@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "date": "2026-04-15",
+    "title": "ישיבת ועדת החוקה, חוק ומשפט",
+    "attendees": ["ח\"כ רון כהן", "ח\"כ מיכל לוי"],
+    "fileUrl": "/protocols/constitution-committee-apr-2026.docx"
+  },
+  {
+    "id": 2,
+    "date": "2026-03-22",
+    "title": "ישיבת מליאה — הצבעה על תקציב המדינה",
+    "attendees": ["ח\"כ רון כהן"],
+    "fileUrl": "/protocols/plenum-budget-mar-2026.docx"
+  },
+  {
+    "id": 3,
+    "date": "2026-03-10",
+    "title": "ישיבת ועדת הכלכלה",
+    "attendees": ["ח\"כ מיכל לוי", "ח\"כ דוד אבי"],
+    "fileUrl": "/protocols/economy-committee-mar-2026.docx"
+  }
+]
