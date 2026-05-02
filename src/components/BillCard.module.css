@@ -10,16 +10,16 @@
 }
 
 .accentRed {
-  border-right-color: #dc3545;
+  border-right-color: var(--color-red-accent);
 }
 
 .accentGray {
-  border-right-color: #adb5bd;
+  border-right-color: var(--color-gray-accent);
 }
 
 .number {
   font-size: 0.72rem;
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 .title {
@@ -37,7 +37,7 @@
 
 .notes {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-style: italic;
   overflow: hidden;
   display: -webkit-box;

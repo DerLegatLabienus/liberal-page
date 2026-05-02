@@ -28,6 +28,8 @@
   --badge-monitor-text: #495057;
 
   --color-text-muted: #666666;
+  --color-red-accent: #dc3545;
+  --color-gray-accent: #adb5bd;
 
   /* Layout */
   --sidebar-width: 240px;
