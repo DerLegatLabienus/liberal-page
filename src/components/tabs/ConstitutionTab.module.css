@@ -1,0 +1,14 @@
+.placeholder {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.iframe {
+  display: block;
+  width: 100%;
+  height: calc(100vh - var(--header-height) - 3rem);
+  border: none;
+  border-radius: 3px;
+}
