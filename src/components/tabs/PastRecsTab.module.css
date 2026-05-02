@@ -51,6 +51,6 @@
 
 .divider {
   border: none;
-  border-top: 1px solid rgba(200, 168, 75, 0.15);
+  border-top: 1px solid var(--color-gold-subtle);
   margin: 0.25rem 0;
 }

@@ -4,7 +4,12 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsc *)",
+      "Bash(node -e 'require\\('\\\\''__TRACKED_VAR__'\\\\''\\)')",
+      "Bash(node *)",
+      "Bash(git commit *)",
+      "Bash(git init *)"
     ]
   }
 }

@@ -14,7 +14,7 @@
 }
 
 .paragraph {
-  color: #c8d4e8;
+  color: var(--color-nav-link);
   font-size: 0.8rem;
   line-height: 1.6;
 }

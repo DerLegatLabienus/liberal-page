@@ -7,6 +7,7 @@
   --color-muted: #99aacc;
   --color-navy-dark: #253660;
   --color-border: #dddddd;
+  --color-gold-subtle: rgba(200, 168, 75, 0.15);
 
   /* Bill status badges */
   --badge-committee-bg: #e8f0ff;
