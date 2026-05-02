@@ -1,0 +1,46 @@
+.card {
+  border-right: 3px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.accentGold {
+  border-right-color: var(--color-gold);
+}
+
+.accentRed {
+  border-right-color: #dc3545;
+}
+
+.accentGray {
+  border-right-color: #adb5bd;
+}
+
+.number {
+  font-size: 0.72rem;
+  color: #888;
+}
+
+.title {
+  font-weight: 700;
+  color: var(--color-navy);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.notes {
+  font-size: 0.75rem;
+  color: #666;
+  font-style: italic;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
