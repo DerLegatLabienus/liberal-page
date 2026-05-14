@@ -3,6 +3,7 @@ import cors from 'cors'
 import trackingRouter from './routes/tracking'
 import parliamentRouter from './routes/parliament'
 import summarizeRouter from './routes/summarize'
+import { startPoller } from './services/poller'
 
 const app = express()
 const PORT = 3001
@@ -20,4 +21,5 @@ app.get('/api/health', (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
+  startPoller()
 })
