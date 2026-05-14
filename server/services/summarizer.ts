@@ -1,7 +1,6 @@
 import { createHash } from 'crypto'
 import { readFile, writeFile } from 'fs/promises'
 import Anthropic from '@anthropic-ai/sdk'
-import pdfParse from 'pdf-parse'
 import mammoth from 'mammoth'
 import type { SummaryCache } from '../../src/types'
 
@@ -25,8 +24,13 @@ export class Summarizer {
     await writeFile(this.cachePath, JSON.stringify(cache, null, 2), 'utf-8')
   }
 
-  private extractText(buffer: Buffer, format: 'pdf' | 'docx'): Promise<string> {
-    if (format === 'pdf') return pdfParse(buffer).then((r) => r.text)
+  private async extractText(buffer: Buffer, format: 'pdf' | 'docx'): Promise<string> {
+    if (format === 'pdf') {
+      // Dynamic import keeps pdf-parse lazy (avoids stdout dump on server start)
+      // and lets vitest mock it via vi.mock('pdf-parse')
+      const pdfMod = await import('pdf-parse') as unknown as { default: (buf: Buffer) => Promise<{ text: string }> }
+      return pdfMod.default(buffer).then((r) => r.text)
+    }
     return mammoth.extractRawText({ buffer }).then((r) => r.value)
   }
 
