@@ -94,10 +94,10 @@ Single scrolling homepage (`/`). Sections top-to-bottom:
 **Add Tracking input** (top of drawer):
 - Single text input: paste any URL from oknesset.org, knesset.gov.il, or gov.il
 - `POST /api/tracking/add` → server parses URL, resolves metadata, appends to JSON
-- Also accepts raw IDs (bill number, committee ID, MK ID)
+- Also accepts raw numeric IDs — when no URL is detected, a type selector (הצ"ח / ועדה / ח"כ) appears inline below the input so the user can specify what the ID refers to before submitting
 
 **Card anatomy (all three tabs share this pattern):**
-- Status color bar on the right edge (green = active/in-committee, orange = vote upcoming, grey = closed)
+- Status color bar on the logical-start edge (right in RTL/Hebrew, left in LTR) — follows the same `useDirection()` logic as the drawer; green = active/in-committee, orange = vote upcoming, grey = closed
 - Title + metadata (bill number / committee chair / MK party)
 - AI summary block (collapsible, shown by default if summary exists)
 - "צפה במקור ↗" link to original source
@@ -120,7 +120,7 @@ Single scrolling homepage (`/`). Sections top-to-bottom:
 |--------|------|-------------|
 | `POST` | `/api/tracking/add` | Parse URL/ID, fetch oknesset metadata, append to JSON |
 | `DELETE` | `/api/tracking/:type/:id` | Remove tracked item from JSON |
-| `GET` | `/api/parliament/:type` | Fetch fresh data for all tracked items of `type` (bills/committees/mks) |
+| `GET` | `/api/parliament/:type` | For each tracked item of `type`, fetch fresh data from oknesset, update the JSON file, and return the merged result. Serves cached JSON if oknesset is unreachable. |
 | `POST` | `/api/summarize` | Download file, MD5 check, Claude summarize, cache result |
 
 ### Services
@@ -144,7 +144,7 @@ Typed REST client for the oknesset.org public API. Methods:
 2. `crypto.createHash('md5').update(buffer).digest('hex')`
 3. Check `summaries-cache.json` — if entry exists with matching MD5, return cached summary
 4. Otherwise: extract text (`pdf-parse` for PDF, `mammoth` for DOCX)
-5. Call Claude API (`claude-opus-4-7` or `claude-sonnet-4-6`) with Hebrew summarization prompt
+5. Call Claude API (model: `claude-sonnet-4-6`, overrideable via `CLAUDE_MODEL` env var) with Hebrew summarization prompt
 6. Write `{ md5, summary, createdAt, sourceUrl }` to `summaries-cache.json`
 
 **`poller.ts`**  
