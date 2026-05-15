@@ -13,6 +13,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
   bill_initiated: '📋',
   vote: '🗳',
   duty_change: '🔄',
+  question: '❓',
 }
 
 interface MkCardProps {
