@@ -29,19 +29,19 @@ export default function AboutSection() {
         {about.leadership && about.leadership.length > 0 && (
           <div>
             <h3 className="mb-4 text-right text-lg font-semibold text-foreground">הנהגה</h3>
-            <div className="flex flex-wrap gap-6 justify-end">
+            <div className="flex flex-wrap gap-6 justify-start">
               {about.leadership.map((member) => (
-                <div key={member.name} className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground text-sm">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
-                  </div>
+                <div key={member.name} className="flex items-center gap-3" dir="rtl">
                   <img
                     src={member.image}
                     alt={member.name}
                     className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
+                  <div>
+                    <p className="text-right font-semibold text-foreground text-sm">{member.name}</p>
+                    <p className="text-right text-xs text-muted-foreground">{member.role}</p>
+                  </div>
                 </div>
               ))}
             </div>

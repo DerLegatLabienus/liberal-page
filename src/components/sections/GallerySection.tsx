@@ -5,11 +5,11 @@ const gallery = galleryData as GalleryItem[]
 
 export default function GallerySection() {
   return (
-    <section id="gallery" className="bg-white py-16">
+    <section id="gallery" className="bg-white py-16" dir="rtl">
       <div className="container mx-auto px-4">
-        <h2 className="mb-6 text-2xl font-bold text-foreground">גלריה</h2>
+        <h2 className="mb-6 text-right text-2xl font-bold text-foreground">גלריה</h2>
         {gallery.length === 0 ? (
-          <p className="text-muted-foreground">תמונות יתווספו בקרוב.</p>
+          <p className="text-right text-muted-foreground">תמונות יתווספו בקרוב.</p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
             {gallery.map((item) => (
@@ -25,7 +25,7 @@ export default function GallerySection() {
                   />
                 </div>
                 <div className="p-2">
-                  <p className="text-xs text-muted-foreground">{item.caption}</p>
+                  <p className="text-right text-xs text-muted-foreground">{item.caption}</p>
                 </div>
               </div>
             ))}
