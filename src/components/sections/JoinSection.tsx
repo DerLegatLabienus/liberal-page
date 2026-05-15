@@ -13,17 +13,11 @@ export default function JoinSection() {
           הצטרפו לליכוד ותהיו חלק מהשינוי מבפנים. לחצו על הכפתור להתפקדות באתר הרשמי של הליכוד.
         </p>
         <Button
-          asChild
+          render={<a href={site.joinFormUrl || 'https://www.likud.org.il/join'} target="_blank" rel="noopener noreferrer" />}
           size="lg"
           className="bg-white text-blue-700 hover:bg-blue-50 shadow-lg"
         >
-          <a
-            href={site.joinFormUrl || 'https://www.likud.org.il/join'}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            להתפקד עכשיו ←
-          </a>
+          להתפקד עכשיו ←
         </Button>
       </div>
     </section>

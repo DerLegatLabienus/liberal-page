@@ -23,13 +23,11 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Button
-            asChild
+            render={<a href={site.joinFormUrl || '#join'} target="_blank" rel="noopener noreferrer" />}
             size="lg"
             className="bg-white text-blue-700 hover:bg-blue-50 shadow-lg"
           >
-            <a href={site.joinFormUrl || '#join'} target="_blank" rel="noopener noreferrer">
-              הצטרפו לליכוד ←
-            </a>
+            הצטרפו לליכוד ←
           </Button>
           <Button
             variant="outline"
