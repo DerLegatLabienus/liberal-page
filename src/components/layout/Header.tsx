@@ -25,7 +25,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           {site.logoPath ? (
             <img

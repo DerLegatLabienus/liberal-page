@@ -5,55 +5,48 @@ const about = aboutData as AboutData
 
 export default function AboutSection() {
   return (
-    <section id="about" className="bg-white py-16" dir="rtl">
-      <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-right text-2xl font-bold text-foreground">מי אנחנו</h2>
+    <section id="about" className="bg-slate-50 py-16" dir="rtl">
+      <div className="container mx-auto max-w-2xl px-4">
+        <h2 className="mb-6 text-right text-2xl font-bold text-foreground">מי אנחנו</h2>
+        <div className="mb-6 space-y-4">
+          {about.paragraphs.map((p, i) => (
+            <p key={i} className="text-right leading-relaxed text-muted-foreground">
+              {p}
+            </p>
+          ))}
+        </div>
+        <div className="mb-8 flex flex-wrap gap-2 justify-end">
+          {about.values.map((value) => (
+            <span
+              key={value}
+              className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700"
+            >
+              {value}
+            </span>
+          ))}
+        </div>
 
-        <div className="grid gap-12 md:grid-cols-2">
-          {/* Text content */}
-          <div className="space-y-4">
-            {about.paragraphs.map((p, i) => (
-              <p key={i} className="text-right leading-relaxed text-muted-foreground">
-                {p}
-              </p>
-            ))}
-            <div className="flex flex-wrap gap-2 justify-end pt-2">
-              {about.values.map((value) => (
-                <span
-                  key={value}
-                  className="rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700"
-                >
-                  {value}
-                </span>
+        {about.leadership && about.leadership.length > 0 && (
+          <div>
+            <h3 className="mb-4 text-right text-lg font-semibold text-foreground">הנהגה</h3>
+            <div className="flex flex-wrap gap-6 justify-start">
+              {about.leadership.map((member) => (
+                <div key={member.name} className="flex items-center gap-3" dir="rtl">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                  <div>
+                    <p className="text-right font-semibold text-foreground text-sm">{member.name}</p>
+                    <p className="text-right text-xs text-muted-foreground">{member.role}</p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* Leadership */}
-          {about.leadership && about.leadership.length > 0 && (
-            <div>
-              <h3 className="mb-6 text-right text-base font-semibold text-muted-foreground uppercase tracking-wide">
-                הנהגה
-              </h3>
-              <div className="space-y-4">
-                {about.leadership.map((member) => (
-                  <div key={member.name} className="flex items-center gap-4" dir="rtl">
-                    <img
-                      src={member.image}
-                      alt={member.name}
-                      className="h-14 w-14 shrink-0 rounded-full object-cover border-2 border-blue-100"
-                      onError={(e) => { e.currentTarget.style.display = 'none' }}
-                    />
-                    <div>
-                      <p className="text-right text-sm font-semibold text-foreground">{member.name}</p>
-                      <p className="text-right text-xs text-muted-foreground">{member.role}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </section>
   )
