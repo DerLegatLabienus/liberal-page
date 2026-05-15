@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { OknessetClient } from './oknesset'
 import { Summarizer } from './summarizer'
+import { fetchMkActivity } from './knesset-scraper'
 import type { Bill, Committee, Mk } from '../../src/types'
 
 const DATA_DIR = path.join(process.cwd(), 'src/data')
@@ -81,24 +82,23 @@ async function pollMks(): Promise<void> {
   let changed = false
 
   for (const mk of mks) {
-    if (!mk.oknesset_id) continue
+    const knsId = mk.oknesset_id ? parseInt(mk.oknesset_id, 10) : 0
+    if (!knsId) continue
+
     try {
-      const votes = await oknesset.getMkVotes(mk.oknesset_id, 10)
-      if (votes.length !== mk.recentVotes.length) {
-        mk.recentVotes = votes.map((v) => {
-          const vote = v as Record<string, unknown>
-          return {
-            date: String(vote.time ?? ''),
-            billTitle: String(vote.bill_title ?? ''),
-            vote: mapVote(String(vote.vote_type ?? '')),
-          }
-        })
+      const fresh = await fetchMkActivity(knsId, 20)
+      const existingUrls = new Set((mk.activity ?? []).map((a) => a.sourceUrl))
+      const newItems = fresh.filter((a) => a.sourceUrl && !existingUrls.has(a.sourceUrl))
+
+      if (newItems.length > 0) {
+        mk.activity = [...newItems, ...(mk.activity ?? [])].slice(0, 20)
         mk.hasNewData = true
         changed = true
       }
     } catch (err) {
       console.error(`Poller: error polling MK ${mk.oknesset_id}:`, err)
     }
+
     mk.lastPolledAt = new Date().toISOString()
   }
 
@@ -113,16 +113,6 @@ function mapBillStatus(status: string): Bill['status'] | null {
     rejected: 'נדחה',
   }
   return map[status.toLowerCase()] ?? null
-}
-
-function mapVote(voteType: string): Mk['recentVotes'][number]['vote'] {
-  const map: Record<string, Mk['recentVotes'][number]['vote']> = {
-    for: 'בעד',
-    against: 'נגד',
-    abstain: 'נמנע',
-    absent: 'נעדר',
-  }
-  return map[voteType.toLowerCase()] ?? 'נעדר'
 }
 
 async function runPollCycle(): Promise<void> {
