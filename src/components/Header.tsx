@@ -7,6 +7,7 @@ const site = siteData as SiteConfig;
 
 const navItems = [
   { label: 'חקיקה', href: '#bills' },
+  { label: 'נציגים', href: '#representatives' },
   { label: 'עדכונים', href: '#updates' },
   { label: 'פריימריז', href: '#primaries' },
   { label: 'פרוטוקולים', href: '#protocols' },
