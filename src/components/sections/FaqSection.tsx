@@ -1,31 +1,61 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import faqData from '@/data/faq.json'
 import type { FaqItem } from '@/types'
 
 const faq = faqData as FaqItem[]
 
+function FaqRow({ item }: { item: FaqItem }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="border-b border-slate-200 last:border-0">
+      <button
+        type="button"
+        dir="rtl"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 py-4 text-right"
+      >
+        <span className="flex-1 text-right text-sm font-medium text-foreground leading-snug">
+          {item.question}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      <div
+        dir="rtl"
+        className={`overflow-hidden transition-all duration-200 ease-in-out ${
+          open ? 'max-h-96 opacity-100 pb-4' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <p className="text-right text-sm text-muted-foreground leading-relaxed pe-7">
+          {item.answer}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function FaqSection() {
   return (
     <section id="faq" className="bg-slate-50 py-16">
       <div className="container mx-auto max-w-2xl px-4">
-        <h2 className="mb-6 text-2xl font-bold text-foreground">שאלות נפוצות</h2>
-        <Accordion type="single" collapsible className="w-full">
+        <h2
+          dir="rtl"
+          className="mb-8 text-right text-2xl font-bold text-foreground"
+        >
+          שאלות נפוצות
+        </h2>
+        <div className="rounded-xl border border-slate-200 bg-white px-6 shadow-sm">
           {faq.map((item) => (
-            <AccordionItem key={item.id} value={String(item.id)}>
-              <AccordionTrigger className="text-sm font-medium">
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent className="leading-relaxed text-sm text-muted-foreground">
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
+            <FaqRow key={item.id} item={item} />
           ))}
-        </Accordion>
+        </div>
       </div>
     </section>
   )

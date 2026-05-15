@@ -24,22 +24,23 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
   const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה').slice(0, 3)
 
   return (
-    <section className="border-b border-border bg-white py-4">
+    <section className="border-b border-border bg-white py-4" dir="rtl">
       <div className="container mx-auto px-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">📊 עדכוני כנסת אחרונים</h2>
+          <h2 className="text-right text-sm font-semibold text-foreground">📊 עדכוני כנסת אחרונים</h2>
           <button
             onClick={onOpenDrawer}
             className="text-xs text-primary hover:underline"
           >
-            לכל הנתונים ←
+            לכל הנתונים →
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1">
           {activeBills.map((bill) => (
             <div
               key={bill.id}
-              className={`min-w-[160px] shrink-0 rounded-md border border-s-4 px-3 py-2 ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
+              dir="rtl"
+              className={`min-w-[160px] shrink-0 rounded-md border border-s-4 px-3 py-2 text-right ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
             >
               <p className="mb-1 text-xs text-muted-foreground">הצ"ח פעילה</p>
               <p className="mb-1 line-clamp-2 text-sm font-medium leading-snug text-foreground">
@@ -53,7 +54,8 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           {committees.slice(0, 1).map((c) => (
             <div
               key={c.id}
-              className="min-w-[160px] shrink-0 rounded-md border border-s-4 border-blue-500 bg-blue-50 px-3 py-2"
+              dir="rtl"
+              className="min-w-[160px] shrink-0 rounded-md border border-s-4 border-blue-500 bg-blue-50 px-3 py-2 text-right"
             >
               <p className="mb-1 text-xs text-muted-foreground">ועדה במעקב</p>
               <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">

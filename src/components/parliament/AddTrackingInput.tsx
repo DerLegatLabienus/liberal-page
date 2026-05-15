@@ -48,8 +48,8 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
   }
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold text-primary">+ הוסף מעקב חדש</p>
+    <div className="space-y-2" dir="rtl">
+      <p className="text-right text-xs font-semibold text-primary">+ הוסף מעקב חדש</p>
       <div className="flex gap-2">
         <Input
           placeholder="הדבק קישור מאתר הכנסת..."

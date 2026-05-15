@@ -19,25 +19,25 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
   return (
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
       <div className="w-1 shrink-0 bg-purple-500" />
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4" dir="rtl">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-foreground">{mk.name || 'ח"כ לא מוגדר'}</p>
+          <p className="text-right text-sm font-semibold text-foreground">{mk.name || 'ח"כ לא מוגדר'}</p>
           <span className="text-xs text-muted-foreground">{mk.party}</span>
         </div>
         {mk.votingSummary && (
           <div className="mb-2 rounded-md bg-purple-50 p-2">
-            <p className="mb-1 text-xs font-semibold text-purple-700">✦ סיכום הצבעות (AI)</p>
-            <p className="leading-relaxed text-xs text-muted-foreground">{mk.votingSummary}</p>
+            <p className="mb-1 text-right text-xs font-semibold text-purple-700">✦ סיכום הצבעות (AI)</p>
+            <p className="text-right leading-relaxed text-xs text-muted-foreground">{mk.votingSummary}</p>
           </div>
         )}
         {mk.recentVotes.length > 0 && (
           <div className="mb-2">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">הצבעות אחרונות:</p>
+            <p className="mb-1 text-right text-xs font-medium text-muted-foreground">הצבעות אחרונות:</p>
             <div className="space-y-1">
               {mk.recentVotes.slice(0, 3).map((vote, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs">
-                  <span className={`font-medium ${VOTE_COLORS[vote.vote] ?? ''}`}>{vote.vote}</span>
                   <span className="truncate text-muted-foreground">{vote.billTitle}</span>
+                  <span className={`shrink-0 font-medium ${VOTE_COLORS[vote.vote] ?? ''}`}>{vote.vote}</span>
                 </div>
               ))}
             </div>

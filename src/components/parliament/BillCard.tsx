@@ -26,20 +26,20 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
   return (
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
       <div className={`w-1 shrink-0 ${STATUS_BAR[bill.status]}`} />
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4" dir="rtl">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
+          <p className="text-right text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[bill.status]}`}>
             {bill.status}
           </span>
         </div>
-        <p className="mb-2 text-xs text-muted-foreground">
+        <p className="mb-2 text-right text-xs text-muted-foreground">
           {bill.number} · {bill.committee}
         </p>
         {bill.notes && (
           <div className="mb-2 rounded-md bg-blue-50 p-2">
-            <p className="mb-1 text-xs font-semibold text-blue-700">✦ סיכום</p>
-            <p className="leading-relaxed text-xs text-muted-foreground">{bill.notes}</p>
+            <p className="mb-1 text-right text-xs font-semibold text-blue-700">✦ סיכום</p>
+            <p className="text-right leading-relaxed text-xs text-muted-foreground">{bill.notes}</p>
           </div>
         )}
         <div className="flex items-center justify-between">

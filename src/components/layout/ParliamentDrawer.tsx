@@ -58,7 +58,7 @@ export default function ParliamentDrawer({
                 <BillCard key={bill.id} bill={bill} onRemove={onRemoveBill} />
               ))}
               {bills.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">
+                <p className="py-8 text-right text-sm text-muted-foreground">
                   אין הצעות חוק במעקב — הוסף באמצעות הקישור למעלה
                 </p>
               )}
@@ -69,7 +69,7 @@ export default function ParliamentDrawer({
                 <CommitteeCard key={c.id} committee={c} onRemove={onRemoveCommittee} />
               ))}
               {committees.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">
+                <p className="py-8 text-right text-sm text-muted-foreground">
                   אין ועדות במעקב
                 </p>
               )}
@@ -80,7 +80,7 @@ export default function ParliamentDrawer({
                 <MkCard key={mk.id} mk={mk} onRemove={onRemoveMk} />
               ))}
               {mks.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">
+                <p className="py-8 text-right text-sm text-muted-foreground">
                   אין חברי כנסת במעקב
                 </p>
               )}
