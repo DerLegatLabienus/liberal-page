@@ -43,7 +43,7 @@ export interface MkVote {
   vote: 'בעד' | 'נגד' | 'נמנע' | 'נעדר'
 }
 
-export type MkActivityType = 'bill_initiated' | 'vote' | 'duty_change'
+export type MkActivityType = 'bill_initiated' | 'vote' | 'duty_change' | 'question'
 
 export interface MkActivity {
   type: MkActivityType
