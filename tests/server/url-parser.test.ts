@@ -1,4 +1,4 @@
-import { parseKnessetUrl } from '../../server/services/url-parser'
+import { parseKnessetUrl, isKnessetSiteUrl } from '../../server/services/url-parser'
 
 describe('parseKnessetUrl', () => {
   it('parses oknesset bill URL', () => {
@@ -27,11 +27,39 @@ describe('parseKnessetUrl', () => {
     expect(parseKnessetUrl(url)).toEqual({ type: 'committee', id: '10' })
   })
 
+  it('parses knesset.gov.il MK mk-positions URL', () => {
+    expect(parseKnessetUrl('https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1116')).toEqual({
+      type: 'mk',
+      id: '1116',
+    })
+  })
+
+  it('parses knesset.gov.il MK mk-detail URL', () => {
+    expect(parseKnessetUrl('https://main.knesset.gov.il/mk/mk-detail/1116')).toEqual({
+      type: 'mk',
+      id: '1116',
+    })
+  })
+
   it('returns null for unsupported URL', () => {
     expect(parseKnessetUrl('https://example.com/foo')).toBeNull()
   })
 
   it('returns null for empty string', () => {
     expect(parseKnessetUrl('')).toBeNull()
+  })
+})
+
+describe('isKnessetSiteUrl', () => {
+  it('returns true for mk-positions URL', () => {
+    expect(isKnessetSiteUrl('https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1116')).toBe(true)
+  })
+
+  it('returns true for mk-detail URL', () => {
+    expect(isKnessetSiteUrl('https://main.knesset.gov.il/mk/mk-detail/1116')).toBe(true)
+  })
+
+  it('returns false for oknesset URL', () => {
+    expect(isKnessetSiteUrl('https://oknesset.org/member/42/')).toBe(false)
   })
 })

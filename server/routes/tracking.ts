@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
-import { parseKnessetUrl } from '../services/url-parser'
+import { parseKnessetUrl, isKnessetSiteUrl } from '../services/url-parser'
 import { OknessetClient } from '../services/oknesset'
+import { getMkBySiteId } from '../services/knesset-api'
 import type { Bill, Committee, Mk, TrackingType } from '../../src/types'
 
 const router = Router()
@@ -83,20 +84,41 @@ router.post('/add', async (req, res) => {
     }
 
     if (type === 'mk') {
-      const data = await oknesset.getMk(id)
       const items = await readItems<Mk>('mk')
       const nextId = Math.max(0, ...items.map((i) => i.id)) + 1
-      const newItem: Mk = {
-        id: nextId,
-        oknesset_id: id,
-        name: data.name,
-        party: data.party ?? 'ליכוד',
-        recentVotes: [],
-        votingSummary: null,
-        sourceUrl: url ?? '',
-        hasNewData: false,
-        lastPolledAt: null,
+      let newItem: Mk
+
+      // knesset.gov.il MK URLs use a SiteId — resolve via Knesset OData API
+      if (url && isKnessetSiteUrl(url)) {
+        const siteId = parseInt(id, 10)
+        const data = await getMkBySiteId(siteId)
+        newItem = {
+          id: nextId,
+          oknesset_id: String(data.knsId),
+          name: data.name,
+          party: data.faction ?? 'ליכוד',
+          recentVotes: [],
+          votingSummary: null,
+          sourceUrl: url,
+          hasNewData: false,
+          lastPolledAt: null,
+        }
+      } else {
+        // oknesset.org MK URL — use oknesset API
+        const data = await oknesset.getMk(id)
+        newItem = {
+          id: nextId,
+          oknesset_id: id,
+          name: data.name,
+          party: data.party ?? 'ליכוד',
+          recentVotes: [],
+          votingSummary: null,
+          sourceUrl: url ?? '',
+          hasNewData: false,
+          lastPolledAt: null,
+        }
       }
+
       items.push(newItem)
       await writeItems('mk', items)
       return res.json({ ok: true, item: newItem })
