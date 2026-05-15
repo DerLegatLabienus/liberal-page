@@ -10,7 +10,7 @@ export default function JoinSection() {
       <div className="container mx-auto max-w-lg px-4">
         <h2 className="mb-3 text-2xl font-bold">הצטרפו לליכוד</h2>
         <p className="mb-6 text-blue-100">
-          הצטרפו לליכוד ותהיו חלק מהשינוי מבפנים. לחצו על הכפתור להתקפקדות באתר הרשמי של הליכוד.
+          הצטרפו לליכוד ותהיו חלק מהשינוי מבפנים. לחצו על הכפתור להתפקדות באתר הרשמי של הליכוד.
         </p>
         <Button
           asChild
@@ -22,7 +22,7 @@ export default function JoinSection() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            להתקפקד עכשיו ←
+            להתפקד עכשיו ←
           </a>
         </Button>
       </div>
