@@ -4,6 +4,7 @@ import path from 'path'
 import { parseKnessetUrl, isKnessetSiteUrl } from '../services/url-parser'
 import { OknessetClient } from '../services/oknesset'
 import { getMkBySiteId } from '../services/knesset-api'
+import { fetchMkActivity } from '../services/knesset-scraper'
 import type { Bill, Committee, Mk, TrackingType } from '../../src/types'
 
 const router = Router()
@@ -88,29 +89,39 @@ router.post('/add', async (req, res) => {
       const nextId = Math.max(0, ...items.map((i) => i.id)) + 1
       let newItem: Mk
 
-      // knesset.gov.il MK URLs use a SiteId — resolve via Knesset OData API
       if (url && isKnessetSiteUrl(url)) {
         const siteId = parseInt(id, 10)
-        const data = await getMkBySiteId(siteId)
+        const identity = await getMkBySiteId(siteId)
+        const activity = await fetchMkActivity(identity.knsId, 10).catch(() => [])
         newItem = {
           id: nextId,
-          oknesset_id: String(data.knsId),
-          name: data.name,
-          party: data.faction ?? '',
+          oknesset_id: String(identity.knsId),
+          knesset_site_id: id,
+          name: identity.name,
+          party: identity.faction ?? '',
+          email: identity.email ?? null,
+          photoUrl: `https://main.knesset.gov.il/mk/members/${id}/photo`,
+          currentRoles: identity.positions.map((p) => ({
+            positionId: p.positionId,
+            description: 'חבר כנסת',
+            isCurrent: p.isCurrent,
+            startDate: p.startDate,
+          })),
+          activity,
           recentVotes: [],
           votingSummary: null,
           sourceUrl: url,
           hasNewData: false,
-          lastPolledAt: null,
+          lastPolledAt: new Date().toISOString(),
         }
       } else {
-        // oknesset.org MK URL — use oknesset API
         const data = await oknesset.getMk(id)
         newItem = {
           id: nextId,
           oknesset_id: id,
           name: data.name,
           party: data.party ?? '',
+          activity: [],
           recentVotes: [],
           votingSummary: null,
           sourceUrl: url ?? '',
