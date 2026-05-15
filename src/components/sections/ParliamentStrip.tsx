@@ -24,13 +24,15 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
   const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה').slice(0, 3)
 
   return (
-    <section className="border-b border-border bg-white py-4" dir="rtl">
-      <div className="container mx-auto px-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-right text-sm font-semibold text-foreground">📊 עדכוני כנסת אחרונים</h2>
+    <section className="border-y border-border bg-blue-50/60 py-8" dir="rtl">
+      <div className="container mx-auto max-w-4xl px-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
+            📊 עדכוני כנסת אחרונים
+          </h2>
           <button
             onClick={onOpenDrawer}
-            className="text-xs text-primary hover:underline"
+            className="text-xs font-medium text-primary hover:underline"
           >
             לכל הנתונים →
           </button>
@@ -40,10 +42,10 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={bill.id}
               dir="rtl"
-              className={`min-w-[160px] shrink-0 rounded-md border border-s-4 px-3 py-2 text-right ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
+              className={`min-w-[180px] shrink-0 rounded-lg border border-s-4 bg-white px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
             >
-              <p className="mb-1 text-xs text-muted-foreground">הצ"ח פעילה</p>
-              <p className="mb-1 line-clamp-2 text-sm font-medium leading-snug text-foreground">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">הצ"ח פעילה</p>
+              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                 {bill.title}
               </p>
               <p className={`text-xs font-medium ${STATUS_DOT[bill.status] ?? ''}`}>
@@ -55,14 +57,14 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={c.id}
               dir="rtl"
-              className="min-w-[160px] shrink-0 rounded-md border border-s-4 border-blue-500 bg-blue-50 px-3 py-2 text-right"
+              className="min-w-[180px] shrink-0 rounded-lg border border-s-4 border-blue-500 bg-white px-4 py-3 text-right shadow-sm"
             >
-              <p className="mb-1 text-xs text-muted-foreground">ועדה במעקב</p>
-              <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">ועדה במעקב</p>
+              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                 {c.name}
               </p>
               {c.lastSessionDate && (
-                <p className="mt-1 text-xs text-green-600">
+                <p className="text-xs text-green-600">
                   ● ישיבה: {new Date(c.lastSessionDate).toLocaleDateString('he-IL')}
                 </p>
               )}
@@ -70,7 +72,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           ))}
           <button
             onClick={onOpenDrawer}
-            className="flex min-w-[100px] shrink-0 items-center justify-center rounded-md border border-dashed border-primary/40 px-3 py-2 text-sm text-primary hover:bg-primary/5"
+            className="flex min-w-[120px] shrink-0 items-center justify-center rounded-lg border border-dashed border-primary/40 bg-white px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
           >
             + עוד נתונים
           </button>
