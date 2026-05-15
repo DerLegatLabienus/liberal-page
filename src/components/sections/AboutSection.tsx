@@ -15,7 +15,7 @@ export default function AboutSection() {
             </p>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="mb-8 flex flex-wrap gap-2">
           {about.values.map((value) => (
             <span
               key={value}
@@ -25,6 +25,28 @@ export default function AboutSection() {
             </span>
           ))}
         </div>
+
+        {about.leadership && about.leadership.length > 0 && (
+          <div>
+            <h3 className="mb-4 text-lg font-semibold text-foreground">הנהגה</h3>
+            <div className="flex flex-wrap gap-6">
+              {about.leadership.map((member) => (
+                <div key={member.name} className="flex items-center gap-3">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )

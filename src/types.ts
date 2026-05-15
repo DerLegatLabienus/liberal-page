@@ -68,9 +68,16 @@ export interface FaqItem {
   answer: string
 }
 
+export interface LeadershipMember {
+  name: string
+  role: string
+  image: string
+}
+
 export interface AboutData {
   paragraphs: string[]
   values: string[]
+  leadership?: LeadershipMember[]
 }
 
 export interface SummaryCache {

@@ -1,10 +1,10 @@
 {
   "partyName": "הליברלים בליכוד",
-  "cellSubtitle": "תא ליכוד · ירושלים",
+  "cellSubtitle": "תנועה ליברלית בתוך הליכוד",
   "heroHeadline": "ליברליזם בתוך הימין",
-  "heroTagline": "מקדמים חקיקה, מייצגים עקרונות, ופועלים מבפנים",
-  "logoPath": "/logo.png",
-  "joinFormUrl": "",
+  "heroTagline": "פועלים לקידום חירות הפרט ושוק חופשי מתוך מפלגת הליכוד",
+  "logoPath": "https://likudliberal.org/wp-content/uploads/2020/05/dz7h5hxt.png",
+  "joinFormUrl": "https://likudliberal.org",
   "constitutionUrl": "",
   "contactEmail": ""
 }

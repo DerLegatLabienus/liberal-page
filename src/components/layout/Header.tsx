@@ -27,9 +27,18 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-            ל"ל
-          </div>
+          {site.logoPath ? (
+            <img
+              src={site.logoPath}
+              alt={site.partyName}
+              className="h-8 w-auto object-contain"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+              ל"ל
+            </div>
+          )}
           <span className="font-bold text-foreground">{site.partyName}</span>
         </div>
 
