@@ -1,17 +1,16 @@
 import type { MkActivity } from '../../src/types'
 
-const BILLS_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+const KNESSET_ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 
 interface KNS_BillInitiatorRecord {
   BillInitiatorID: number
   BillID: number
   PersonID: number
-  IsInitiator: boolean
   LastUpdatedDate: string
   KNS_Bill: {
     BillID: number
     Name: string
-    SubTypeDesc: string
+    SubTypeDesc: string | null
     KnessetNum: number
   }
 }
@@ -19,7 +18,7 @@ interface KNS_BillInitiatorRecord {
 interface KNS_QueryRecord {
   QueryID: number
   Name: string
-  TypeDesc: string
+  TypeDesc: string | null
   SubmitDate: string
 }
 
@@ -32,10 +31,12 @@ async function fetchJson<T>(url: string): Promise<T[]> {
 
 async function fetchMkBills(knsId: number): Promise<MkActivity[]> {
   const url =
-    `${BILLS_BASE}/KNS_BillInitiator` +
+    `${KNESSET_ODATA_BASE}/KNS_BillInitiator` +
     `?$filter=PersonID%20eq%20${knsId}` +
     `&$expand=KNS_Bill` +
     `&$orderby=LastUpdatedDate%20desc` +
+    // Fetch extra bills to buffer for the interleaved sort with questions,
+    // so the final merged slice of `limit` (default 10) is well-populated.
     `&$top=20` +
     `&$format=json`
 
@@ -55,7 +56,7 @@ async function fetchMkBills(knsId: number): Promise<MkActivity[]> {
 
 async function fetchMkQuestions(knsId: number): Promise<MkActivity[]> {
   const url =
-    `${BILLS_BASE}/KNS_Query` +
+    `${KNESSET_ODATA_BASE}/KNS_Query` +
     `?$filter=PersonID%20eq%20${knsId}` +
     `&$orderby=SubmitDate%20desc` +
     `&$top=10` +
@@ -69,7 +70,9 @@ async function fetchMkQuestions(knsId: number): Promise<MkActivity[]> {
       date: r.SubmitDate,
       title: r.Name,
       detail: r.TypeDesc ?? undefined,
-      sourceUrl: `${BILLS_BASE}/KNS_Query(${r.QueryID})`,
+      sourceUrl:
+        `https://main.knesset.gov.il/Activity/Legislation/Questions/Pages/QueryDetails.aspx` +
+        `?QueryId=${r.QueryID}`,
     }))
 }
 
