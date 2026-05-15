@@ -52,7 +52,7 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
           )}
           {onRemove && (
             <button onClick={() => onRemove(mk.id)}
-              className="text-xs text-red-400 hover:text-red-600 ltr:ml-auto rtl:mr-auto">
+              className="text-xs text-red-400 hover:text-red-600 ms-auto">
               הסר
             </button>
           )}

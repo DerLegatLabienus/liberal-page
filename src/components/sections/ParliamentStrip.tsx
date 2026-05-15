@@ -39,7 +39,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           {activeBills.map((bill) => (
             <div
               key={bill.id}
-              className={`min-w-[160px] shrink-0 rounded-md border border-r-4 px-3 py-2 ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
+              className={`min-w-[160px] shrink-0 rounded-md border border-s-4 px-3 py-2 ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
             >
               <p className="mb-1 text-xs text-muted-foreground">הצ"ח פעילה</p>
               <p className="mb-1 line-clamp-2 text-sm font-medium leading-snug text-foreground">
@@ -53,7 +53,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           {committees.slice(0, 1).map((c) => (
             <div
               key={c.id}
-              className="min-w-[160px] shrink-0 rounded-md border border-r-4 border-blue-500 bg-blue-50 px-3 py-2"
+              className="min-w-[160px] shrink-0 rounded-md border border-s-4 border-blue-500 bg-blue-50 px-3 py-2"
             >
               <p className="mb-1 text-xs text-muted-foreground">ועדה במעקב</p>
               <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">

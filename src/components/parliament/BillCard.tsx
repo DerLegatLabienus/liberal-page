@@ -48,7 +48,7 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
               עודכן: {new Date(bill.lastPolledAt).toLocaleDateString('he-IL')}
             </p>
           )}
-          <div className="flex gap-2 ltr:ml-auto rtl:mr-auto">
+          <div className="flex gap-2 ms-auto">
             {bill.sourceUrl && (
               <a href={bill.sourceUrl} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline">

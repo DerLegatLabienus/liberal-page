@@ -17,7 +17,7 @@ export default function FaqSection() {
         <Accordion type="single" collapsible className="w-full">
           {faq.map((item) => (
             <AccordionItem key={item.id} value={String(item.id)}>
-              <AccordionTrigger className="text-right text-sm font-medium">
+              <AccordionTrigger className="text-sm font-medium">
                 {item.question}
               </AccordionTrigger>
               <AccordionContent className="leading-relaxed text-sm text-muted-foreground">

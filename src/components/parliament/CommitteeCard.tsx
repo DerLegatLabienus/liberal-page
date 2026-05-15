@@ -37,7 +37,7 @@ export default function CommitteeCard({ committee, onRemove }: CommitteeCardProp
           )}
           {onRemove && (
             <button onClick={() => onRemove(committee.id)}
-              className="text-xs text-red-400 hover:text-red-600 ltr:ml-auto rtl:mr-auto">
+              className="text-xs text-red-400 hover:text-red-600 ms-auto">
               הסר
             </button>
           )}
