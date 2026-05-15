@@ -1,6 +1,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/heebo";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -43,7 +43,10 @@
   }
   .theme {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Heebo Variable', 'Arial Hebrew', 'Tahoma', system-ui, sans-serif;
+  }
+  body {
+    font-family: var(--font-sans);
   }
   .dark {
     --background: oklch(0.145 0 0);

@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { label: 'אודות', href: '#about' },
   { label: 'גלריה', href: '#gallery' },
   { label: 'שאלות', href: '#faq' },
-  { label: 'הצטרפות', href: '#join' },
+  { label: 'הצטרפו', href: '#join' },
 ]
 
 export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderProps) {

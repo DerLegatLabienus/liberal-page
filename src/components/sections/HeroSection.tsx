@@ -26,7 +26,7 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
             className="bg-white text-blue-700 hover:bg-blue-50"
           >
             <a href={site.joinFormUrl || '#join'} target="_blank" rel="noopener noreferrer">
-              הצטרפות להתקפקדות
+              הצטרפו לליכוד ←
             </a>
           </Button>
           <Button

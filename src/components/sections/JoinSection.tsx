@@ -8,9 +8,9 @@ export default function JoinSection() {
   return (
     <section id="join" className="bg-gradient-to-br from-blue-700 to-sky-600 py-16 text-center text-white">
       <div className="container mx-auto max-w-lg px-4">
-        <h2 className="mb-3 text-2xl font-bold">הצטרפות להתקפקדות</h2>
+        <h2 className="mb-3 text-2xl font-bold">הצטרפו לליכוד</h2>
         <p className="mb-6 text-blue-100">
-          הצטרפו לליכוד ותהיו חלק מהשינוי מבפנים. לחצו על הכפתור להתקפקדות רשמית באתר הליכוד.
+          הצטרפו לליכוד ותהיו חלק מהשינוי מבפנים. לחצו על הכפתור להתקפקדות באתר הרשמי של הליכוד.
         </p>
         <Button
           asChild
@@ -22,7 +22,7 @@ export default function JoinSection() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            להתקפקדות רשמית ←
+            להתקפקד עכשיו ←
           </a>
         </Button>
       </div>
