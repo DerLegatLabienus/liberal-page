@@ -43,11 +43,35 @@ export interface MkVote {
   vote: 'בעד' | 'נגד' | 'נמנע' | 'נעדר'
 }
 
+export type MkActivityType = 'bill_initiated' | 'vote' | 'duty_change'
+
+export interface MkActivity {
+  type: MkActivityType
+  date: string
+  title: string
+  detail?: string
+  sourceUrl?: string
+}
+
+export interface MkRole {
+  positionId: number
+  description: string
+  committeeName?: string
+  factionName?: string
+  isCurrent: boolean
+  startDate: string | null
+}
+
 export interface Mk {
   id: number
   oknesset_id: string
+  knesset_site_id?: string
   name: string
   party: string
+  email?: string | null
+  photoUrl?: string | null
+  currentRoles?: MkRole[]
+  activity?: MkActivity[]
   recentVotes: MkVote[]
   votingSummary: string | null
   sourceUrl: string

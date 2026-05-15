@@ -1,12 +1,100 @@
 [
   {
     "id": 1,
-    "oknesset_id": "",
-    "name": "",
-    "party": "ליכוד",
+    "oknesset_id": "30839",
+    "knesset_site_id": "1116",
+    "name": "דן אילוז",
+    "party": "הליכוד",
+    "email": "hak_diluz@knesset.gov.il",
+    "photoUrl": "https://main.knesset.gov.il/mk/members/1116/photo",
+    "currentRoles": [
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "factionName": "הליכוד",
+        "isCurrent": true,
+        "startDate": "2023-01-06T00:00:00"
+      }
+    ],
+    "activity": [
+      {
+        "type": "bill_initiated",
+        "date": "2022-12-12T10:52:03.387",
+        "title": "הצעת חוק האגודות העותומניות (רישום ופיקוח), התשפ\"ג-2022",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2195987"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2022-12-12T10:51:59.73",
+        "title": "הצעת חוק לתיקון פקודת הסמים המסוכנים (הגדרת צמח הקנבוס, מדרוג עבירות ועונשים בסם קנבוס), התשפ\"ג-2022",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2195694"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2022-12-12T10:52:01",
+        "title": "הצעת חוק הסכמים קיבוציים (תיקון - יציגות ארגון עובדים והגנה על הפרט), התשפ\"ג-2022",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2195842"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2022-12-12T10:52:10",
+        "title": "הצעת חוק ביטוח בריאות ממלכתי (תיקון - הוספת טיפול בקנבוס למטרות רפואיות), התשפ\"ג-2022",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2196187"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2022-12-12T10:52:15",
+        "title": "הצעת חוק מועצת הצמחים (ייצור ושיווק) (תיקון - ביטול מועצת הצמחים), התשפ\"ג-2022",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2196209"
+      }
+    ],
     "recentVotes": [],
     "votingSummary": null,
-    "sourceUrl": "",
+    "sourceUrl": "https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1116",
+    "hasNewData": false,
+    "lastPolledAt": null
+  },
+  {
+    "id": 2,
+    "oknesset_id": "30870",
+    "knesset_site_id": "1117",
+    "name": "משה רוט",
+    "party": "יהדות התורה",
+    "email": null,
+    "photoUrl": "https://main.knesset.gov.il/mk/members/1117/photo",
+    "currentRoles": [
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "factionName": "יהדות התורה",
+        "isCurrent": false,
+        "startDate": null
+      }
+    ],
+    "activity": [
+      {
+        "type": "bill_initiated",
+        "date": "2024-01-01T00:00:00",
+        "title": "הצעת חוק-יסוד: הממשלה (תיקון מס' 13)",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1117"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2024-01-01T00:00:00",
+        "title": "חוק קידום התחרות בענף המזון (תיקון מס' 8 והוראת שעה), התשפ\"ד",
+        "detail": "פרטית",
+        "sourceUrl": "https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1117"
+      }
+    ],
+    "recentVotes": [],
+    "votingSummary": null,
+    "sourceUrl": "https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1117",
     "hasNewData": false,
     "lastPolledAt": null
   }
