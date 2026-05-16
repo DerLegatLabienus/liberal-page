@@ -1,112 +1,171 @@
 # Data Schema
 
-All interfaces live in `src/types.ts`. All data files live in `src/data/`.
+All shared interfaces live in `src/types.ts`. JSON data files live in `src/data/`.
 
----
+The current app uses `site`, `about`, `gallery`, `faq`, `bills`, `committees`, `mks`, and `summaries-cache`. Older static files such as `representatives`, `updates`, `protocols`, and `primaries` still exist but are not part of the current mounted homepage flow.
 
-## SiteConfig — `src/data/site.json`
+## SiteConfig — `site.json`
 
 ```typescript
 interface SiteConfig {
-  partyName: string;
-  cellSubtitle: string;
-  heroHeadline: string;
-  heroTagline: string;
-  logoPath: string;        // "/logo.png" — served from public/
-  constitutionUrl: string; // "" (empty)
-  contactEmail: string;    // "" (empty)
+  partyName: string
+  cellSubtitle: string
+  heroHeadline: string
+  heroTagline: string
+  logoPath: string
+  constitutionUrl: string
+  contactEmail: string
 }
 ```
 
-**Note:** `constitutionUrl` and `contactEmail` are currently empty strings — their UI surfaces (ConstitutionTab, Footer email link) handle the empty-string case gracefully.
+Join URLs are not stored in `site.json`. `JoinSelector` owns the effective-soft URL mapping because those links are fixed integration targets, not editable site content.
 
-**Join form URLs** are constants in `JoinSection.tsx`, not in `site.json`:
-- `effective-soft.co.il/XZone/pfo?uid=licudliberal` — new member, individual
-- `effective-soft.co.il/XZone/pfo?uid=licudliberal2` — new member, couple
-- `effective-soft.co.il/XZone/pfo?uid=licudliberal3` — existing Likud member joining group, individual
-- `effective-soft.co.il/XZone/pfo?uid=licudliberal4` — existing Likud member joining group, couple
-
----
-
-## Bill — `src/data/bills.json`
+## Bill — `bills.json`
 
 ```typescript
 interface Bill {
-  id: number;
-  number: string;   // "פ/1234"
-  title: string;
-  status: 'בוועדה' | 'הצבעה קרובה' | 'עבר' | 'נדחה';
-  position: 'תומכים' | 'מתנגדים' | 'עוקבים';
-  notes: string;
+  id: number
+  oknesset_id: string
+  number: string
+  title: string
+  status: 'בוועדה' | 'הצבעה קרובה' | 'עבר' | 'נדחה'
+  position: 'תומכים' | 'מתנגדים' | 'עוקבים'
+  notes: string
+  committee: string
+  sourceUrl: string
+  documentUrl: string | null
+  hasNewData: boolean
+  lastPolledAt: string | null
 }
 ```
 
----
+`id` is a local numeric ID used for drawer rendering and delete routes. `oknesset_id` is the external ID used for refreshes.
 
-## Representative — `src/data/representatives.json`
+## Committee — `committees.json`
 
 ```typescript
-interface Representative {
-  id: number;
-  name: string;      // "ח\"כ רון כהן"
-  role: string;      // "חבר כנסת" | "חברת כנסת"
-  committee: string;
-  initials: string;  // shown in avatar circle
+interface Committee {
+  id: number
+  oknesset_id: string
+  name: string
+  chair: string
+  lastSessionDate: string | null
+  lastSessionSummary: string | null
+  lastSessionDocumentUrl: string | null
+  sourceUrl: string
+  hasNewData: boolean
+  lastPolledAt: string | null
 }
 ```
 
----
+Committee polling can update latest session fields and cache a summary when a protocol document is available.
 
-## Update — `src/data/updates.json`
+## MK — `mks.json`
 
 ```typescript
-interface Update {
-  id: number;
-  date: string;        // ISO: "2026-05-02"
-  title: string;
-  description: string;
+interface Mk {
+  id: number
+  oknesset_id: string
+  knesset_site_id?: string
+  name: string
+  party: string
+  email?: string | null
+  photoUrl?: string | null
+  currentRoles?: MkRole[]
+  activity?: MkActivity[]
+  recentVotes: MkVote[]
+  votingSummary: string | null
+  sourceUrl: string
+  hasNewData: boolean
+  lastPolledAt: string | null
 }
 ```
 
----
+`oknesset_id` stores the internal Knesset/OData person ID for MKs added from Knesset-site URLs. `knesset_site_id` stores the public website ID when available.
 
-## Protocol — `src/data/protocols.json`
+### MK Supporting Types
 
 ```typescript
-interface Protocol {
-  id: number;
-  date: string;
-  title: string;
-  attendees: string[];
-  fileUrl: string;   // placeholder paths — files not yet hosted
+interface MkVote {
+  date: string
+  billTitle: string
+  vote: 'בעד' | 'נגד' | 'נמנע' | 'נעדר'
+}
+
+type MkActivityType = 'bill_initiated' | 'vote' | 'duty_change' | 'question'
+
+interface MkActivity {
+  type: MkActivityType
+  date: string
+  title: string
+  detail?: string
+  sourceUrl?: string
+}
+
+interface MkRole {
+  positionId: number
+  description: string
+  committeeName?: string
+  factionName?: string
+  isCurrent: boolean
+  startDate: string | null
 }
 ```
 
----
+The current scraper populates `bill_initiated` and `question` activity. Vote and duty-change types remain in the shared type for compatibility with existing UI/data shape.
 
-## PrimariesCycle / PrimariesCandidate — `src/data/primaries.json`
-
-```typescript
-interface PrimariesCandidate {
-  name: string;
-  role: string;
-  reason?: string;
-}
-
-interface PrimariesCycle {
-  cycle: string;
-  current: boolean;  // only the current cycle is displayed
-  candidates: PrimariesCandidate[];
-}
-```
-
----
-
-## AboutData — `src/data/about.json`
+## Static Public Content
 
 ```typescript
+interface GalleryItem {
+  id: number
+  src: string
+  caption: string
+  date: string
+}
+
+interface FaqItem {
+  id: number
+  question: string
+  answer: string
+}
+
+interface LeadershipMember {
+  name: string
+  role: string
+  image: string
+}
+
 interface AboutData {
-  paragraphs: string[];
-  values: string[];
+  paragraphs: string[]
+  values: string[]
+  leadership?: LeadershipMember[]
 }
 ```
+
+## Summary Cache — `summaries-cache.json`
+
+```typescript
+interface SummaryCache {
+  [md5: string]: {
+    summary: string
+    createdAt: string
+    sourceUrl: string
+  }
+}
+```
+
+Summaries are keyed by MD5 of the downloaded document buffer.
+
+## Tracking Types and URL Parsing
+
+```typescript
+type TrackingType = 'bill' | 'committee' | 'mk'
+
+interface ParsedUrl {
+  type: TrackingType
+  id: string
+}
+```
+
+`POST /api/tracking/add` accepts either a parsed URL or `{ rawId, type }`. Supported parser patterns currently cover oknesset bill/member/committee URLs, selected Knesset bill/committee/MK URLs, and raw numeric IDs selected in the UI.

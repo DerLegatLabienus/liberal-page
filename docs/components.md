@@ -1,131 +1,115 @@
 # Component Reference
 
-All components are in `src/components/`. Each has a co-located `.module.css` file. No external UI library — all styling is custom CSS Modules + global tokens.
+Current components live under `src/components/`. Styling is Tailwind-based, with shadcn-style primitives in `src/components/ui/`. There are no current `.module.css` component styles.
 
----
+## App Composition
 
-## Mounted in App.tsx
+`src/App.tsx` mounts:
 
-Only two components are currently rendered:
+| Component | Purpose |
+|-----------|---------|
+| `layout/Header` | Sticky nav, logo, Knesset drawer trigger, new-data badge |
+| `sections/HeroSection` | Main headline and CTAs |
+| `sections/ParliamentStrip` | Horizontal preview of active bills and one committee |
+| `sections/AboutSection` | About copy and values from `about.json` |
+| `sections/GallerySection` | Gallery grid from `gallery.json` |
+| `sections/FaqSection` | Accordion from `faq.json` |
+| `sections/JoinSection` | Join selector and secure handoff to effective-soft |
+| `layout/Footer` | Footer content |
+| `layout/ParliamentDrawer` | Side drawer for tracked bills, committees, and MKs |
 
-| Component | Section id | Data source |
-|-----------|-----------|-------------|
-| `Header` | — | `site.json` |
-| `Hero` | — | `site.json` |
+## Layout Components
 
-All others are built and data-wired but not yet composed into the page (backlog foundational item #2).
+### `Header`
 
----
+Reads `site.json` for logo and party name. The nav links are currently `#about`, `#gallery`, `#faq`, and `#join`.
 
-## Header
+The "מעקב כנסת" button opens the drawer. If any bill, committee, or MK has `hasNewData: true`, the button shows a blue dot badge. The current implementation computes the badge but does not clear `hasNewData` when the drawer opens.
 
-**Data:** `SiteConfig` (partyName, logoPath)  
-**Renders:** Logo image (with `logoFallback` div on error) + party name on the right; nav links on the left.  
-**Nav links (hardcoded):** חקיקה → `#bills`, עדכונים → `#updates`, פריימריז → `#primaries`, פרוטוקולים → `#protocols`, הצטרפו → `#join` (accent style).  
-**State:** `logoError: boolean` — switches to fallback on `img.onError`.
+### `ParliamentDrawer`
 
----
+Full-height side sheet. It opens from the right in RTL and left in LTR using `useDirection()`.
 
-## Hero
+The drawer contains:
 
-**Data:** `SiteConfig` (cellSubtitle, heroHeadline, heroTagline)  
-**Renders:** Subtitle label, H1 headline, tagline paragraph, CTA button.  
-**CTA:** Smooth-scrolls to `#join` section on click.
+- `AddTrackingInput`
+- Tabs for `bills`, `committees`, and `mks`
+- `BillCard`, `CommitteeCard`, and `MkCard` lists
+- A footer with the latest frontend sync timestamp and manual refresh button
 
----
+The drawer receives all data and remove callbacks from `App.tsx`.
 
-## BillsTracker
+### `Footer`
 
-**Data:** `Bill[]` from `bills.json`  
-**Renders:** Section with title/subtitle + CSS grid of `BillCard` components.  
-**Section id:** `#bills`
+Renders simple site footer content using `site.json`.
 
-### BillCard
+## Section Components
 
-**Props:** `{ bill: Bill }`  
-**Renders:**
-- Left accent bar color driven by `bill.position` (`accentGold` / `accentRed` / `accentGray`)
-- Bill number (`פ/1234`)
-- Bill title
-- Two badges: status badge + position badge (CSS classes from `globals.css`)
-- Notes text
+### `HeroSection`
 
-**Badge class map:**
+Reads headline, subtitle, and tagline from `site.json`. It exposes CTAs for joining and opening the Knesset tracking drawer.
 
-| Value | CSS class |
-|-------|-----------|
-| בוועדה | `.badge-committee` |
-| הצבעה קרובה | `.badge-vote` |
-| עבר | `.badge-passed` |
-| נדחה | `.badge-rejected` |
-| תומכים | `.badge-support` |
-| מתנגדים | `.badge-oppose` |
-| עוקבים | `.badge-monitor` |
+### `ParliamentStrip`
 
----
+Receives bills and committees from `App.tsx`. It shows up to three active bills, one committee, and a button that opens the full drawer.
 
-## Representatives
+### `AboutSection`
 
-**Data:** `Representative[]` from `representatives.json`  
-**Renders:** Section with title + flex-wrap grid of inline cards.  
-**Section id:** `#representatives`  
-**Card fields (top to bottom):** Avatar circle (initials), name, role, party (muted), committee (gold).  
-**`party` field:** Required on all records — no default/fallback in component or data.  
-**Note:** Cards are built inline — no separate `RepresentativeCard` component.
+Reads `about.json`. Renders paragraphs, values, and optional leadership items if present.
 
----
+### `GallerySection`
 
-## UpdatesFeed
+Reads `gallery.json` and renders image cards with captions and dates.
 
-**Data:** `Update[]` from `updates.json`  
-**Renders:** Ordered list. Each item: date badge (`dd/mm`) + title + description.  
-**Section id:** `#updates`  
-**Date format:** strips year — shows `dd/mm` only.
+### `FaqSection`
 
----
+Reads `faq.json` and renders an accordion.
 
-## PrimariesSection
+### `JoinSection`
 
-**Data:** `PrimariesCycle[]` from `primaries.json`  
-**Renders:** If a `current` cycle exists: cycle name H3 + grid of `CandidateCard`. Otherwise: empty state message.  
-**Section id:** `#primaries`
+Renders the local join selector and explains that the official form opens in effective-soft.
 
-### CandidateCard
+The selector does not collect or submit personal data. It only chooses the correct external effective-soft URL.
 
-**Props:** `{ candidate: PrimariesCandidate }`  
-**Renders:** Gold star icon, avatar circle (auto-derived initials), name, role, optional reason block.  
-**Initials:** First char of first two whitespace-separated words in `name`.
+## Parliament Components
 
----
+### `JoinSelector`
 
-## ProtocolsList
+Frontend-only selector for the hitkpakdut flow. It asks for membership status and individual/couple mode, then opens one of the official effective-soft forms:
 
-**Data:** `Protocol[]` from `protocols.json`  
-**Renders:** List. Each row: DOC badge, date (`dd/mm/yyyy`), title, attendee names joined by ` · `, download link.  
-**Section id:** `#protocols`  
-**Date format:** full `dd/mm/yyyy`.
+- `licudliberal` for new/renewal individual registration
+- `licudliberal2` for new/renewal couple registration
+- `licudliberal3` for existing Likud member individual group join
+- `licudliberal4` for existing Likud member couple group join
 
----
+It also shows direct fallback links and WhatsApp support. There is no backend route, no local storage, and no form-data proxy.
 
-## JoinSection
+### `AddTrackingInput`
 
-**Data:** `SiteConfig` (joinFormUrl)  
-**Renders:** If `joinFormUrl` is set: `<iframe>`. Otherwise: placeholder text "קישור לטופס ההצטרפות לא הוגדר עדיין".  
-**Section id:** `#join`
+Accepts a URL or a raw numeric ID. Raw numeric IDs show an inline type selector for bill, committee, or MK.
 
----
+Submits to `POST /api/tracking/add` through `api.tracking.add()`. On success, it clears the input and asks the parent to refresh parliament data.
 
-## Sidebar
+Supported URL parsing is defined in `server/services/url-parser.ts`. Although the helper text mentions `gov.il`, the parser currently supports oknesset URLs, selected Knesset URLs, and raw IDs.
 
-**State:** `activeTab: 'about' | 'pastrecs' | 'constitution'`  
-**Renders:** Tab bar (3 buttons) + tab content switcher.  
-**Tabs:**
-- `AboutTab` — renders `about.json` paragraphs + values list
-- `PastRecsTab` — past primaries recommendations (reads `primaries.json` cycles where `current === false`)
-- `ConstitutionTab` — links to / embeds `site.constitutionUrl`
+### `BillCard`
 
----
+Displays a tracked bill's number, title, status, position, notes, source link, optional document link, and remove action. It uses status/position values from the `Bill` type.
 
-## Footer
+### `CommitteeCard`
 
-Renders party name and copyright. No data dependencies beyond `site.json` partyName.
+Displays committee name, chair, latest session date, optional summary/document link, source link, poll timestamp, and remove action.
+
+### `MkCard`
+
+Displays MK name, party, optional photo/email/roles, recent activity, source link, poll timestamp, and remove action. Activity currently comes from the Knesset OData scraper for Knesset-site MK URLs.
+
+## UI Primitives
+
+`src/components/ui/` contains local shadcn-style primitives such as `button`, `card`, `input`, `sheet`, `tabs`, `badge`, `accordion`, and `separator`.
+
+Some UI primitive files export both components and style helpers. ESLint reports `react-refresh/only-export-components` warnings for those files, but the current build and tests pass.
+
+## Legacy Data Files
+
+`representatives.json`, `updates.json`, `protocols.json`, and `primaries.json` still exist in `src/data/`, but their old sections are not mounted in the current app flow.

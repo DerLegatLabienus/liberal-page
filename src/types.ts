@@ -4,7 +4,6 @@ export interface SiteConfig {
   heroHeadline: string
   heroTagline: string
   logoPath: string
-  joinFormUrl: string
   constitutionUrl: string
   contactEmail: string
 }

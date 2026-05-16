@@ -1,4 +1,5 @@
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import siteData from '@/data/site.json'
 import type { SiteConfig } from '@/types'
 
@@ -22,13 +23,15 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
           {site.heroTagline}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button
-            render={<a href={site.joinFormUrl || '#join'} target="_blank" rel="noopener noreferrer" />}
-            size="lg"
-            className="bg-white text-blue-700 hover:bg-blue-50 shadow-lg"
+          <a
+            href="#join"
+            className={cn(
+              buttonVariants({ size: 'lg' }),
+              'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
+            )}
           >
             הצטרפו לליכוד ←
-          </Button>
+          </a>
           <Button
             variant="outline"
             size="lg"

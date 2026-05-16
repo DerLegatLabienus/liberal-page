@@ -1,13 +1,13 @@
 # Backlog
 
-## 1. Modernized Hitkpakdut Form (Priority: High)
+## 1. Join Flow Analytics / Config (Priority: Low)
 
-`src/components/parliament/JoinForm.tsx` is built with all fields (name, phone, email, ID, neighborhood).
-Currently the "הצטרפות" CTA in `JoinSection.tsx` links to the official Likud registration page.
+`JoinSection` uses a frontend-only selector that routes users to the correct
+effective-soft form. The site does not collect or store membership details.
 
-**To activate:** Wire `JoinForm` as the primary CTA in `JoinSection.tsx` and add
-`POST /api/members/join` to the Express server that writes submissions to
-`src/data/members.json`. Replace the external link button with the form.
+Potential future enhancement: move the URL mapping/help text to a read-only
+config endpoint or add anonymous click analytics. Do not proxy submissions or
+store identity/payment/signature data locally.
 
 ## 2. Database Migration (Priority: Medium)
 
