@@ -91,7 +91,9 @@ async function pollMks(): Promise<void> {
       const newItems = fresh.filter((a) => a.sourceUrl && !existingUrls.has(a.sourceUrl))
 
       if (newItems.length > 0) {
-        mk.activity = [...newItems, ...(mk.activity ?? [])].slice(0, 20)
+        mk.activity = [...newItems, ...(mk.activity ?? [])]
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 20)
         mk.hasNewData = true
         changed = true
       }
