@@ -17,6 +17,14 @@ in each route file — swap those functions for repository calls.
 
 ## 3. Multi-Language Support (Priority: Low)
 
+### 3a. Shareable language links (Priority: Low)
+
+After i18n is shipped, add `?lang=en` query param support so language-specific URLs can be shared and bookmarked. On load, read `?lang=` before `localStorage` and set language accordingly. Enables sharing an English-language URL with diaspora audiences.
+
+Depends on: item 3 (i18n) shipping first.
+
+
+
 Add an English (LTR) version of the site. `useDirection()` already observes
 `document.documentElement.dir` — switching the attribute flips all directional
 components automatically.
