@@ -47,18 +47,39 @@ describe('MkCard — real Knesset data (site ID 1116: דן אילוז)', () => {
     expect(img).toHaveAttribute('src', 'https://main.knesset.gov.il/mk/members/1116/photo')
   })
 
-  it('shows exactly 4 activity items (capped from 20)', () => {
-    render(<MkCard mk={mk1116} />)
-    // All 1116 activity is bill_initiated — each shows the 📋 icon
+  it('shows exactly 4 activity items (capped)', () => {
+    const activity = Array.from({ length: 6 }, (_, i) => ({
+      type: 'bill_initiated' as const,
+      date: `2026-0${i + 1}-01T00:00:00`,
+      title: `הצעת חוק ${i + 1}`,
+      sourceUrl: `https://example.com/bill/${i + 1}`,
+    }))
+    render(<MkCard mk={mkFixture({ name: 'דן אילוז', activity })} />)
     const icons = screen.getAllByText('📋')
     expect(icons).toHaveLength(4)
   })
 
   it('does not show the 5th activity item', () => {
-    render(<MkCard mk={mk1116} />)
-    // 5th item in mks.json activity array
-    const fifthTitle = mk1116.activity![4].title
-    expect(screen.queryByText(fifthTitle)).not.toBeInTheDocument()
+    const activity = Array.from({ length: 6 }, (_, i) => ({
+      type: 'bill_initiated' as const,
+      date: `2026-0${i + 1}-01T00:00:00`,
+      title: `הצעת חוק ${i + 1}`,
+      sourceUrl: `https://example.com/bill/${i + 1}`,
+    }))
+    render(<MkCard mk={mkFixture({ name: 'דן אילוז', activity })} />)
+    expect(screen.queryByText('הצעת חוק 5')).not.toBeInTheDocument()
+  })
+
+  it('shows formatted Hebrew date for each activity item', () => {
+    const activity = [{
+      type: 'bill_initiated' as const,
+      date: '2026-05-14T10:00:00',
+      title: 'הצעת חוק בדיקה',
+      detail: 'פרטית',
+      sourceUrl: 'https://example.com/bill/1',
+    }]
+    render(<MkCard mk={mkFixture({ activity })} />)
+    expect(screen.getByText(/14\.5\.2026/)).toBeInTheDocument()
   })
 
   it('renders source link pointing to Knesset MK page', () => {

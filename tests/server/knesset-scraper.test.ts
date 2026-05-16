@@ -17,6 +17,7 @@ const BILLS_RESPONSE = {
         Name: 'הצעת חוק חכירה הוגנת, התשפ"ד-2024',
         SubTypeDesc: 'פרטית',
         KnessetNum: 25,
+        LastUpdatedDate: '2026-03-29T00:00:00',
       },
     },
     {
@@ -30,6 +31,7 @@ const BILLS_RESPONSE = {
         Name: 'הצעת חוק ישנה, התשפ"ד-2024',
         SubTypeDesc: 'פרטית',
         KnessetNum: 25,
+        LastUpdatedDate: '2024-01-01T00:00:00',
       },
     },
   ],

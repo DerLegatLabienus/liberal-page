@@ -12,6 +12,7 @@ interface KNS_BillInitiatorRecord {
     Name: string
     SubTypeDesc: string | null
     KnessetNum: number
+    LastUpdatedDate: string
   }
 }
 
@@ -34,7 +35,7 @@ async function fetchMkBills(knsId: number): Promise<MkActivity[]> {
     `${KNESSET_ODATA_BASE}/KNS_BillInitiator` +
     `?$filter=PersonID%20eq%20${knsId}` +
     `&$expand=KNS_Bill` +
-    `&$orderby=LastUpdatedDate%20desc` +
+    `&$orderby=KNS_Bill%2FLastUpdatedDate%20desc` +
     // Fetch extra bills to buffer for the interleaved sort with questions,
     // so the final merged slice of `limit` (default 10) is well-populated.
     `&$top=20` +
@@ -45,7 +46,7 @@ async function fetchMkBills(knsId: number): Promise<MkActivity[]> {
     .filter((r) => r.KNS_Bill?.Name)
     .map((r) => ({
       type: 'bill_initiated' as const,
-      date: r.LastUpdatedDate,
+      date: r.KNS_Bill.LastUpdatedDate,
       title: r.KNS_Bill.Name,
       detail: r.KNS_Bill.SubTypeDesc ?? undefined,
       sourceUrl:

@@ -27,9 +27,9 @@ function ActivityItem({ item }: { item: MkActivity }) {
       <span className="shrink-0 mt-0.5">{ACTIVITY_ICONS[item.type] ?? '•'}</span>
       <div className="flex-1 min-w-0">
         <p className="text-right text-foreground leading-snug line-clamp-2">{item.title}</p>
-        {item.detail && (
-          <p className="text-right text-muted-foreground">{item.detail}</p>
-        )}
+        <p className="text-right text-muted-foreground">
+          {item.detail ? `${item.detail} · ` : ''}{new Date(item.date).toLocaleDateString('he-IL')}
+        </p>
       </div>
       {item.sourceUrl && (
         <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer"
