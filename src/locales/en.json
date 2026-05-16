@@ -1,0 +1,91 @@
+{
+  "ui": {
+    "nav_about": "About",
+    "nav_gallery": "Gallery",
+    "nav_faq": "FAQ",
+    "nav_join": "Join",
+    "nav_tracker": "📊 Knesset Tracker",
+    "lang_toggle": "עב",
+    "drawer_title": "📊 Knesset Tracker",
+    "drawer_bills_tab": "Bills",
+    "drawer_committees_tab": "Committees",
+    "drawer_mks_tab": "MKs",
+    "drawer_empty_bills": "No bills tracked — add one using the link above",
+    "drawer_empty_committees": "No committees tracked",
+    "drawer_empty_mks": "No MKs tracked",
+    "drawer_last_synced": "Last synced",
+    "drawer_not_synced": "Not synced",
+    "drawer_refresh": "Refresh",
+    "strip_heading": "📊 Latest Knesset Updates",
+    "strip_see_all": "See all data →",
+    "strip_active_bill": "Active bill",
+    "strip_tracked_committee": "Tracked committee",
+    "strip_more": "+ More data"
+  },
+  "hero": {
+    "headline": "Liberalism within the Right",
+    "tagline": "Advancing legislation, representing principles, acting from within",
+    "cta_join": "Join Likud →",
+    "cta_tracker": "📊 Knesset Tracker"
+  },
+  "about": {
+    "heading": "Who We Are",
+    "paragraphs": [
+      "The Liberals in Likud are a group of veteran and new Likud members from across Israel, working to advance liberal values of individual freedom and free markets within the Likud movement.",
+      "We believe the individual is sovereign over themselves and the foundation of the state. The state's role is to expand individual freedoms — including personal rights and property — while ensuring security and justice.",
+      "We act from within: bringing the liberal voice to Knesset committees, faction meetings, and primaries — leaving a mark on laws that affect every citizen in Israel."
+    ],
+    "values_heading": "Our Values",
+    "values": ["Individual freedom", "Free market", "Rule of law", "Civil rights", "Good governance", "Freedom of speech"],
+    "leadership_heading": "Leadership"
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "items": [
+      {
+        "question": "Who are the Liberals in Likud?",
+        "answer": "A group of veteran and new Likud members from across Israel, working to advance individual freedom and free market values within the Likud movement. The movement was founded by Amir Weitzman."
+      },
+      {
+        "question": "What is the group's philosophy?",
+        "answer": "We believe the individual is sovereign over themselves and the foundation of the state. The state's role is to expand individual freedoms — including personal rights and property — while ensuring security and justice. We are proud Zionists committed to the land, its people, and its culture."
+      },
+      {
+        "question": "What areas does the group work in?",
+        "answer": "The group operates across 20 major reform areas: opening markets to competition, reducing regulation, land reform, education freedom (school vouchers), abolishing production councils, media freedom, reducing the tax burden, and more."
+      },
+      {
+        "question": "How do I join?",
+        "answer": "Click the 'Join Likud' button at the bottom of the page. First join Likud, then you can join the cell's activities and be part of change from within."
+      }
+    ]
+  },
+  "join": {
+    "heading": "Join Likud",
+    "subtitle": "Choose your membership path and we'll direct you to the correct official form in the Liberals in Likud secure system.",
+    "choose_path": "Choose the right path",
+    "choose_subtitle": "After selecting, you'll be directed to the official form in the Liberals in Likud secure system.",
+    "membership_status": "Membership status",
+    "join_type": "Membership type",
+    "individual": "Individual",
+    "couple": "Couple",
+    "status_new_title": "I have never been a Likud member",
+    "status_new_desc": "For new Likud registration and joining the Liberal cell.",
+    "status_renewal_title": "Previously a member / renewal / code 99",
+    "status_renewal_desc": "For renewing membership or completing re-registration.",
+    "status_existing_title": "I am already a Likud member",
+    "status_existing_desc": "To join the Liberal group without payment details.",
+    "summary_placeholder": "Select membership status and type to open the appropriate form",
+    "privacy_note": "Identity, signature, and payment details are entered only in the effective-soft system and are not stored on this site.",
+    "open_form": "Open official form",
+    "whatsapp_help": "Help via WhatsApp",
+    "link_new_individual": "New individual membership",
+    "link_new_couple": "New couple membership",
+    "link_existing_individual": "Existing Likud member - individual",
+    "link_existing_couple": "Existing Likud members - couple"
+  },
+  "gallery": {
+    "heading": "Gallery",
+    "empty": "Photos coming soon."
+  }
+}
