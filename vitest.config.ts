@@ -14,5 +14,8 @@ export default defineConfig({
     environmentMatchGlobs: [
       ['tests/server/**', 'node'],
     ],
+    alias: {
+      'react-i18next': path.resolve(__dirname, './src/__mocks__/react-i18next.ts'),
+    },
   },
 })
