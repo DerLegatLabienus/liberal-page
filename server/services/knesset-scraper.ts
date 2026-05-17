@@ -1,99 +1,73 @@
 import type { MkActivity } from '../../src/types'
 
-const KNESSET_ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+const KNESSET_WEBSITE_API = 'https://www.knesset.gov.il/WebSiteApi/knessetapi'
+const CURRENT_KNESSET = 25
 
-interface KNS_BillInitiatorRecord {
-  BillInitiatorID: number
-  BillID: number
-  PersonID: number
-  LastUpdatedDate: string
-  KNS_Bill: {
-    BillID: number
+interface KnessetActivityResponse {
+  PrivateBills: Array<{
+    Date: string
+    InitiatiorType: string
     Name: string
-    SubTypeDesc: string | null
-    KnessetNum: number
-    LastUpdatedDate: string
-  }
+    BillLink: string
+  }>
+  PlenaryVotes: Array<{
+    Date: string
+    VoteResult: string
+    Name: string
+    VoteID: number
+  }>
+  Queries: Array<{
+    ID: number
+    Date: string
+    QueryType: string
+    Subject: string
+  }>
+  AgendaProposals: unknown[]
 }
 
-interface KNS_QueryRecord {
-  QueryID: number
-  Name: string
-  TypeDesc: string | null
-  SubmitDate: string
+function parsePlenaryDate(s: string): string {
+  // "13/05/2026, בשעה 11:42" → "2026-05-13T11:42:00"
+  const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})(?:.*?(\d{2}):(\d{2}))?/)
+  if (!m) return new Date().toISOString()
+  const [, d, mo, y, h = '00', mi = '00'] = m
+  return `${y}-${mo}-${d}T${h}:${mi}:00`
 }
 
-async function fetchJson<T>(url: string): Promise<T[]> {
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`Knesset OData error ${res.status}`)
-  const data = await res.json() as { value?: T[] }
-  return data.value ?? []
-}
+export async function fetchMkActivity(siteId: number, limit = 10): Promise<MkActivity[]> {
+  const url = `${KNESSET_WEBSITE_API}/MKs/GetParlamentayActivity?mkId=${siteId}&knessetId=${CURRENT_KNESSET}`
+  const res = await fetch(url, {
+    headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
+  })
+  if (!res.ok) throw new Error(`Knesset Website API error ${res.status}`)
+  const data = await res.json() as KnessetActivityResponse
 
-async function fetchMkBills(knsId: number): Promise<MkActivity[]> {
-  const url =
-    `${KNESSET_ODATA_BASE}/KNS_BillInitiator` +
-    `?$filter=PersonID%20eq%20${knsId}` +
-    `&$expand=KNS_Bill` +
-    `&$orderby=KNS_Bill%2FLastUpdatedDate%20desc` +
-    // Fetch extra bills to buffer for the interleaved sort with questions,
-    // so the final merged slice of `limit` (default 10) is well-populated.
-    `&$top=20` +
-    `&$format=json`
+  const bills: MkActivity[] = (data.PrivateBills ?? []).map((b) => ({
+    type: 'bill_initiated' as const,
+    date: b.Date,
+    title: b.Name,
+    sourceUrl: `https://main.knesset.gov.il${b.BillLink}`,
+  }))
 
-  const records = await fetchJson<KNS_BillInitiatorRecord>(url)
-  return records
-    .filter((r) => r.KNS_Bill?.Name)
-    .map((r) => ({
-      type: 'bill_initiated' as const,
-      date: r.KNS_Bill.LastUpdatedDate,
-      title: r.KNS_Bill.Name,
-      detail: r.KNS_Bill.SubTypeDesc ?? undefined,
-      sourceUrl:
-        `https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx` +
-        `?t=lawsuggestionssearch&lawitemid=${r.BillID}`,
-    }))
-}
+  const votes: MkActivity[] = (data.PlenaryVotes ?? []).map((v) => ({
+    type: 'vote' as const,
+    date: parsePlenaryDate(v.Date),
+    title: v.Name,
+    detail: v.VoteResult,
+    sourceUrl: `https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=${v.VoteID}`,
+  }))
 
-async function fetchMkQuestions(knsId: number): Promise<MkActivity[]> {
-  const url =
-    `${KNESSET_ODATA_BASE}/KNS_Query` +
-    `?$filter=PersonID%20eq%20${knsId}` +
-    `&$orderby=SubmitDate%20desc` +
-    `&$top=10` +
-    `&$format=json`
-
-  const records = await fetchJson<KNS_QueryRecord>(url)
-  return records
-    .filter((r) => r.Name)
-    .map((r) => ({
+  const seen = new Set<number>()
+  const questions: MkActivity[] = (data.Queries ?? [])
+    .filter((q) => { if (seen.has(q.ID)) return false; seen.add(q.ID); return true })
+    .map((q) => ({
       type: 'question' as const,
-      date: r.SubmitDate,
-      title: r.Name,
-      detail: r.TypeDesc ?? undefined,
-      sourceUrl:
-        `https://main.knesset.gov.il/Activity/Legislation/Questions/Pages/QueryDetails.aspx` +
-        `?QueryId=${r.QueryID}`,
+      date: q.Date,
+      title: q.Subject,
+      detail: q.QueryType,
+      sourceUrl: `https://main.knesset.gov.il/Activity/Legislation/Questions/Pages/QueryDetails.aspx?QueryId=${q.ID}`,
     }))
-}
 
-/**
- * Fetch MK activity (bills initiated + parliamentary questions)
- * from Knesset OData, merged and sorted newest first.
- *
- * @param knsId  Internal Knesset PersonID (KnsID)
- * @param limit  Max items to return (default 10)
- */
-export async function fetchMkActivity(knsId: number, limit = 10): Promise<MkActivity[]> {
-  const [billsResult, questionsResult] = await Promise.allSettled([
-    fetchMkBills(knsId),
-    fetchMkQuestions(knsId),
-  ])
-
-  const bills = billsResult.status === 'fulfilled' ? billsResult.value : []
-  const questions = questionsResult.status === 'fulfilled' ? questionsResult.value : []
-
-  return [...bills, ...questions]
+  return [...bills, ...votes, ...questions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, limit)
 }

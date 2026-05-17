@@ -82,11 +82,11 @@ async function pollMks(): Promise<void> {
   let changed = false
 
   for (const mk of mks) {
-    const knsId = mk.oknesset_id ? parseInt(mk.oknesset_id, 10) : 0
-    if (!knsId) continue
+    const siteId = mk.knesset_site_id ? parseInt(mk.knesset_site_id, 10) : 0
+    if (!siteId) continue
 
     try {
-      const fresh = await fetchMkActivity(knsId, 20)
+      const fresh = await fetchMkActivity(siteId, 20)
       const existingUrls = new Set((mk.activity ?? []).map((a) => a.sourceUrl))
       const newItems = fresh.filter((a) => a.sourceUrl && !existingUrls.has(a.sourceUrl))
 
