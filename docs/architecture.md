@@ -128,7 +128,7 @@ The poller:
 
 - Checks bills through oknesset and marks changed status with `hasNewData`.
 - Checks committee sessions and summarizes protocol files when available.
-- Checks MK activity through the Knesset OData scraper.
+- Checks MK activity through the Knesset website API (`GetParlamentayActivity`), which returns private bills, plenary votes, and parliamentary questions in the same order the Knesset website displays them. Uses `knesset_site_id` (e.g. 1116) as the MK identifier.
 - Updates `lastPolledAt`.
 - Writes each JSON file only when tracked content changed, though some route refreshes write timestamps independently.
 
