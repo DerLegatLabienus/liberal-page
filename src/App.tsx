@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParliament } from '@/hooks/useParliament'
 import { api } from '@/lib/api-client'
 import Header from '@/components/layout/Header'
@@ -12,6 +13,8 @@ import FaqSection from '@/components/sections/FaqSection'
 import JoinSection from '@/components/sections/JoinSection'
 
 export default function App() {
+  const { i18n } = useTranslation()
+  const isHebrew = i18n.language === 'he'
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { bills, committees, mks, loading, lastSyncedAt, refresh } = useParliament()
 
@@ -20,7 +23,7 @@ export default function App() {
     committees.some((c) => c.hasNewData) ||
     mks.some((m) => m.hasNewData)
 
-  const handleOpenDrawer = useCallback(() => setDrawerOpen(true), [])
+  const handleOpenDrawer = useCallback(() => { if (isHebrew) setDrawerOpen(true) }, [isHebrew])
   const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
   const handleAdd = useCallback(() => refresh(), [refresh])
 
@@ -41,30 +44,38 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header hasNewParliamentData={hasNewData} onOpenDrawer={handleOpenDrawer} />
+      <Header
+        hasNewParliamentData={hasNewData}
+        onOpenDrawer={handleOpenDrawer}
+        trackerEnabled={isHebrew}
+      />
       <main>
         <HeroSection onOpenDrawer={handleOpenDrawer} />
-        <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
+        {isHebrew && (
+          <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
+        )}
         <AboutSection />
         <GallerySection />
         <FaqSection />
         <JoinSection />
       </main>
       <Footer />
-      <ParliamentDrawer
-        open={drawerOpen}
-        onClose={handleCloseDrawer}
-        bills={bills}
-        committees={committees}
-        mks={mks}
-        loading={loading}
-        lastSyncedAt={lastSyncedAt}
-        onRefresh={refresh}
-        onAdd={handleAdd}
-        onRemoveBill={handleRemoveBill}
-        onRemoveCommittee={handleRemoveCommittee}
-        onRemoveMk={handleRemoveMk}
-      />
+      {isHebrew && (
+        <ParliamentDrawer
+          open={drawerOpen}
+          onClose={handleCloseDrawer}
+          bills={bills}
+          committees={committees}
+          mks={mks}
+          loading={loading}
+          lastSyncedAt={lastSyncedAt}
+          onRefresh={refresh}
+          onAdd={handleAdd}
+          onRemoveBill={handleRemoveBill}
+          onRemoveCommittee={handleRemoveCommittee}
+          onRemoveMk={handleRemoveMk}
+        />
+      )}
     </div>
   )
 }
