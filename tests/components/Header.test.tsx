@@ -1,11 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Header from '@/components/layout/Header'
 
 describe('Header — language toggle URL sync', () => {
   beforeEach(() => {
     vi.spyOn(history, 'replaceState')
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('calls history.replaceState with ?lang=en when toggling from Hebrew', async () => {
