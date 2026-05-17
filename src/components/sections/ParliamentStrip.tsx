@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
 import type { Bill, Committee } from '@/types'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -21,48 +23,41 @@ interface ParliamentStripProps {
 }
 
 export default function ParliamentStrip({ bills, committees, onOpenDrawer }: ParliamentStripProps) {
+  const { t } = useTranslation()
+  const direction = useDirection()
   const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה').slice(0, 3)
 
   return (
-    <section className="border-y border-border bg-blue-50/60 py-8" dir="rtl">
+    <section className="border-y border-border bg-blue-50/60 py-8" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
-            📊 עדכוני כנסת אחרונים
+            {t('ui.strip_heading')}
           </h2>
-          <button
-            onClick={onOpenDrawer}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            לכל הנתונים →
+          <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
+            {t('ui.strip_see_all')}
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1">
           {activeBills.map((bill) => (
             <div
               key={bill.id}
-              dir="rtl"
+              dir={direction}
               className={`min-w-[180px] shrink-0 rounded-lg border border-s-4 bg-white px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
             >
-              <p className="mb-1 text-xs font-medium text-muted-foreground">הצ"ח פעילה</p>
-              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-                {bill.title}
-              </p>
-              <p className={`text-xs font-medium ${STATUS_DOT[bill.status] ?? ''}`}>
-                ● {bill.status}
-              </p>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_active_bill')}</p>
+              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
+              <p className={`text-xs font-medium ${STATUS_DOT[bill.status] ?? ''}`}>● {bill.status}</p>
             </div>
           ))}
           {committees.slice(0, 1).map((c) => (
             <div
               key={c.id}
-              dir="rtl"
+              dir={direction}
               className="min-w-[180px] shrink-0 rounded-lg border border-s-4 border-blue-500 bg-white px-4 py-3 text-right shadow-sm"
             >
-              <p className="mb-1 text-xs font-medium text-muted-foreground">ועדה במעקב</p>
-              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-                {c.name}
-              </p>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_tracked_committee')}</p>
+              <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{c.name}</p>
               {c.lastSessionDate && (
                 <p className="text-xs text-green-600">
                   ● ישיבה: {new Date(c.lastSessionDate).toLocaleDateString('he-IL')}
@@ -74,7 +69,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             onClick={onOpenDrawer}
             className="flex min-w-[120px] shrink-0 items-center justify-center rounded-lg border border-dashed border-primary/40 bg-white px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
           >
-            + עוד נתונים
+            {t('ui.strip_more')}
           </button>
         </div>
       </div>
