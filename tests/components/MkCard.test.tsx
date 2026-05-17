@@ -128,6 +128,38 @@ describe('MkCard — real Knesset data (site ID 1117: משה רוט)', () => {
   })
 })
 
+describe('MkCard — vote activity colors', () => {
+  const makeVote = (result: string) => mkFixture({
+    activity: [{
+      type: 'vote' as const,
+      date: '2026-05-13T11:42:00',
+      title: 'הצעת חוק דחיית מועדים',
+      detail: result,
+      sourceUrl: 'https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=1',
+    }],
+  })
+
+  it('shows vote result text in the feed', () => {
+    render(<MkCard mk={makeVote('הצביע נגד')} />)
+    expect(screen.getByText(/הצביע נגד/)).toBeInTheDocument()
+  })
+
+  it('applies red color class for נגד vote', () => {
+    const { container } = render(<MkCard mk={makeVote('הצביע נגד')} />)
+    expect(container.querySelector('.text-red-500')).toBeInTheDocument()
+  })
+
+  it('applies green color class for בעד vote', () => {
+    const { container } = render(<MkCard mk={makeVote('הצביע בעד')} />)
+    expect(container.querySelector('.text-green-600')).toBeInTheDocument()
+  })
+
+  it('applies yellow color class for נמנע vote', () => {
+    const { container } = render(<MkCard mk={makeVote('נמנע')} />)
+    expect(container.querySelector('.text-yellow-600')).toBeInTheDocument()
+  })
+})
+
 describe('MkCard — edge cases', () => {
   it('shows fallback text when name is empty', () => {
     render(<MkCard mk={mkFixture({ name: '' })} />)

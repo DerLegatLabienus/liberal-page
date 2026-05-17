@@ -22,12 +22,17 @@ interface MkCardProps {
 }
 
 function ActivityItem({ item }: { item: MkActivity }) {
+  const voteColorKey = item.type === 'vote' && item.detail
+    ? Object.keys(VOTE_COLORS).find((k) => item.detail!.includes(k))
+    : undefined
+  const detailColor = voteColorKey ? VOTE_COLORS[voteColorKey] : 'text-muted-foreground'
+
   return (
     <div className="flex items-start gap-2 text-xs" dir="rtl">
       <span className="shrink-0 mt-0.5">{ACTIVITY_ICONS[item.type] ?? '•'}</span>
       <div className="flex-1 min-w-0">
         <p className="text-right text-foreground leading-snug line-clamp-2">{item.title}</p>
-        <p className="text-right text-muted-foreground">
+        <p className={`text-right ${detailColor}`}>
           {item.detail ? `${item.detail} · ` : ''}{new Date(item.date).toLocaleDateString('he-IL')}
         </p>
       </div>
