@@ -1,15 +1,22 @@
+import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
 import galleryData from '@/data/gallery.json'
 import type { GalleryItem } from '@/types'
 
 const gallery = galleryData as GalleryItem[]
 
 export default function GallerySection() {
+  const { t } = useTranslation()
+  const direction = useDirection()
+
   return (
-    <section id="gallery" className="bg-slate-50 py-16" dir="rtl">
+    <section id="gallery" className="bg-slate-50 py-16" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-right text-2xl font-bold text-foreground">גלריה</h2>
+        <h2 className="mb-8 text-right text-2xl font-bold text-foreground">
+          {t('gallery.heading')}
+        </h2>
         {gallery.length === 0 ? (
-          <p className="text-right text-muted-foreground">תמונות יתווספו בקרוב.</p>
+          <p className="text-right text-muted-foreground">{t('gallery.empty')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
             {gallery.map((item) => (
