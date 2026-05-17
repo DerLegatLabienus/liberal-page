@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import siteData from '@/data/site.json'
@@ -10,6 +11,8 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
+  const { t } = useTranslation()
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-sky-600 px-4 py-24 text-center text-white">
       <div className="relative mx-auto max-w-4xl">
@@ -17,10 +20,10 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
           {site.cellSubtitle}
         </p>
         <h1 className="mb-4 text-4xl font-bold leading-tight md:text-6xl">
-          {site.heroHeadline}
+          {t('hero.headline')}
         </h1>
         <p className="mx-auto mb-10 max-w-xl text-lg text-blue-100 leading-relaxed">
-          {site.heroTagline}
+          {t('hero.tagline')}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <a
@@ -30,7 +33,7 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
               'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
             )}
           >
-            הצטרפו לליכוד ←
+            {t('hero.cta_join')}
           </a>
           <Button
             variant="outline"
@@ -38,7 +41,7 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
             onClick={onOpenDrawer}
             className="border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
           >
-            📊 מעקב כנסת
+            {t('hero.cta_tracker')}
           </Button>
         </div>
       </div>
