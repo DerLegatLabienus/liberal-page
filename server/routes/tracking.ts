@@ -92,7 +92,7 @@ router.post('/add', async (req, res) => {
       if (url && isKnessetSiteUrl(url)) {
         const siteId = parseInt(id, 10)
         const identity = await getMkBySiteId(siteId)
-        const activity = await fetchMkActivity(identity.knsId, 10).catch(() => [])
+        const activity = await fetchMkActivity(siteId, 10).catch(() => [])
         newItem = {
           id: nextId,
           oknesset_id: String(identity.knsId),
