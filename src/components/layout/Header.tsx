@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Menu } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { useDirection } from '@/hooks/useDirection'
 import siteData from '@/data/site.json'
@@ -12,16 +13,25 @@ interface HeaderProps {
   onOpenDrawer: () => void
 }
 
-const NAV_LINKS = [
-  { label: 'אודות', href: '#about' },
-  { label: 'גלריה', href: '#gallery' },
-  { label: 'שאלות', href: '#faq' },
-  { label: 'הצטרפו', href: '#join' },
-]
-
 export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderProps) {
+  const { t, i18n } = useTranslation()
   const direction = useDirection()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const NAV_LINKS = [
+    { label: t('ui.nav_about'), href: '#about' },
+    { label: t('ui.nav_gallery'), href: '#gallery' },
+    { label: t('ui.nav_faq'), href: '#faq' },
+    { label: t('ui.nav_join'), href: '#join' },
+  ]
+
+  const toggleLang = () => {
+    const next = i18n.language === 'he' ? 'en' : 'he'
+    i18n.changeLanguage(next)
+    document.documentElement.lang = next
+    document.documentElement.dir = next === 'he' ? 'rtl' : 'ltr'
+    localStorage.setItem('lang', next)
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -52,9 +62,16 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
               {link.label}
             </a>
           ))}
+          <button
+            onClick={toggleLang}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Switch language"
+          >
+            {t('ui.lang_toggle')}
+          </button>
           <div className="relative">
             <Button onClick={onOpenDrawer} className="gap-2" variant="default" size="sm">
-              <span>📊 מעקב כנסת</span>
+              <span>{t('ui.nav_tracker')}</span>
               <Menu className={`h-4 w-4 ${direction === 'ltr' ? 'scale-x-[-1]' : ''}`} />
             </Button>
             {hasNewParliamentData && (
@@ -85,12 +102,18 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
                 {link.label}
               </a>
             ))}
+            <button
+              onClick={() => { toggleLang(); setMobileOpen(false) }}
+              className="text-start text-sm text-muted-foreground"
+            >
+              {t('ui.lang_toggle')}
+            </button>
             <Button
               onClick={() => { onOpenDrawer(); setMobileOpen(false) }}
               size="sm"
               className="w-full"
             >
-              📊 מעקב כנסת
+              {t('ui.nav_tracker')}
             </Button>
           </nav>
         </div>
