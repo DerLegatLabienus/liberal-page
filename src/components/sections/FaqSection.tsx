@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import faqData from '@/data/faq.json'
-import type { FaqItem } from '@/types'
+import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
 
-const faq = faqData as FaqItem[]
+interface FaqItemShape {
+  question: string
+  answer: string
+}
 
-function FaqRow({ item }: { item: FaqItem }) {
+function FaqRow({ item, direction }: { item: FaqItemShape; direction: 'rtl' | 'ltr' }) {
   const [open, setOpen] = useState(false)
 
   return (
     <div className="border-b border-slate-100 last:border-0">
       <button
         type="button"
-        dir="rtl"
+        dir={direction}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className="flex w-full items-center gap-3 py-5 text-right"
@@ -27,7 +30,7 @@ function FaqRow({ item }: { item: FaqItem }) {
         />
       </button>
       <div
-        dir="rtl"
+        dir={direction}
         className={`overflow-hidden transition-all duration-200 ease-in-out ${
           open ? 'max-h-96 opacity-100 pb-5' : 'max-h-0 opacity-0'
         }`}
@@ -41,18 +44,22 @@ function FaqRow({ item }: { item: FaqItem }) {
 }
 
 export default function FaqSection() {
+  const { t } = useTranslation()
+  const direction = useDirection()
+  const items = t('faq.items', { returnObjects: true }) as FaqItemShape[]
+
   return (
     <section id="faq" className="bg-white py-16">
       <div className="container mx-auto max-w-4xl px-4">
         <h2
-          dir="rtl"
+          dir={direction}
           className="mb-8 text-right text-2xl font-bold text-foreground"
         >
-          שאלות נפוצות
+          {t('faq.heading')}
         </h2>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 shadow-sm">
-          {faq.map((item) => (
-            <FaqRow key={item.id} item={item} />
+          {items.map((item, i) => (
+            <FaqRow key={i} item={item} direction={direction} />
           ))}
         </div>
       </div>
