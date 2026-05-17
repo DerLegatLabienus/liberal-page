@@ -20,7 +20,8 @@
     "strip_see_all": "לכל הנתונים →",
     "strip_active_bill": "הצ\"ח פעילה",
     "strip_tracked_committee": "ועדה במעקב",
-    "strip_more": "+ עוד נתונים"
+    "strip_more": "+ עוד נתונים",
+    "rights_reserved": "כל הזכויות שמורות"
   },
   "hero": {
     "headline": "ליברליזם בתוך הימין",
@@ -87,5 +88,23 @@
   "gallery": {
     "heading": "גלריה",
     "empty": "תמונות יתווספו בקרוב."
+  },
+  "tracker": {
+    "add_new": "+ הוסף מעקב חדש",
+    "tab_bill": "הצ\"ח",
+    "tab_committee": "ועדה",
+    "tab_mk": "ח\"כ",
+    "placeholder": "הדבק קישור מאתר הכנסת...",
+    "add_button": "הוסף",
+    "error_generic": "שגיאה",
+    "recent_activity": "פעילות אחרונה",
+    "recent_votes": "הצבעות אחרונות:",
+    "ai_vote_summary": "✦ סיכום הצבעות (AI)",
+    "ai_session_summary": "✦ סיכום ישיבה אחרונה (AI)",
+    "view_source": "צפה במקור ↗",
+    "remove": "הסר",
+    "mk_unknown": "ח\"כ לא מוגדר",
+    "chair_prefix": "יו\"ר:",
+    "last_session_prefix": "ישיבה אחרונה:"
   }
 }

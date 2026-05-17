@@ -20,7 +20,8 @@
     "strip_see_all": "See all data →",
     "strip_active_bill": "Active bill",
     "strip_tracked_committee": "Tracked committee",
-    "strip_more": "+ More data"
+    "strip_more": "+ More data",
+    "rights_reserved": "All rights reserved"
   },
   "hero": {
     "headline": "Liberalism within the Right",
@@ -87,5 +88,23 @@
   "gallery": {
     "heading": "Gallery",
     "empty": "Photos coming soon."
+  },
+  "tracker": {
+    "add_new": "+ Add new tracking",
+    "tab_bill": "Bill",
+    "tab_committee": "Committee",
+    "tab_mk": "MK",
+    "placeholder": "Paste a link from the Knesset website...",
+    "add_button": "Add",
+    "error_generic": "Error",
+    "recent_activity": "Recent activity",
+    "recent_votes": "Recent votes:",
+    "ai_vote_summary": "✦ Vote summary (AI)",
+    "ai_session_summary": "✦ Last session summary (AI)",
+    "view_source": "View source ↗",
+    "remove": "Remove",
+    "mk_unknown": "Unknown MK",
+    "chair_prefix": "Chair:",
+    "last_session_prefix": "Last session:"
   }
 }
