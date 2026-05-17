@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api-client'
@@ -6,21 +7,22 @@ import type { TrackingType } from '@/types'
 
 const RAW_ID_RE = /^\d+$/
 
-const TYPE_OPTIONS: { value: TrackingType; label: string }[] = [
-  { value: 'bill', label: 'הצ"ח' },
-  { value: 'committee', label: 'ועדה' },
-  { value: 'mk', label: 'ח"כ' },
-]
-
 interface AddTrackingInputProps {
   onAdd: () => void
 }
 
 export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
   const [selectedType, setSelectedType] = useState<TrackingType | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const TYPE_OPTIONS: { value: TrackingType; label: string }[] = [
+    { value: 'bill', label: t('tracker.tab_bill') },
+    { value: 'committee', label: t('tracker.tab_committee') },
+    { value: 'mk', label: t('tracker.tab_mk') },
+  ]
 
   const trimmed = value.trim()
   const isRawId = RAW_ID_RE.test(trimmed) && trimmed.length > 0
@@ -41,7 +43,7 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
       setSelectedType(null)
       onAdd()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה')
+      setError(err instanceof Error ? err.message : t('tracker.error_generic'))
     } finally {
       setLoading(false)
     }
@@ -49,10 +51,10 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
 
   return (
     <div className="space-y-2" dir="rtl">
-      <p className="text-right text-xs font-semibold text-primary">+ הוסף מעקב חדש</p>
+      <p className="text-right text-xs font-semibold text-primary">{t('tracker.add_new')}</p>
       <div className="flex gap-2">
         <Input
-          placeholder="הדבק קישור מאתר הכנסת..."
+          placeholder={t('tracker.placeholder')}
           value={value}
           onChange={(e) => { setValue(e.target.value); setSelectedType(null) }}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
@@ -60,7 +62,7 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
           dir="ltr"
         />
         <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || loading}>
-          {loading ? '...' : 'הוסף'}
+          {loading ? '...' : t('tracker.add_button')}
         </Button>
       </div>
       {needsTypeSelector && (

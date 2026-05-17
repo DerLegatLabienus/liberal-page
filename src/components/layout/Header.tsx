@@ -11,9 +11,10 @@ const site = siteData as SiteConfig
 interface HeaderProps {
   hasNewParliamentData: boolean
   onOpenDrawer: () => void
+  trackerEnabled: boolean
 }
 
-export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderProps) {
+export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnabled }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -31,6 +32,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
     document.documentElement.lang = next
     document.documentElement.dir = next === 'he' ? 'rtl' : 'ltr'
     localStorage.setItem('lang', next)
+    history.replaceState(null, '', `?lang=${next}`)
   }
 
   return (
@@ -65,12 +67,18 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
           <button
             onClick={toggleLang}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            aria-label="Switch language"
           >
             {t('ui.lang_toggle')}
           </button>
           <div className="relative">
-            <Button onClick={onOpenDrawer} className="gap-2" variant="default" size="sm">
+            <Button
+              onClick={trackerEnabled ? onOpenDrawer : undefined}
+              className="gap-2"
+              variant="default"
+              size="sm"
+              disabled={!trackerEnabled}
+              title={trackerEnabled ? undefined : 'Available in Hebrew'}
+            >
               <span>{t('ui.nav_tracker')}</span>
               <Menu className={`h-4 w-4 ${direction === 'ltr' ? 'scale-x-[-1]' : ''}`} />
             </Button>
@@ -109,9 +117,11 @@ export default function Header({ hasNewParliamentData, onOpenDrawer }: HeaderPro
               {t('ui.lang_toggle')}
             </button>
             <Button
-              onClick={() => { onOpenDrawer(); setMobileOpen(false) }}
+              onClick={() => { if (trackerEnabled) { onOpenDrawer(); setMobileOpen(false) } }}
               size="sm"
               className="w-full"
+              disabled={!trackerEnabled}
+              title={trackerEnabled ? undefined : 'Available in Hebrew'}
             >
               {t('ui.nav_tracker')}
             </Button>

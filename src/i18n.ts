@@ -3,9 +3,18 @@ import { initReactI18next } from 'react-i18next'
 import he from './locales/he.json'
 import en from './locales/en.json'
 
-const savedLang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) || 'he'
-document.documentElement.lang = savedLang
-document.documentElement.dir = savedLang === 'he' ? 'rtl' : 'ltr'
+export function detectInitialLanguage(): string {
+  const fromUrl = new URLSearchParams(location.search).get('lang')
+  if (fromUrl === 'he' || fromUrl === 'en') {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('lang', fromUrl)
+    return fromUrl
+  }
+  return (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) || 'he'
+}
+
+const lang = detectInitialLanguage()
+document.documentElement.lang = lang
+document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
 
 i18n
   .use(initReactI18next)
@@ -14,7 +23,7 @@ i18n
       he: { translation: he },
       en: { translation: en },
     },
-    lng: savedLang,
+    lng: lang,
     fallbackLng: 'he',
     interpolation: { escapeValue: false },
   })

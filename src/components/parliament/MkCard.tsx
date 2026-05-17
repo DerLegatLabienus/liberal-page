@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Mk } from '@/types'
 import type { MkActivity } from '@/types'
@@ -45,6 +46,7 @@ function ActivityItem({ item }: { item: MkActivity }) {
 }
 
 export default function MkCard({ mk, onRemove }: MkCardProps) {
+  const { t } = useTranslation()
   const direction = useDirection()
   const activity = mk.activity ?? []
   const photoUrl = mk.photoUrl
@@ -54,7 +56,6 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
       <div className="w-1 shrink-0 bg-purple-500" />
       <div className="flex-1 p-4" dir="rtl">
 
-        {/* Header: photo + name + party */}
         <div className="mb-3 flex items-center gap-3">
           {photoUrl && (
             <img
@@ -66,7 +67,7 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
           )}
           <div className="min-w-0">
             <p className="text-right text-sm font-semibold text-foreground leading-tight">
-              {mk.name || 'ח"כ לא מוגדר'}
+              {mk.name || t('tracker.mk_unknown')}
             </p>
             {mk.party && (
               <p className="text-right text-xs text-muted-foreground">{mk.party}</p>
@@ -74,28 +75,25 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
           </div>
         </div>
 
-        {/* AI voting summary */}
         {mk.votingSummary && (
           <div className="mb-3 rounded-md bg-purple-50 p-2">
-            <p className="mb-1 text-right text-xs font-semibold text-purple-700">✦ סיכום הצבעות (AI)</p>
+            <p className="mb-1 text-right text-xs font-semibold text-purple-700">{t('tracker.ai_vote_summary')}</p>
             <p className="text-right leading-relaxed text-xs text-muted-foreground">{mk.votingSummary}</p>
           </div>
         )}
 
-        {/* Activity feed */}
         {activity.length > 0 && (
           <div className="mb-3 space-y-2">
-            <p className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">פעילות אחרונה</p>
+            <p className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('tracker.recent_activity')}</p>
             {activity.slice(0, 4).map((item, i) => (
               <ActivityItem key={i} item={item} />
             ))}
           </div>
         )}
 
-        {/* Legacy recentVotes fallback */}
         {activity.length === 0 && mk.recentVotes.length > 0 && (
           <div className="mb-3">
-            <p className="mb-1 text-right text-xs font-medium text-muted-foreground">הצבעות אחרונות:</p>
+            <p className="mb-1 text-right text-xs font-medium text-muted-foreground">{t('tracker.recent_votes')}</p>
             <div className="space-y-1">
               {mk.recentVotes.slice(0, 3).map((vote, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs">
@@ -107,18 +105,17 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
           </div>
         )}
 
-        {/* Footer */}
         <div className="flex items-center justify-between">
           {mk.sourceUrl && (
             <a href={mk.sourceUrl} target="_blank" rel="noopener noreferrer"
               className="text-xs text-primary hover:underline">
-              צפה במקור ↗
+              {t('tracker.view_source')}
             </a>
           )}
           {onRemove && (
             <button onClick={() => onRemove(mk.id)}
               className="text-xs text-red-400 hover:text-red-600 ms-auto">
-              הסר
+              {t('tracker.remove')}
             </button>
           )}
         </div>
