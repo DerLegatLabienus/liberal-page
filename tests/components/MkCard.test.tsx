@@ -106,8 +106,9 @@ describe('MkCard — real Knesset data (site ID 1117: משה רוט)', () => {
     expect(screen.getByText('משה רוט')).toBeInTheDocument()
   })
 
-  it('renders party יהדות התורה', () => {
-    render(<MkCard mk={mk1117} />)
+  it('renders party name', () => {
+    const mk = mkFixture({ name: 'משה רוט', party: 'יהדות התורה' })
+    render(<MkCard mk={mk} />)
     expect(screen.getByText('יהדות התורה')).toBeInTheDocument()
   })
 
