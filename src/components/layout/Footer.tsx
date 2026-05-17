@@ -1,9 +1,12 @@
+import { useTranslation } from 'react-i18next'
 import siteData from '@/data/site.json'
 import type { SiteConfig } from '@/types'
 
 const site = siteData as SiteConfig
 
 export default function Footer() {
+  const { t } = useTranslation()
+
   return (
     <footer className="bg-slate-900 py-10 text-sm text-slate-400" dir="rtl">
       <div className="container mx-auto max-w-4xl px-4">
@@ -12,7 +15,7 @@ export default function Footer() {
             {site.partyName}
           </p>
           <p className="text-slate-500">
-            {site.cellSubtitle} · כל הזכויות שמורות {new Date().getFullYear()}
+            {site.cellSubtitle} · {t('ui.rights_reserved')} {new Date().getFullYear()}
           </p>
         </div>
         {site.contactEmail && (
