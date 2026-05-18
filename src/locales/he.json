@@ -115,9 +115,11 @@
     "chair_prefix": "יו\"ר:",
     "last_session_prefix": "ישיבה אחרונה:"
   },
-  "site": {
-    "party_name": "הליברלים בליכוד",
-    "cell_subtitle": "תנועה ליברלית בתוך הליכוד",
-    "logo_initials": "ל\"ל"
+"showcase": {
+    "heading": "ח\"כים ליברלים בליכוד",
+    "liberal_badge": "ליברל בליכוד",
+    "supporter_badge": "תומך",
+    "search_placeholder": "חפש ח\"כ...",
+    "no_selection": "חפש ובחר ח\"כ למעלה"
   }
 }

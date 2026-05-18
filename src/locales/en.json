@@ -115,9 +115,11 @@
     "chair_prefix": "Chair:",
     "last_session_prefix": "Last session:"
   },
-  "site": {
-    "party_name": "Liberals in Likud",
-    "cell_subtitle": "A liberal movement within Likud",
-    "logo_initials": "LL"
+"showcase": {
+    "heading": "Liberals in Likud MKs",
+    "liberal_badge": "Liberal",
+    "supporter_badge": "Supporter",
+    "search_placeholder": "Search MK...",
+    "no_selection": "Search and select an MK above"
   }
 }

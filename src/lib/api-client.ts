@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity } from '@/types'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -32,4 +32,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ url }),
     }),
+  mks: {
+    list: () => apiFetch<KnessetMember[]>('/mks/list'),
+    activity: (siteId: number) => apiFetch<MkActivity[]>(`/mks/activity?siteId=${siteId}`),
+  },
 }
