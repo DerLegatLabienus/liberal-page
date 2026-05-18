@@ -61,6 +61,51 @@ describe('fetchAllKnessetMembers', () => {
     expect((calls[1][0] as string)).toContain('skiptoken=30839')
   })
 
+  it('collects all 120 MKs across two pages (100 + 20)', async () => {
+    // Simulate real Knesset API: page 1 returns 100, page 2 returns 20
+    const page1Persons = Array.from({ length: 100 }, (_, i) => ({
+      PersonID: 1000 + i,
+      FirstName: `פרטי${i}`,
+      LastName: `משפחה${i}`,
+      PictureDeputyUrl: null,
+    }))
+    const page2Persons = Array.from({ length: 20 }, (_, i) => ({
+      PersonID: 2000 + i,
+      FirstName: `פרטי${100 + i}`,
+      LastName: `משפחה${100 + i}`,
+      PictureDeputyUrl: null,
+    }))
+    const allPersons = [...page1Persons, ...page2Persons]
+
+    // Build matching site codes and faction positions for all 120
+    const allSiteCodes = allPersons.map((p, i) => ({ SiteId: 100 + i, KnsID: p.PersonID }))
+    const allFactionPositions = allPersons.map((p) => ({
+      PersonID: p.PersonID,
+      FactionName: 'הליכוד',
+      IsCurrent: true,
+    }))
+
+    // BATCH_SIZE = 40, so 120 persons = 3 batches each for factions and site codes
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(page1Persons, 'KNS_Person?$skiptoken=1099')) // page 1
+      .mockResolvedValueOnce(mockOdata(page2Persons))                                // page 2
+      // faction batches: 40 + 40 + 40
+      .mockResolvedValueOnce(mockOdata(allFactionPositions.slice(0, 40)))
+      .mockResolvedValueOnce(mockOdata(allFactionPositions.slice(40, 80)))
+      .mockResolvedValueOnce(mockOdata(allFactionPositions.slice(80)))
+      // site code batches: 40 + 40 + 40
+      .mockResolvedValueOnce(mockOdata(allSiteCodes.slice(0, 40)))
+      .mockResolvedValueOnce(mockOdata(allSiteCodes.slice(40, 80)))
+      .mockResolvedValueOnce(mockOdata(allSiteCodes.slice(80)))
+
+    const result = await fetchAllKnessetMembers(25)
+    expect(result).toHaveLength(120)
+    // Page 2 MKs (like Dan Ilouz) must be included
+    const page2SiteIds = allSiteCodes.slice(100).map((sc) => sc.SiteId)
+    const resultSiteIds = result.map((m) => m.siteId)
+    expect(page2SiteIds.every((id) => resultSiteIds.includes(id))).toBe(true)
+  })
+
   it('excludes persons with no site code entry', async () => {
     const personNoSite = { PersonID: 99999, FirstName: 'ללא', LastName: 'קוד', PictureDeputyUrl: null }
     vi.mocked(fetch)
