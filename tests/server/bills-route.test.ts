@@ -77,7 +77,7 @@ describe('POST /api/bills/track', () => {
 
   it('skips duplicate billId', async () => {
     vi.mocked(readFile).mockResolvedValue(JSON.stringify([
-      { id: 1, oknesset_id: '', knessetUrl: 'https://www.knesset.gov.il/privatelaw/hql_knesset_det.aspx?knesset=25&hql_id=1038990', title: 'existing', number: '', status: 'בוועדה', position: 'עוקבים', notes: '', committee: '', sourceUrl: '', documentUrl: null, hasNewData: false, lastPolledAt: null }
+      { id: 1, oknesset_id: '', title: 'existing', number: '1038990', status: 'בוועדה', position: 'עוקבים', notes: '', committee: '', sourceUrl: '', documentUrl: null, hasNewData: false, lastPolledAt: null }
     ]) as never)
     const res = await request(app).post('/api/bills/track').send({
       billId: 1038990,
