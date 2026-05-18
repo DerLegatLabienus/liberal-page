@@ -12,11 +12,11 @@ export default function GallerySection() {
   return (
     <section id="gallery" className="bg-slate-50 py-16" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-right text-2xl font-bold text-foreground">
+        <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
           {t('gallery.heading')}
         </h2>
         {gallery.length === 0 ? (
-          <p className="text-right text-muted-foreground">{t('gallery.empty')}</p>
+          <p className="text-start text-muted-foreground">{t('gallery.empty')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
             {gallery.map((item) => (
@@ -30,7 +30,7 @@ export default function GallerySection() {
                   />
                 </div>
                 <div className="px-3 py-2">
-                  <p className="text-right text-xs text-muted-foreground leading-snug">{item.caption}</p>
+                  <p className="text-start text-xs text-muted-foreground leading-snug">{item.caption}</p>
                 </div>
               </div>
             ))}

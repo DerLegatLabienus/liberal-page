@@ -18,9 +18,9 @@ function FaqRow({ item, direction }: { item: FaqItemShape; direction: 'rtl' | 'l
         dir={direction}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 py-5 text-right"
+        className="flex w-full items-center gap-3 py-5 text-start"
       >
-        <span className="flex-1 text-right text-sm font-medium text-foreground leading-snug">
+        <span className="flex-1 text-start text-sm font-medium text-foreground leading-snug">
           {item.question}
         </span>
         <ChevronDown
@@ -35,7 +35,7 @@ function FaqRow({ item, direction }: { item: FaqItemShape; direction: 'rtl' | 'l
           open ? 'max-h-96 opacity-100 pb-5' : 'max-h-0 opacity-0'
         }`}
       >
-        <p className="text-right text-sm text-muted-foreground leading-relaxed pe-7">
+        <p className="text-start text-sm text-muted-foreground leading-relaxed pe-7">
           {item.answer}
         </p>
       </div>
@@ -53,7 +53,7 @@ export default function FaqSection() {
       <div className="container mx-auto max-w-4xl px-4">
         <h2
           dir={direction}
-          className="mb-8 text-right text-2xl font-bold text-foreground"
+          className="mb-8 text-start text-2xl font-bold text-foreground"
         >
           {t('faq.heading')}
         </h2>

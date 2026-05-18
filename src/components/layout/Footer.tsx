@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
 import siteData from '@/data/site.json'
 import type { SiteConfig } from '@/types'
 
@@ -6,11 +7,12 @@ const site = siteData as SiteConfig
 
 export default function Footer() {
   const { t } = useTranslation()
+  const direction = useDirection()
 
   return (
-    <footer className="bg-slate-900 py-10 text-sm text-slate-400" dir="rtl">
+    <footer className="bg-slate-900 py-10 text-sm text-slate-400" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
-        <div className="flex flex-col items-center gap-2 text-center md:flex-row md:justify-between md:text-right">
+        <div className="flex flex-col items-center gap-2 text-center md:flex-row md:justify-between md:text-end">
           <p className="font-medium text-slate-300">
             {site.partyName}
           </p>

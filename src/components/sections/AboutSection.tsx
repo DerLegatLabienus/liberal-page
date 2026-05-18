@@ -15,14 +15,14 @@ export default function AboutSection() {
   return (
     <section id="about" className="bg-white py-16" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-right text-2xl font-bold text-foreground">
+        <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
           {t('about.heading')}
         </h2>
 
         <div className="grid gap-12 md:grid-cols-2">
           <div className="space-y-4">
             {paragraphs.map((p, i) => (
-              <p key={i} className="text-right leading-relaxed text-muted-foreground">
+              <p key={i} className="text-start leading-relaxed text-muted-foreground">
                 {p}
               </p>
             ))}
@@ -40,7 +40,7 @@ export default function AboutSection() {
 
           {about.leadership && about.leadership.length > 0 && (
             <div>
-              <h3 className="mb-6 text-right text-base font-semibold text-muted-foreground uppercase tracking-wide">
+              <h3 className="mb-6 text-start text-base font-semibold text-muted-foreground uppercase tracking-wide">
                 {t('about.leadership_heading')}
               </h3>
               <div className="space-y-4">
@@ -53,8 +53,8 @@ export default function AboutSection() {
                       onError={(e) => { e.currentTarget.style.display = 'none' }}
                     />
                     <div>
-                      <p className="text-right text-sm font-semibold text-foreground">{member.name}</p>
-                      <p className="text-right text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-start text-sm font-semibold text-foreground">{member.name}</p>
+                      <p className="text-start text-xs text-muted-foreground">{member.role}</p>
                     </div>
                   </div>
                 ))}

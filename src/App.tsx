@@ -50,7 +50,7 @@ export default function App() {
         trackerEnabled={isHebrew}
       />
       <main>
-        <HeroSection onOpenDrawer={handleOpenDrawer} />
+        <HeroSection onOpenDrawer={handleOpenDrawer} trackerEnabled={isHebrew} />
         {isHebrew && (
           <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
         )}

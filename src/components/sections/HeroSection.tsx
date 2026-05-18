@@ -8,9 +8,10 @@ const site = siteData as SiteConfig
 
 interface HeroSectionProps {
   onOpenDrawer: () => void
+  trackerEnabled?: boolean
 }
 
-export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
+export default function HeroSection({ onOpenDrawer, trackerEnabled = true }: HeroSectionProps) {
   const { t } = useTranslation()
 
   return (
@@ -35,14 +36,16 @@ export default function HeroSection({ onOpenDrawer }: HeroSectionProps) {
           >
             {t('hero.cta_join')}
           </a>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={onOpenDrawer}
-            className="border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
-          >
-            {t('hero.cta_tracker')}
-          </Button>
+          {trackerEnabled && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onOpenDrawer}
+              className="border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
+            >
+              {t('hero.cta_tracker')}
+            </Button>
+          )}
         </div>
       </div>
     </section>
