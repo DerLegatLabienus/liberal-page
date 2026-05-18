@@ -57,7 +57,7 @@ router.post('/track', async (req, res) => {
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
-    id: nextId, oknesset_id: String(committeeId), name: name.trim(),
+    id: nextId, oknesset_id: '', name: name.trim(),
     chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
     sourceUrl: knessetUrl ?? '', hasNewData: false, lastPolledAt: null,
   }
