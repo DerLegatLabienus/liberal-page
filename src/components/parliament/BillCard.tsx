@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Bill } from '@/types'
 
@@ -21,6 +22,7 @@ interface BillCardProps {
 }
 
 export default function BillCard({ bill, onRemove }: BillCardProps) {
+  const { t } = useTranslation()
   const direction = useDirection()
 
   return (
