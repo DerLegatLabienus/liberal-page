@@ -21,7 +21,8 @@
     "strip_active_bill": "Active bill",
     "strip_tracked_committee": "Tracked committee",
     "strip_more": "+ More data",
-    "rights_reserved": "All rights reserved"
+    "rights_reserved": "All rights reserved",
+    "menu": "Menu"
   },
   "hero": {
     "headline": "Liberalism within the Right",
@@ -37,7 +38,14 @@
       "We act from within: bringing the liberal voice to Knesset committees, faction meetings, and primaries — leaving a mark on laws that affect every citizen in Israel."
     ],
     "values_heading": "Our Values",
-    "values": ["Individual freedom", "Free market", "Rule of law", "Civil rights", "Good governance", "Freedom of speech"],
+    "values": [
+      "Individual freedom",
+      "Free market",
+      "Rule of law",
+      "Civil rights",
+      "Good governance",
+      "Freedom of speech"
+    ],
     "leadership_heading": "Leadership"
   },
   "faq": {
@@ -106,5 +114,10 @@
     "mk_unknown": "Unknown MK",
     "chair_prefix": "Chair:",
     "last_session_prefix": "Last session:"
+  },
+  "site": {
+    "party_name": "Liberals in Likud",
+    "cell_subtitle": "A liberal movement within Likud",
+    "logo_initials": "LL"
   }
 }

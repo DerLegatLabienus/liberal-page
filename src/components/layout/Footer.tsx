@@ -14,10 +14,10 @@ export default function Footer() {
       <div className="container mx-auto max-w-4xl px-4">
         <div className="flex flex-col items-center gap-2 text-center md:flex-row md:justify-between md:text-end">
           <p className="font-medium text-slate-300">
-            {site.partyName}
+            {t('site.party_name')}
           </p>
           <p className="text-slate-500">
-            {site.cellSubtitle} · {t('ui.rights_reserved')} {new Date().getFullYear()}
+            {t('site.cell_subtitle')} · {t('ui.rights_reserved')} {new Date().getFullYear()}
           </p>
         </div>
         {site.contactEmail && (

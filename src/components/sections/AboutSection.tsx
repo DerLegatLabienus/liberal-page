@@ -6,7 +6,7 @@ import type { AboutData } from '@/types'
 const about = aboutData as AboutData
 
 export default function AboutSection() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const direction = useDirection()
 
   const paragraphs = t('about.paragraphs', { returnObjects: true }) as string[]
@@ -53,8 +53,8 @@ export default function AboutSection() {
                       onError={(e) => { e.currentTarget.style.display = 'none' }}
                     />
                     <div>
-                      <p className="text-start text-sm font-semibold text-foreground">{member.name}</p>
-                      <p className="text-start text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-start text-sm font-semibold text-foreground">{i18n.language === 'he' ? member.name : (member.nameEn ?? member.name)}</p>
+                      <p className="text-start text-xs text-muted-foreground">{i18n.language === 'he' ? member.role : (member.roleEn ?? member.role)}</p>
                     </div>
                   </div>
                 ))}

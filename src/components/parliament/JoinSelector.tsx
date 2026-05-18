@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useDirection } from '@/hooks/useDirection'
 import { ExternalLink, MessageCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -37,6 +38,7 @@ const WHATSAPP_URL = 'https://wa.me/972528750238'
 
 export default function JoinSelector() {
   const { t } = useTranslation()
+  const direction = useDirection()
   const [status, setStatus] = useState<MembershipStatus | null>(null)
   const [mode, setMode] = useState<JoinMode | null>(null)
 
@@ -48,7 +50,7 @@ export default function JoinSelector() {
   const selectedModeKey = MODE_OPTION_KEYS.find((o) => o.value === mode)
 
   return (
-    <div className="mx-auto max-w-3xl rounded-lg bg-white p-4 text-right text-slate-900 shadow-xl md:p-6" dir="auto">
+    <div className="mx-auto max-w-3xl rounded-lg bg-white p-4 text-start text-slate-900 shadow-xl md:p-6" dir={direction}>
       <div className="mb-5">
         <p className="mb-2 text-sm font-semibold text-blue-700">{t('join.choose_path')}</p>
         <p className="text-sm leading-relaxed text-slate-600">{t('join.choose_subtitle')}</p>
@@ -64,7 +66,7 @@ export default function JoinSelector() {
                 type="button"
                 onClick={() => setStatus(option.value)}
                 className={cn(
-                  'min-h-28 rounded-lg border bg-white p-3 text-right transition-colors',
+                  'min-h-28 rounded-lg border bg-white p-3 text-start transition-colors',
                   'hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                   status === option.value && 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
                 )}

@@ -48,10 +48,10 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
             />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-              ל"ל
+              {t('site.logo_initials')}
             </div>
           )}
-          <span className="font-bold text-foreground">{site.partyName}</span>
+          <span className="font-bold text-foreground">{t('site.party_name')}</span>
         </div>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -91,7 +91,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
         <button
           className="flex items-center md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
-          aria-label="תפריט"
+          aria-label={t('ui.menu')}
         >
           <Menu className="h-5 w-5" />
         </button>

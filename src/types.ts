@@ -95,6 +95,8 @@ export interface LeadershipMember {
   name: string
   role: string
   image: string
+  nameEn?: string
+  roleEn?: string
 }
 
 export interface AboutData {
