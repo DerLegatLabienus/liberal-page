@@ -1,7 +1,9 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem } from '@/types'
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
@@ -43,5 +45,13 @@ export const api = {
   mks: {
     list: () => apiFetch<KnessetMember[]>('/mks/list'),
     activity: (siteId: number) => apiFetch<MkActivity[]>(`/mks/activity?siteId=${siteId}`),
+  },
+  committees: {
+    list: () => apiFetch<CommitteeListItem[]>('/committees/list'),
+    track: (committeeId: number, name: string, knessetUrl: string) =>
+      apiFetch<{ ok: boolean; duplicate?: boolean }>('/committees/track', {
+        method: 'POST',
+        body: JSON.stringify({ committeeId, name, knessetUrl }),
+      }),
   },
 }
