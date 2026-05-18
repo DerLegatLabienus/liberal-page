@@ -7,7 +7,7 @@ import mksData from '../../src/data/mks.json'
 
 // Real Knesset data sourced from OData API via knesset-scraper
 const mk1116 = mksData.find((m) => m.knesset_site_id === '1116')! as unknown as Mk
-const mk1117 = mksData.find((m) => m.knesset_site_id === '1117')! as unknown as Mk
+const mk1117 = mkFixture({ id: 4, name: 'משה רוט', party: 'יהדות התורה', knesset_site_id: '1117', sourceUrl: 'https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1117' }) as Mk
 
 // Minimal valid Mk for edge-case tests
 function mkFixture(overrides: Partial<Mk>): Mk {
@@ -85,7 +85,7 @@ describe('MkCard — real Knesset data (site ID 1116: דן אילוז)', () => {
   it('renders source link pointing to Knesset MK page', () => {
     render(<MkCard mk={mk1116} />)
     const link = screen.getByRole('link', { name: /צפה במקור/i })
-    expect(link).toHaveAttribute('href', 'https://main.knesset.gov.il/mk/Apps/mk/mk-positions/1116')
+    expect(link).toHaveAttribute('href', 'https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1116')
     expect(link).toHaveAttribute('target', '_blank')
   })
 
