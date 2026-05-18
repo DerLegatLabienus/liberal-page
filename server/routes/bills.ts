@@ -44,7 +44,7 @@ router.get('/search', async (req, res) => {
 })
 
 router.post('/track', async (req, res) => {
-  const { billId, name, knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
+  const { billId, name, _knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
   if (!billId || !name) return res.status(400).json({ error: 'billId and name required' })
 
   const bills = await readBills()
