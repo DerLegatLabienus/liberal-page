@@ -2,24 +2,12 @@
   {
     "id": 1,
     "oknesset_id": "",
-    "name": "ועדת הבריאות",
+    "name": "ועדת האתיקה",
     "chair": "",
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=4189",
-    "hasNewData": false,
-    "lastPolledAt": null
-  },
-  {
-    "id": 2,
-    "oknesset_id": "",
-    "name": "ועדת הכספים",
-    "chair": "",
-    "lastSessionDate": null,
-    "lastSessionSummary": null,
-    "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=4186",
+    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=4188",
     "hasNewData": false,
     "lastPolledAt": null
   }
