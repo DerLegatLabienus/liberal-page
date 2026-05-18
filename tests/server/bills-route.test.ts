@@ -45,7 +45,7 @@ describe('GET /api/bills/search', () => {
     expect(res.body).toHaveLength(2)
     expect(res.body[0].billId).toBe(1038990)
     expect(res.body[0].name).toBe('הצעת חוק חופש העיסוק, התשפ"ו-2026')
-    expect(res.body[0].knessetUrl).toContain('1038990')
+    expect(res.body[0].knessetUrl).toBe('')
   })
 })
 
@@ -72,7 +72,7 @@ describe('POST /api/bills/track', () => {
     const [, content] = vi.mocked(writeFile).mock.calls[0]
     const written = JSON.parse(content as string)
     expect(written[0].title).toBe('הצעת חוק חופש העיסוק')
-    expect(written[0].knessetUrl).toContain('1038990')
+    expect(written[0].knessetUrl).toBeUndefined()
   })
 
   it('skips duplicate billId', async () => {

@@ -57,16 +57,7 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
                 צפה במקור ↗
               </a>
             )}
-            {bill.knessetUrl && (
-              <a
-                href={bill.knessetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline"
-              >
-                {t('tracker.view_source')}
-              </a>
-            )}
+
             {onRemove && (
               <button onClick={() => onRemove(bill.id)}
                 className="text-xs text-red-400 hover:text-red-600">

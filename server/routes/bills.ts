@@ -35,7 +35,7 @@ router.get('/search', async (req, res) => {
     const results: BillSearchResult[] = (data.value ?? []).map((b) => ({
       billId: b.BillID,
       name: b.Name.trim(),
-      knessetUrl: `https://www.knesset.gov.il/privatelaw/hql_knesset_det.aspx?knesset=${CURRENT_KNESSET}&hql_id=${b.BillID}`,
+      knessetUrl: '',
     }))
     res.json(results)
   } catch (err) {
@@ -61,8 +61,7 @@ router.post('/track', async (req, res) => {
     position: 'עוקבים',
     notes: '',
     committee: '',
-    sourceUrl: knessetUrl ?? '',
-    knessetUrl: knessetUrl,
+    sourceUrl: '',
     documentUrl: null,
     hasNewData: false,
     lastPolledAt: null,
