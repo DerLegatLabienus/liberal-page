@@ -19,8 +19,15 @@ export interface Bill {
   committee: string
   sourceUrl: string
   documentUrl: string | null
+  knessetUrl?: string
   hasNewData: boolean
   lastPolledAt: string | null
+}
+
+export interface BillSearchResult {
+  billId: number
+  name: string
+  knessetUrl: string
 }
 
 export interface Committee {
