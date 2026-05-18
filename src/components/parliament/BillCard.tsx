@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Bill } from '@/types'
 
@@ -21,6 +22,7 @@ interface BillCardProps {
 }
 
 export default function BillCard({ bill, onRemove }: BillCardProps) {
+  const { t } = useTranslation()
   const direction = useDirection()
 
   return (
@@ -53,6 +55,16 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
               <a href={bill.sourceUrl} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline">
                 צפה במקור ↗
+              </a>
+            )}
+            {bill.knessetUrl && (
+              <a
+                href={bill.knessetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                {t('tracker.view_source')}
               </a>
             )}
             {onRemove && (
