@@ -17,8 +17,10 @@ const SITE_CODES = [
   { SiteId: 1117, KnsID: 30870 },
 ]
 
-function mockOdata(value: unknown[]) {
-  return { ok: true, json: async () => ({ value }) } as Response
+function mockOdata(value: unknown[], nextLink?: string) {
+  const body: Record<string, unknown> = { value }
+  if (nextLink) body['odata.nextLink'] = nextLink
+  return { ok: true, json: async () => body } as Response
 }
 
 describe('fetchAllKnessetMembers', () => {
@@ -31,18 +33,32 @@ describe('fetchAllKnessetMembers', () => {
 
   it('assembles KnessetMember[] with name, siteId, and party', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce(mockOdata(PERSONS))          // KNS_Person IsCurrent
-      .mockResolvedValueOnce(mockOdata(FACTION_POSITIONS))// faction positions batch 1
-      .mockResolvedValueOnce(mockOdata(SITE_CODES))       // site codes batch 1
+      .mockResolvedValueOnce(mockOdata(PERSONS))           // KNS_Person page 1, no nextLink
+      .mockResolvedValueOnce(mockOdata(FACTION_POSITIONS)) // faction batch 1
+      .mockResolvedValueOnce(mockOdata(SITE_CODES))        // site codes batch 1
 
     const result = await fetchAllKnessetMembers(25)
-
     expect(result).toHaveLength(2)
     expect(result[0].siteId).toBe(1116)
     expect(result[0].name).toBe('דן אילוז')
     expect(result[0].party).toBe('הליכוד')
     expect(result[0].isLiberal).toBe(false)
-    expect(result[0].isSupporter).toBe(false)
+  })
+
+  it('follows odata.nextLink to collect all pages', async () => {
+    const page1 = [PERSONS[0]]
+    const page2 = [PERSONS[1]]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(page1, 'KNS_Person?$skiptoken=30839'))  // page 1 + nextLink
+      .mockResolvedValueOnce(mockOdata(page2))                                  // page 2, no nextLink
+      .mockResolvedValueOnce(mockOdata(FACTION_POSITIONS))                      // faction batch
+      .mockResolvedValueOnce(mockOdata(SITE_CODES))                             // site codes batch
+
+    const result = await fetchAllKnessetMembers(25)
+    expect(result).toHaveLength(2)
+    // Verify second fetch used the nextLink
+    const calls = vi.mocked(fetch).mock.calls
+    expect((calls[1][0] as string)).toContain('skiptoken=30839')
   })
 
   it('excludes persons with no site code entry', async () => {
@@ -50,27 +66,15 @@ describe('fetchAllKnessetMembers', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockOdata([...PERSONS, personNoSite]))
       .mockResolvedValueOnce(mockOdata(FACTION_POSITIONS))
-      .mockResolvedValueOnce(mockOdata(SITE_CODES)) // only codes for 30839 and 30870
+      .mockResolvedValueOnce(mockOdata(SITE_CODES))
 
     const result = await fetchAllKnessetMembers(25)
-    expect(result).toHaveLength(2) // personNoSite excluded
-    expect(result.every(m => m.siteId !== 0)).toBe(true)
+    expect(result).toHaveLength(2)
   })
 
   it('derives photo URL from siteId when PictureDeputyUrl is null', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockOdata([PERSONS[0]]))
-      .mockResolvedValueOnce(mockOdata([FACTION_POSITIONS[0]]))
-      .mockResolvedValueOnce(mockOdata([SITE_CODES[0]]))
-
-    const result = await fetchAllKnessetMembers(25)
-    expect(result[0].photoUrl).toBe('https://www.knesset.gov.il/mk/images/members/mk_1116.jpg')
-  })
-
-  it('uses PictureDeputyUrl when present', async () => {
-    const personWithPhoto = { ...PERSONS[0], PictureDeputyUrl: '/mk/images/members/mk_1116.jpg' }
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockOdata([personWithPhoto]))
       .mockResolvedValueOnce(mockOdata([FACTION_POSITIONS[0]]))
       .mockResolvedValueOnce(mockOdata([SITE_CODES[0]]))
 

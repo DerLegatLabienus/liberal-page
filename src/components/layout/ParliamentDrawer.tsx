@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useDirection } from '@/hooks/useDirection'
+import { api } from '@/lib/api-client'
 import AddTrackingInput from '@/components/parliament/AddTrackingInput'
 import BillCard from '@/components/parliament/BillCard'
 import CommitteeCard from '@/components/parliament/CommitteeCard'
@@ -40,6 +41,16 @@ export default function ParliamentDrawer({
     : t('ui.drawer_not_synced')
 
   const [selectedMk, setSelectedMk] = useState<KnessetMember | null>(null)
+
+  const handleSelectMk = (member: KnessetMember) => {
+    setSelectedMk(member)
+    // Track in background if not already tracked
+    const alreadyTracked = mks.some((m) => m.knesset_site_id === String(member.siteId))
+    if (!alreadyTracked) {
+      const url = `https://www.knesset.gov.il/mk/Apps/mk/mk-positions/${member.siteId}`
+      api.tracking.add({ url }).then(() => onAdd()).catch(() => {/* silently ignore */})
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={(v: boolean) => !v && onClose()}>
@@ -82,7 +93,7 @@ export default function ParliamentDrawer({
             </TabsContent>
 
             <TabsContent value="mks" className="m-0 space-y-3 p-4">
-              <MkCombobox onSelect={setSelectedMk} selectedSiteId={selectedMk?.siteId ?? null} />
+              <MkCombobox onSelect={handleSelectMk} selectedSiteId={selectedMk?.siteId ?? null} />
               {selectedMk ? (
                 <MkActivityCard member={selectedMk} />
               ) : (
