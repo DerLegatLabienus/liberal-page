@@ -120,3 +120,12 @@ export interface ParsedUrl {
   type: TrackingType
   id: string
 }
+
+export interface KnessetMember {
+  siteId: number
+  name: string
+  party: string
+  photoUrl: string | null
+  isLiberal: boolean
+  isSupporter: boolean
+}
