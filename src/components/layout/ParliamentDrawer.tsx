@@ -11,6 +11,7 @@ import BillCard from '@/components/parliament/BillCard'
 import CommitteeCard from '@/components/parliament/CommitteeCard'
 import MkCombobox from '@/components/parliament/MkCombobox'
 import MkActivityCard from '@/components/parliament/MkActivityCard'
+import MkCard from '@/components/parliament/MkCard'
 import type { Bill, Committee, Mk, KnessetMember } from '@/types'
 
 interface ParliamentDrawerProps {
@@ -94,10 +95,19 @@ export default function ParliamentDrawer({
 
             <TabsContent value="mks" className="m-0 space-y-3 p-4">
               <MkCombobox onSelect={handleSelectMk} selectedSiteId={selectedMk?.siteId ?? null} />
-              {selectedMk ? (
-                <MkActivityCard member={selectedMk} />
-              ) : (
-                <p className="py-8 text-start text-sm text-muted-foreground">{t('showcase.no_selection')}</p>
+              {selectedMk && <MkActivityCard member={selectedMk} />}
+              {mks.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-start pt-2">
+                    {t('ui.drawer_mks_tab')}
+                  </p>
+                  {mks.map((mk) => (
+                    <MkCard key={mk.id} mk={mk} onRemove={onRemoveMk} />
+                  ))}
+                </div>
+              )}
+              {!selectedMk && mks.length === 0 && (
+                <p className="py-8 text-start text-sm text-muted-foreground">{t('ui.drawer_empty_mks')}</p>
               )}
             </TabsContent>
           </div>
