@@ -1,0 +1,43 @@
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Only one deploy runs at a time; new pushes cancel in-progress deploys
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Build and deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          cname: ""

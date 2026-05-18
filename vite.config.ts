@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: "/liberal-page",
+  base: "/liberal-page/",
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

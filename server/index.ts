@@ -5,18 +5,21 @@ import parliamentRouter from './routes/parliament'
 import summarizeRouter from './routes/summarize'
 import mksRouter from './routes/mks'
 import billsRouter from './routes/bills'
+import committeesRouter from './routes/committees'
 import { startPoller } from './services/poller'
 
 const app = express()
 const PORT = 3001
 
-app.use(cors({ origin: 'http://localhost:5173' }))
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
+app.use(cors({ origin: ALLOWED_ORIGINS }))
 app.use(express.json())
 
 app.use('/api/tracking', trackingRouter)
 app.use('/api/parliament', parliamentRouter)
 app.use('/api/mks', mksRouter)
 app.use('/api/bills', billsRouter)
+app.use('/api/committees', committeesRouter)
 app.use('/api/summarize', summarizeRouter)
 
 app.get('/api/health', (_req, res) => {
