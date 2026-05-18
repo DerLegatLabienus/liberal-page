@@ -27,7 +27,7 @@
   "hero": {
     "headline": "Liberalism within the Right",
     "tagline": "Advancing legislation, representing principles, acting from within",
-    "cta_join": "Join Likud →",
+    "cta_join": "Join Likud Liberals →",
     "cta_tracker": "📊 Knesset Tracker"
   },
   "about": {
@@ -65,12 +65,12 @@
       },
       {
         "question": "How do I join?",
-        "answer": "Click the 'Join Likud' button at the bottom of the page. First join Likud, then you can join the cell's activities and be part of change from within."
+        "answer": "Click the 'Join Likud Liberals' button at the bottom of the page. First join Likud, then you can join the cell's activities and be part of change from within."
       }
     ]
   },
   "join": {
-    "heading": "Join Likud",
+    "heading": "Join Likud Liberals",
     "subtitle": "Choose your membership path and we'll direct you to the correct official form in the Liberals in Likud secure system.",
     "choose_path": "Choose the right path",
     "choose_subtitle": "After selecting, you'll be directed to the official form in the Liberals in Likud secure system.",
