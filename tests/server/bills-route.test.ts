@@ -45,7 +45,7 @@ describe('GET /api/bills/search', () => {
     expect(res.body).toHaveLength(2)
     expect(res.body[0].billId).toBe(1038990)
     expect(res.body[0].name).toBe('הצעת חוק חופש העיסוק, התשפ"ו-2026')
-    expect(res.body[0].knessetUrl).toBe('')
+    expect(res.body[0].knessetUrl).toContain('lawitemid=1038990')
   })
 })
 

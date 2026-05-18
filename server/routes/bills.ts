@@ -35,7 +35,7 @@ router.get('/search', async (req, res) => {
     const results: BillSearchResult[] = (data.value ?? []).map((b) => ({
       billId: b.BillID,
       name: b.Name.trim(),
-      knessetUrl: '',
+      knessetUrl: `https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=${b.BillID}`,
     }))
     res.json(results)
   } catch (err) {
@@ -44,7 +44,7 @@ router.get('/search', async (req, res) => {
 })
 
 router.post('/track', async (req, res) => {
-  const { billId, name, _knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
+  const { billId, name, knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
   if (!billId || !name) return res.status(400).json({ error: 'billId and name required' })
 
   const bills = await readBills()
@@ -61,7 +61,7 @@ router.post('/track', async (req, res) => {
     position: 'עוקבים',
     notes: '',
     committee: '',
-    sourceUrl: '',
+    sourceUrl: knessetUrl ?? '',
     documentUrl: null,
     hasNewData: false,
     lastPolledAt: null,

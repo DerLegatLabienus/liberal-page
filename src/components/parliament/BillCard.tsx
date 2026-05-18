@@ -52,7 +52,7 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
             {bill.sourceUrl && (
               <a href={bill.sourceUrl} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline">
-                צפה במקור ↗
+                {t('tracker.view_source')}
               </a>
             )}
 

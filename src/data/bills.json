@@ -26,5 +26,19 @@
     "documentUrl": null,
     "hasNewData": false,
     "lastPolledAt": null
+  },
+  {
+    "id": 5,
+    "oknesset_id": "",
+    "number": "1044632",
+    "title": "הצעת חוק לתיקון פקודת מס הכנסה (מס' 285) (נכס דיגיטלי), התשפ\"ו-2026",
+    "status": "בוועדה",
+    "position": "עוקבים",
+    "notes": "",
+    "committee": "",
+    "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=1044632",
+    "documentUrl": null,
+    "hasNewData": false,
+    "lastPolledAt": null
   }
 ]

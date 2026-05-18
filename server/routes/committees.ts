@@ -40,7 +40,7 @@ router.get('/list', async (_req, res) => {
     const committees: CommitteeListItem[] = raw.map((c) => ({
       committeeId: c.CommitteeID,
       name: c.Name.trim(),
-      knessetUrl: `https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=${c.CommitteeID}`,
+      knessetUrl: `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=${c.CommitteeID}`,
     }))
     await repo.set(committees)
     res.json(committees)
@@ -50,7 +50,7 @@ router.get('/list', async (_req, res) => {
 })
 
 router.post('/track', async (req, res) => {
-  const { committeeId, name, _knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
+  const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
@@ -59,7 +59,7 @@ router.post('/track', async (req, res) => {
   const newCommittee: Committee = {
     id: nextId, oknesset_id: String(committeeId), name: name.trim(),
     chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
-    sourceUrl: '', hasNewData: false, lastPolledAt: null,
+    sourceUrl: knessetUrl ?? '', hasNewData: false, lastPolledAt: null,
   }
   committees.push(newCommittee)
   await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
