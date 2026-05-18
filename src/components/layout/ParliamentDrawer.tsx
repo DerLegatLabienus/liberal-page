@@ -12,6 +12,7 @@ import CommitteeCard from '@/components/parliament/CommitteeCard'
 import MkCombobox from '@/components/parliament/MkCombobox'
 import MkActivityCard from '@/components/parliament/MkActivityCard'
 import MkCard from '@/components/parliament/MkCard'
+import BillSearchCombobox from '@/components/parliament/BillSearchCombobox'
 import type { Bill, Committee, Mk, KnessetMember } from '@/types'
 
 interface ParliamentDrawerProps {
@@ -76,6 +77,7 @@ export default function ParliamentDrawer({
 
           <div className="flex-1 overflow-y-auto">
             <TabsContent value="bills" className="m-0 space-y-3 p-4">
+              <BillSearchCombobox onAdd={onAdd} />
               {bills.map((bill) => (
                 <BillCard key={bill.id} bill={bill} onRemove={onRemoveBill} />
               ))}
