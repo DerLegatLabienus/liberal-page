@@ -30,9 +30,9 @@ interface ParliamentDrawerProps {
 }
 
 export default function ParliamentDrawer({
-  open, onClose, bills, committees, mks,
+  open, onClose, bills, committees, mks: _mks,
   loading, lastSyncedAt, onRefresh, onAdd,
-  onRemoveBill, onRemoveCommittee, onRemoveMk,
+  onRemoveBill, onRemoveCommittee, onRemoveMk: _onRemoveMk,
 }: ParliamentDrawerProps) {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
