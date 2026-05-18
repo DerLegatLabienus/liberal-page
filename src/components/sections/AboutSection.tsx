@@ -26,7 +26,7 @@ export default function AboutSection() {
                 {p}
               </p>
             ))}
-            <div className="flex flex-wrap gap-2 justify-end pt-2">
+            <div className="flex flex-wrap gap-2 justify-start pt-2">
               {values.map((value) => (
                 <span
                   key={value}

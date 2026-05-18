@@ -6,7 +6,7 @@ import type { GalleryItem } from '@/types'
 const gallery = galleryData as GalleryItem[]
 
 export default function GallerySection() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const direction = useDirection()
 
   return (
@@ -24,13 +24,13 @@ export default function GallerySection() {
                 <div className="relative h-44 w-full bg-slate-100">
                   <img
                     src={item.src}
-                    alt={item.caption}
+                    alt={i18n.language === 'he' ? item.caption : (item.captionEn ?? item.caption)}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
                 </div>
                 <div className="px-3 py-2">
-                  <p className="text-start text-xs text-muted-foreground leading-snug">{item.caption}</p>
+                  <p className="text-start text-xs text-muted-foreground leading-snug">{i18n.language === 'he' ? item.caption : (item.captionEn ?? item.caption)}</p>
                 </div>
               </div>
             ))}

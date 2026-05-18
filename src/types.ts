@@ -82,6 +82,7 @@ export interface GalleryItem {
   id: number
   src: string
   caption: string
+  captionEn?: string
   date: string
 }
 
