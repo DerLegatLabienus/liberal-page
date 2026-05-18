@@ -1,0 +1,43 @@
+name: pr-review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    name: Claude PR Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get diff
+        run: git diff origin/master...HEAD > /tmp/diff.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install anthropic SDK
+        run: pip install anthropic
+
+      - name: Run Claude review
+        run: python .github/scripts/pr_review.py > /tmp/review.txt
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Post review comment
+        run: |
+          REVIEW=$(cat /tmp/review.txt)
+          BODY=$(printf '\U0001F916 **Claude PR Review**\n\n%s' "$REVIEW")
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

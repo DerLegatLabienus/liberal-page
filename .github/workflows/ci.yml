@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test — start server and hit /api/health
+        run: |
+          npx tsx server/index.ts &
+          SERVER_PID=$!
+          sleep 5
+          curl -f http://localhost:3001/api/health
+          CURL_EXIT=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $CURL_EXIT
