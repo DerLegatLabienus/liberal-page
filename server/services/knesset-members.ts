@@ -56,7 +56,7 @@ export async function fetchAllKnessetMembers(knessetNum: number): Promise<Knesse
     const batch = knsIds.slice(i, i + BATCH_SIZE)
     const filter = batch.map((id) => `PersonID%20eq%20${id}`).join('%20or%20')
     const page = await odataFetch<PositionRow>(
-      `KNS_PersonToPosition?$filter=(${filter})%20and%20IsCurrent%20eq%20true%20and%20FactionID%20ne%20null&$top=100&$format=json`
+      `KNS_PersonToPosition?$filter=(${filter})%20and%20IsCurrent%20eq%20true%20and%20FactionID%20ne%20null&$top=200&$format=json`
     )
     positions.push(...page)
   }
