@@ -59,7 +59,7 @@ router.post('/track', async (req, res) => {
   const newCommittee: Committee = {
     id: nextId, oknesset_id: String(committeeId), name: name.trim(),
     chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
-    sourceUrl: knessetUrl ?? '', hasNewData: false, lastPolledAt: null,
+    sourceUrl: '', hasNewData: false, lastPolledAt: null,
   }
   committees.push(newCommittee)
   await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')

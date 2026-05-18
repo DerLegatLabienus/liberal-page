@@ -1,25 +1,13 @@
 [
   {
     "id": 1,
-    "oknesset_id": "4186",
-    "name": "ועדת הכספים",
+    "oknesset_id": "4189",
+    "name": "ועדת הבריאות",
     "chair": "",
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=4186",
-    "hasNewData": false,
-    "lastPolledAt": null
-  },
-  {
-    "id": 2,
-    "oknesset_id": "4187",
-    "name": "הוועדה לביטחון לאומי",
-    "chair": "",
-    "lastSessionDate": null,
-    "lastSessionSummary": null,
-    "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=4187",
+    "sourceUrl": "",
     "hasNewData": false,
     "lastPolledAt": null
   }

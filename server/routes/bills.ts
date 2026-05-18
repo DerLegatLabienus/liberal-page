@@ -48,7 +48,7 @@ router.post('/track', async (req, res) => {
   if (!billId || !name) return res.status(400).json({ error: 'billId and name required' })
 
   const bills = await readBills()
-  const alreadyTracked = bills.some((b) => b.knessetUrl?.includes(`hql_id=${billId}`))
+  const alreadyTracked = bills.some((b) => b.number === String(billId))
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
 
   const nextId = Math.max(0, ...bills.map((b) => b.id)) + 1
