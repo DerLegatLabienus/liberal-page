@@ -19,7 +19,7 @@ describe('AddTrackingInput', () => {
     await user.type(screen.getByPlaceholderText(/הדבק קישור/i), '12345')
     expect(await screen.findByText('הצ"ח')).toBeInTheDocument()
     expect(screen.getByText('ועדה')).toBeInTheDocument()
-    expect(screen.getByText('ח"כ')).toBeInTheDocument()
+    expect(screen.queryByText('ח"כ')).not.toBeInTheDocument()
   })
 
   it('does not show type selector for a URL', async () => {

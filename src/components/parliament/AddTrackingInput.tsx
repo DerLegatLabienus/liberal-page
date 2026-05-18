@@ -21,7 +21,6 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
   const TYPE_OPTIONS: { value: TrackingType; label: string }[] = [
     { value: 'bill', label: t('tracker.tab_bill') },
     { value: 'committee', label: t('tracker.tab_committee') },
-    { value: 'mk', label: t('tracker.tab_mk') },
   ]
 
   const trimmed = value.trim()

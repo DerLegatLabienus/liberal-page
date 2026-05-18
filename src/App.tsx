@@ -8,6 +8,7 @@ import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
 import HeroSection from '@/components/sections/HeroSection'
 import ParliamentStrip from '@/components/sections/ParliamentStrip'
 import AboutSection from '@/components/sections/AboutSection'
+import LiberalsShowcase from '@/components/sections/LiberalsShowcase'
 import GallerySection from '@/components/sections/GallerySection'
 import FaqSection from '@/components/sections/FaqSection'
 import JoinSection from '@/components/sections/JoinSection'
@@ -55,6 +56,7 @@ export default function App() {
           <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
         )}
         <AboutSection />
+        <LiberalsShowcase />
         <GallerySection />
         <FaqSection />
         <JoinSection />
