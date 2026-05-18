@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -7,8 +8,9 @@ import { useDirection } from '@/hooks/useDirection'
 import AddTrackingInput from '@/components/parliament/AddTrackingInput'
 import BillCard from '@/components/parliament/BillCard'
 import CommitteeCard from '@/components/parliament/CommitteeCard'
-import MkCard from '@/components/parliament/MkCard'
-import type { Bill, Committee, Mk } from '@/types'
+import MkCombobox from '@/components/parliament/MkCombobox'
+import MkActivityCard from '@/components/parliament/MkActivityCard'
+import type { Bill, Committee, Mk, KnessetMember } from '@/types'
 
 interface ParliamentDrawerProps {
   open: boolean
@@ -36,6 +38,8 @@ export default function ParliamentDrawer({
   const lastSyncedLabel = lastSyncedAt
     ? `${t('ui.drawer_last_synced')}: ${new Date(lastSyncedAt).toLocaleTimeString(i18n.language === 'he' ? 'he-IL' : 'en-US')}`
     : t('ui.drawer_not_synced')
+
+  const [selectedMk, setSelectedMk] = useState<KnessetMember | null>(null)
 
   return (
     <Sheet open={open} onOpenChange={(v: boolean) => !v && onClose()}>
@@ -78,11 +82,11 @@ export default function ParliamentDrawer({
             </TabsContent>
 
             <TabsContent value="mks" className="m-0 space-y-3 p-4">
-              {mks.map((mk) => (
-                <MkCard key={mk.id} mk={mk} onRemove={onRemoveMk} />
-              ))}
-              {mks.length === 0 && (
-                <p className="py-8 text-right text-sm text-muted-foreground">{t('ui.drawer_empty_mks')}</p>
+              <MkCombobox onSelect={setSelectedMk} selectedSiteId={selectedMk?.siteId ?? null} />
+              {selectedMk ? (
+                <MkActivityCard member={selectedMk} />
+              ) : (
+                <p className="py-8 text-start text-sm text-muted-foreground">{t('showcase.no_selection')}</p>
               )}
             </TabsContent>
           </div>
