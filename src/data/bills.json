@@ -1,33 +1,5 @@
 [
   {
-    "id": 1,
-    "oknesset_id": "",
-    "number": "פ/1234",
-    "title": "הצעת חוק לתיקון חוק יסוד: חופש העיסוק",
-    "status": "בוועדה",
-    "position": "תומכים",
-    "notes": "הצעת חוק שהתא יזם במטרה להרחיב את חופש העיסוק ולהפחית רגולציה מיותרת.",
-    "committee": "ועדת החוקה, חוק ומשפט",
-    "sourceUrl": "",
-    "documentUrl": null,
-    "hasNewData": false,
-    "lastPolledAt": null
-  },
-  {
-    "id": 2,
-    "oknesset_id": "",
-    "number": "פ/5678",
-    "title": "הצעת חוק לתיקון חוק שירות המדינה",
-    "status": "הצבעה קרובה",
-    "position": "עוקבים",
-    "notes": "הצעה לשינוי כללי המינויים בשירות הציבורי. אנו עוקבים אחר ההתפתחויות.",
-    "committee": "ועדת הכנסת",
-    "sourceUrl": "",
-    "documentUrl": null,
-    "hasNewData": false,
-    "lastPolledAt": null
-  },
-  {
     "id": 3,
     "oknesset_id": "",
     "number": "פ/9012",

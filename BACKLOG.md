@@ -119,6 +119,32 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 **Notes:**
 - Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
 
+## 12. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
+
+The old site at likudliberal.org contains event photos and media that are missing from the new site. These should be scraped and migrated before the old site is decommissioned or goes dark.
+
+**Requirements:**
+- Crawl likudliberal.org and extract all image URLs (event photos, gallery content, etc.)
+- Download and store images in cloud storage (Cloudflare R2 or equivalent)
+- Preserve metadata where available: event name, date, caption, original URL
+- Output a structured manifest (JSON) mapping each image to its metadata, ready to feed into the CMS (item 1 in backlog)
+- Do not migrate unrelated UI assets (logos used purely for layout, icons, etc.) — focus on event/content photos
+
+**Notes:**
+- Do this before the old site changes — media on the old site may disappear without warning
+- The scrape should be a one-time migration script, not an ongoing sync
+- Review images manually after download to discard duplicates or low-quality shots before importing into CMS
+
+## 13. Upgrade Node.js Version (Priority: Low)
+
+The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version for long-term support, security patches, and compatibility with current tooling.
+
+**Requirements:**
+- Upgrade to the latest Node LTS (v22.x at time of writing)
+- Add an `.nvmrc` or `engines` field in `package.json` to pin the expected version and prevent accidental mismatches
+- Verify all dependencies (Vite, tsx, Express) are compatible after the upgrade
+- Update CI/CD pipeline (item T3) to use the same LTS version
+
 ## 12. Live Parliamentary Content Translation (Priority: Low)
 
 Parliamentary content items (bill titles, MK names, committee names, activity descriptions) are stored as plain Hebrew strings from the Knesset API. No English source exists.

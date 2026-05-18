@@ -26,3 +26,4 @@ dist-ssr
 .superpowers/
 .env
 src/data/knesset-members-cache.json
+src/data/knesset-committees-cache.json

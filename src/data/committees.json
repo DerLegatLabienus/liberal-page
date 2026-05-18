@@ -1,13 +1,25 @@
 [
   {
     "id": 1,
-    "oknesset_id": "",
-    "name": "ועדת החוקה, חוק ומשפט",
+    "oknesset_id": "4186",
+    "name": "ועדת הכספים",
     "chair": "",
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "",
+    "sourceUrl": "https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=4186",
+    "hasNewData": false,
+    "lastPolledAt": null
+  },
+  {
+    "id": 2,
+    "oknesset_id": "4187",
+    "name": "הוועדה לביטחון לאומי",
+    "chair": "",
+    "lastSessionDate": null,
+    "lastSessionSummary": null,
+    "lastSessionDocumentUrl": null,
+    "sourceUrl": "https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=4187",
     "hasNewData": false,
     "lastPolledAt": null
   }

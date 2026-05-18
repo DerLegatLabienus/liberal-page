@@ -30,6 +30,12 @@ export interface BillSearchResult {
   knessetUrl: string
 }
 
+export interface CommitteeListItem {
+  committeeId: number
+  name: string
+  knessetUrl: string
+}
+
 export interface Committee {
   id: number
   oknesset_id: string
