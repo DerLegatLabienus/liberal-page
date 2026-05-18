@@ -56,3 +56,17 @@ curl http://localhost:3001/api/health
 | Backend | 3001 | http://localhost:3001 |
 
 The frontend is accessible from Windows at `http://localhost:5173` (WSL2 localhost forwarding is enabled via `host: '0.0.0.0'` in vite.config.ts).
+
+## Visual Companion (Brainstorming)
+
+WSL2 is detected as Linux, so the brainstorm server's auto-detection does **not** enable foreground mode. Without `--foreground`, the server starts then dies within seconds because its owner PID tracking kills it when the spawning background task exits.
+
+**Always start the visual companion with `--foreground` + `run_in_background: true`:**
+
+```bash
+# Correct — foreground mode keeps the process alive under the background task
+bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --url-host localhost --foreground
+# (Bash tool must use run_in_background: true)
+```
+
+Without `--foreground`, the server starts successfully (outputs JSON) but dies 2–30 seconds later and the browser gets connection refused.
