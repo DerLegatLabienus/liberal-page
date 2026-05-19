@@ -137,6 +137,7 @@ The old site at likudliberal.org contains event photos and media that are missin
 
 ## 13. Upgrade Node.js Version (Priority: Low)
 
+
 The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version for long-term support, security patches, and compatibility with current tooling.
 
 **Requirements:**
@@ -145,7 +146,7 @@ The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the lat
 - Verify all dependencies (Vite, tsx, Express) are compatible after the upgrade
 - Update CI/CD pipeline (item T3) to use the same LTS version
 
-## 12. Live Parliamentary Content Translation (Priority: Low)
+## 14. Live Parliamentary Content Translation (Priority: Low)
 
 Parliamentary content items (bill titles, MK names, committee names, activity descriptions) are stored as plain Hebrew strings from the Knesset API. No English source exists.
 
@@ -157,7 +158,7 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - The cache is persisted between server restarts
 - Depends on: item 3 (i18n) shipped first, item 2 (database) for long-term cache storage
 
-## 13. CommitteeCard — Recent Sessions with Links (Priority: Medium)
+## 15. CommitteeCard — Recent Sessions with Links (Priority: Medium)
 
 Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`, instead of only showing the last session date.
 
@@ -169,3 +170,16 @@ Display the committee's last 3–5 session dates and links directly inside the `
 - The existing `/api/committees/info/{id}` endpoint (currently unused for source links) can serve as an accessible fallback/preview page
 
 **Why:** Currently only the last session date is shown with no link. Session links help users jump directly to the Knesset meeting record.
+
+## 16. Poller — Backoff on Failure, No Tight Retry Loop (Priority: High)
+
+On fetch failure the poller currently retries immediately, causing a tight loop of constant GET requests to the Knesset API for MK, committee, and bill lists. It should back off and wait between cycles instead.
+
+**Requirements:**
+- On any failed poll cycle, wait a minimum backoff interval before the next attempt (e.g. 60 seconds, increasing exponentially up to a cap like 10 minutes)
+- A successful cycle resets the backoff to the normal poll interval
+- Errors are logged with the backoff duration so it is visible in server logs
+- The fix applies to all polled lists: MKs, committees, bills
+
+**Notes:**
+- Current observed behavior: a single failure causes the poller to hammer the Knesset API continuously, which risks rate-limiting or IP blocking
