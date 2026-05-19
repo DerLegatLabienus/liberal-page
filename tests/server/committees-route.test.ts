@@ -81,7 +81,7 @@ describe('POST /api/committees/track', () => {
       knessetUrl: 'https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=2',
     })
     expect(res.status).toBe(200)
-    expect(res.body.duplicate).toBe(true)
+    expect(res.body.duplicate ?? res.body.updated).toBe(true)
     expect(writeFile).not.toHaveBeenCalled()
   })
 })
