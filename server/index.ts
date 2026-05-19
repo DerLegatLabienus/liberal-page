@@ -11,8 +11,21 @@ import { startPoller } from './services/poller'
 const app = express()
 const PORT = 3001
 
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
-app.use(cors({ origin: ALLOWED_ORIGINS }))
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim().toLowerCase())
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true)
+    if (ALLOWED_ORIGINS.includes(origin.toLowerCase())) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`))
+    }
+  },
+}))
 app.use(express.json())
 
 app.use('/api/tracking', trackingRouter)

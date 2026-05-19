@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGIN
-        value: https://DerLegatLabienus.github.io
+        value: https://derlegatlabienus.github.io
       - key: POLL_INTERVAL_MS
         value: "21600000"
       - key: ANTHROPIC_API_KEY
