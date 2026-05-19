@@ -34,14 +34,28 @@ router.get('/list', async (_req, res) => {
   try {
     const cached = await repo.get()
     if (cached && repo.getAgeMs() < CACHE_TTL_MS) return res.json(cached)
-    const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
-      `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
-    )
-    const committees: CommitteeListItem[] = raw.map((c) => ({
-      committeeId: c.CommitteeID,
-      name: c.Name.trim(),
-      knessetUrl: `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?ItemID=${c.CommitteeID}`,
-    }))
+
+    // Fetch committees and site code mappings in parallel
+    const [raw, siteCodes] = await Promise.all([
+      odataFetchAll<{ CommitteeID: number; Name: string }>(
+        `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
+      ),
+      odataFetchAll<{ KnsID: number; SiteId: number }>(
+        `KNS_CmtSiteCode?$select=KnsID,SiteId&$top=500&$format=json`
+      ),
+    ])
+
+    // Build KnsID → SiteId map
+    const siteIdMap = new Map(siteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
+
+    const committees: CommitteeListItem[] = raw
+      .filter((c) => siteIdMap.has(c.CommitteeID))
+      .map((c) => ({
+        committeeId: c.CommitteeID,
+        name: c.Name.trim(),
+        knessetUrl: `https://main.knesset.gov.il/apps/committees/${siteIdMap.get(c.CommitteeID)}`,
+      }))
+
     await repo.set(committees)
     res.json(committees)
   } catch (err) {
@@ -49,26 +63,13 @@ router.get('/list', async (_req, res) => {
   }
 })
 
-async function fetchLatestSessionUrl(committeeId: number): Promise<string> {
-  try {
-    const url = `${ODATA_BASE}/KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=1&$select=SessionUrl&$format=json`
-    const res = await fetch(url, { headers: { Accept: 'application/json' } })
-    if (!res.ok) return ''
-    const data = await res.json() as { value: Array<{ SessionUrl?: string }> }
-    const raw = data.value?.[0]?.SessionUrl ?? ''
-    return raw.replace('http://', 'https://')
-  } catch {
-    return ''
-  }
-}
-
 router.post('/track', async (req, res) => {
-  const { committeeId, name } = req.body as { committeeId?: number; name?: string }
+  const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
-  const sourceUrl = await fetchLatestSessionUrl(committeeId)
+  const sourceUrl = knessetUrl ?? ''
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
     id: nextId, oknesset_id: '', name: name.trim(),
