@@ -8,6 +8,10 @@ import type { Bill, Committee, Mk } from '../../src/types'
 const DATA_DIR = path.join(process.cwd(), 'src/data')
 const CACHE_PATH = path.join(DATA_DIR, 'summaries-cache.json')
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
+const BACKOFF_INITIAL_MS = 60_000   // 1 minute minimum on failure
+const BACKOFF_MAX_MS = 600_000      // 10 minutes maximum on failure
+
+let currentDelayMs = INTERVAL_MS
 
 const oknesset = new OknessetClient()
 const summarizer = new Summarizer(CACHE_PATH)
@@ -21,9 +25,12 @@ async function writeJson<T>(filename: string, data: T[]): Promise<void> {
   await writeFile(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf-8')
 }
 
-async function pollBills(): Promise<void> {
+async function pollBills(): Promise<boolean> {
   const bills = await readJson<Bill>('bills.json')
+  if (bills.filter((b) => b.oknesset_id).length === 0) return true
+
   let changed = false
+  let anySuccess = false
 
   for (const bill of bills) {
     if (!bill.oknesset_id) continue
@@ -38,6 +45,7 @@ async function pollBills(): Promise<void> {
       if (bill.documentUrl) {
         await summarizer.summarizeUrl(bill.documentUrl)
       }
+      anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling bill ${bill.oknesset_id}:`, err)
     }
@@ -45,11 +53,15 @@ async function pollBills(): Promise<void> {
   }
 
   if (changed) await writeJson('bills.json', bills)
+  return anySuccess
 }
 
-async function pollCommittees(): Promise<void> {
+async function pollCommittees(): Promise<boolean> {
   const committees = await readJson<Committee>('committees.json')
+  if (committees.filter((c) => c.oknesset_id).length === 0) return true
+
   let changed = false
+  let anySuccess = false
 
   for (const committee of committees) {
     if (!committee.oknesset_id) continue
@@ -68,6 +80,7 @@ async function pollCommittees(): Promise<void> {
           }
         }
       }
+      anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling committee ${committee.oknesset_id}:`, err)
     }
@@ -75,11 +88,15 @@ async function pollCommittees(): Promise<void> {
   }
 
   if (changed) await writeJson('committees.json', committees)
+  return anySuccess
 }
 
-async function pollMks(): Promise<void> {
+async function pollMks(): Promise<boolean> {
   const mks = await readJson<Mk>('mks.json')
+  if (mks.filter((m) => !m.inactive && m.knesset_site_id).length === 0) return true
+
   let changed = false
+  let anySuccess = false
 
   for (const mk of mks) {
     if (mk.inactive) continue
@@ -98,6 +115,7 @@ async function pollMks(): Promise<void> {
         mk.hasNewData = true
         changed = true
       }
+      anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling MK ${mk.oknesset_id}:`, err)
     }
@@ -106,6 +124,7 @@ async function pollMks(): Promise<void> {
   }
 
   if (changed) await writeJson('mks.json', mks)
+  return anySuccess
 }
 
 function mapBillStatus(status: string): Bill['status'] | null {
@@ -118,13 +137,28 @@ function mapBillStatus(status: string): Bill['status'] | null {
   return map[status.toLowerCase()] ?? null
 }
 
-async function runPollCycle(): Promise<void> {
+export async function runPollCycle(): Promise<boolean> {
   console.log('Poller: starting poll cycle', new Date().toISOString())
-  await Promise.allSettled([pollBills(), pollCommittees(), pollMks()])
-  console.log('Poller: poll cycle complete')
+  const results = await Promise.allSettled([pollBills(), pollCommittees(), pollMks()])
+  const anySuccess = results.some(
+    (r) => r.status === 'fulfilled' && r.value === true
+  )
+  console.log('Poller: poll cycle complete', anySuccess ? '(success)' : '(all failed)')
+  return anySuccess
+}
+
+async function runAndSchedule(): Promise<void> {
+  const success = await runPollCycle()
+  if (success) {
+    currentDelayMs = INTERVAL_MS
+  } else {
+    currentDelayMs = Math.min(currentDelayMs * 2, BACKOFF_MAX_MS)
+    currentDelayMs = Math.max(currentDelayMs, BACKOFF_INITIAL_MS)
+    console.warn(`Poller: all polls failed — backing off ${currentDelayMs / 1000}s before next cycle`)
+  }
+  setTimeout(runAndSchedule, currentDelayMs)
 }
 
 export function startPoller(): void {
-  runPollCycle()
-  setInterval(runPollCycle, INTERVAL_MS)
+  runAndSchedule()
 }
