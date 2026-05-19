@@ -75,7 +75,7 @@ router.get('/list', async (_req, res) => {
 })
 
 router.post('/track', async (req, res) => {
-  const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
+  const { committeeId, name, knessetUrl: _knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
