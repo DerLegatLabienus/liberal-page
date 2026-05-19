@@ -48,13 +48,16 @@ router.get('/list', async (_req, res) => {
     // Build KnsID → SiteId map
     const siteIdMap = new Map(siteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
 
-    const committees: CommitteeListItem[] = raw
-      .filter((c) => siteIdMap.has(c.CommitteeID))
-      .map((c) => ({
+    const committees: CommitteeListItem[] = raw.map((c) => {
+      const siteId = siteIdMap.get(c.CommitteeID)
+      return {
         committeeId: c.CommitteeID,
         name: c.Name.trim(),
-        knessetUrl: `https://main.knesset.gov.il/apps/committees/${siteIdMap.get(c.CommitteeID)}`,
-      }))
+        knessetUrl: siteId
+          ? `https://main.knesset.gov.il/apps/committees/${siteId}`
+          : `https://main.knesset.gov.il/apps/committees`,
+      }
+    })
 
     await repo.set(committees)
     res.json(committees)
@@ -69,7 +72,16 @@ router.post('/track', async (req, res) => {
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
-  const sourceUrl = `/api/committees/info/${committeeId}`
+  // Look up SiteId for /apps/committees/{siteId} URL format
+  let sourceUrl = `https://main.knesset.gov.il/apps/committees`
+  try {
+    const scRes = await fetch(`${ODATA_BASE}/KNS_CmtSiteCode?$filter=KnsID%20eq%20${committeeId}&$select=SiteId&$format=json`, { headers: { Accept: 'application/json' } })
+    if (scRes.ok) {
+      const scData = await scRes.json() as { value: Array<{ SiteId: number }> }
+      const siteId = scData.value?.[0]?.SiteId
+      if (siteId) sourceUrl = `https://main.knesset.gov.il/apps/committees/${siteId}`
+    }
+  } catch { /* use fallback */ }
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
     id: nextId, oknesset_id: '', name: name.trim(),

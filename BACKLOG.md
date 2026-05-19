@@ -156,3 +156,16 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - Components check the cache before falling back to the raw Hebrew string
 - The cache is persisted between server restarts
 - Depends on: item 3 (i18n) shipped first, item 2 (database) for long-term cache storage
+
+## 13. CommitteeCard — Recent Sessions with Links (Priority: Medium)
+
+Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`, instead of only showing the last session date.
+
+**Requirements:**
+- Fetch recent sessions from `KNS_CommitteeSession?$filter=CommitteeID eq {id}&$orderby=StartDate desc&$top=5` at poll time
+- Store sessions as a `recentSessions` array on the `Committee` type: `{ date: string; sessionId: number; sessionUrl: string; type: string }[]`
+- `CommitteeCard` renders each session as a dated link: `"13/05/2026 — פתוחה ↗"`
+- Links point to `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID={sessionId}` (the canonical Knesset session URL from OData's `SessionUrl` field)
+- The existing `/api/committees/info/{id}` endpoint (currently unused for source links) can serve as an accessible fallback/preview page
+
+**Why:** Currently only the last session date is shown with no link. Session links help users jump directly to the Knesset meeting record.

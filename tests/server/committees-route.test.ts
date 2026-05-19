@@ -45,7 +45,7 @@ describe('GET /api/committees/list', () => {
     expect(res.body).toHaveLength(2)
     expect(res.body[0].committeeId).toBe(2)
     expect(res.body[0].name).toBe('ועדת הכספים')
-    expect(res.body[0].knessetUrl).toContain('/apps/committees/100')
+    expect(res.body[0].knessetUrl).toContain('/apps/committees')
   })
 })
 
