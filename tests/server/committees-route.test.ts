@@ -33,13 +33,19 @@ function mockOdata(value: unknown[], nextLink?: string) {
 describe('GET /api/committees/list', () => {
   beforeEach(() => vi.mocked(fetch).mockReset())
   it('returns 200 with committee list', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES))
+    const SITE_CODES = [
+      { KnsID: 2, SiteId: 100 },
+      { KnsID: 3, SiteId: 200 },
+    ]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // committees
+      .mockResolvedValueOnce(mockOdata(SITE_CODES))        // site codes
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(2)
     expect(res.body[0].committeeId).toBe(2)
     expect(res.body[0].name).toBe('ועדת הכספים')
-    expect(res.body[0].knessetUrl).toContain('ItemID=2')
+    expect(res.body[0].knessetUrl).toContain('/apps/committees/100')
   })
 })
 
