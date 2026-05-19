@@ -35,37 +35,32 @@ router.get('/list', async (_req, res) => {
     const cached = await repo.get()
     if (cached && repo.getAgeMs() < CACHE_TTL_MS) return res.json(cached)
 
-    // Step 1: fetch all Knesset 25 current committees
+    // Fetch all Knesset 25 current committees
     const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
       `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
     )
 
-    // Step 2: batch-fetch site codes for only these committee IDs (avoids loading all 720 entries)
-    const BATCH = 40
-    const committeeIds = raw.map((c) => c.CommitteeID)
-    const allSiteCodes: Array<{ KnsID: number; SiteId: number }> = []
-    for (let i = 0; i < committeeIds.length; i += BATCH) {
-      const batch = committeeIds.slice(i, i + BATCH)
-      const filter = batch.map((id) => `KnsID%20eq%20${id}`).join('%20or%20')
-      const page = await odataFetchAll<{ KnsID: number; SiteId: number }>(
-        `KNS_CmtSiteCode?$filter=${filter}&$select=KnsID,SiteId&$top=100&$format=json`
+    // For each committee, get the most recent session URL from OData (authoritative link)
+    const BATCH = 20
+    const sessionUrlMap = new Map<number, string>()
+    for (let i = 0; i < raw.length; i += BATCH) {
+      const batch = raw.slice(i, i + BATCH)
+      const filter = batch.map((c) => `CommitteeID%20eq%20${c.CommitteeID}`).join('%20or%20')
+      const sessions = await odataFetchAll<{ CommitteeID: number; SessionUrl?: string }>(
+        `KNS_CommitteeSession?$filter=(${filter})&$orderby=StartDate%20desc&$top=${BATCH * 2}&$select=CommitteeID,SessionUrl&$format=json`
       )
-      allSiteCodes.push(...page)
+      for (const s of sessions) {
+        if (!sessionUrlMap.has(s.CommitteeID) && s.SessionUrl) {
+          sessionUrlMap.set(s.CommitteeID, s.SessionUrl.replace('http://', 'https://'))
+        }
+      }
     }
 
-    // Build KnsID → SiteId map
-    const siteIdMap = new Map(allSiteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
-
-    const committees: CommitteeListItem[] = raw.map((c) => {
-      const siteId = siteIdMap.get(c.CommitteeID)
-      return {
-        committeeId: c.CommitteeID,
-        name: c.Name.trim(),
-        knessetUrl: siteId
-          ? `https://main.knesset.gov.il/apps/committees/${siteId}`
-          : `https://main.knesset.gov.il/apps/committees`,
-      }
-    })
+    const committees: CommitteeListItem[] = raw.map((c) => ({
+      committeeId: c.CommitteeID,
+      name: c.Name.trim(),
+      knessetUrl: sessionUrlMap.get(c.CommitteeID) ?? '',
+    }))
 
     await repo.set(committees)
     res.json(committees)
@@ -75,21 +70,15 @@ router.get('/list', async (_req, res) => {
 })
 
 router.post('/track', async (req, res) => {
-  const { committeeId, name, knessetUrl: _knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
+  const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
-  const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
+  // Deduplicate by name AND by committeeId stored in oknesset_id
+  const alreadyTracked = committees.some(
+    (c) => c.oknesset_id === String(committeeId) || c.name.trim() === name.trim()
+  )
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
-  // Look up SiteId for /apps/committees/{siteId} URL format
-  let sourceUrl = `https://main.knesset.gov.il/apps/committees`
-  try {
-    const scRes = await fetch(`${ODATA_BASE}/KNS_CmtSiteCode?$filter=KnsID%20eq%20${committeeId}&$select=SiteId&$format=json`, { headers: { Accept: 'application/json' } })
-    if (scRes.ok) {
-      const scData = await scRes.json() as { value: Array<{ SiteId: number }> }
-      const siteId = scData.value?.[0]?.SiteId
-      if (siteId) sourceUrl = `https://main.knesset.gov.il/apps/committees/${siteId}`
-    }
-  } catch { /* use fallback */ }
+  const sourceUrl = knessetUrl ?? ''
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
     id: nextId, oknesset_id: '', name: name.trim(),

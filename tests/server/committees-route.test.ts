@@ -32,31 +32,31 @@ function mockOdata(value: unknown[], nextLink?: string) {
 
 describe('GET /api/committees/list', () => {
   beforeEach(() => vi.mocked(fetch).mockReset())
-  it('returns 200 with committee list including SiteId-based URLs', async () => {
-    // committees batch first, then site code batch (filtered by committeeIds)
-    const SITE_CODES = [
-      { KnsID: 2, SiteId: 100 },
-      { KnsID: 3, SiteId: 200 },
+  it('returns 200 with committee list using SessionUrl as knessetUrl', async () => {
+    const SESSIONS = [
+      { CommitteeID: 2, SessionUrl: 'http://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=123' },
+      { CommitteeID: 3, SessionUrl: 'http://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=456' },
     ]
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // Step 1: committee list
-      .mockResolvedValueOnce(mockOdata(SITE_CODES))        // Step 2: site codes batch
+      .mockResolvedValueOnce(mockOdata(SESSIONS))          // Step 2: session URLs batch
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(2)
     expect(res.body[0].committeeId).toBe(2)
     expect(res.body[0].name).toBe('ועדת הכספים')
-    // URL should use the SiteId from KNS_CmtSiteCode
-    expect(res.body[0].knessetUrl).toBe('https://main.knesset.gov.il/apps/committees/100')
+    // URL should use SessionUrl converted to https
+    expect(res.body[0].knessetUrl).toContain('AllCommitteesAgenda')
+    expect(res.body[0].knessetUrl).toContain('https://')
   })
 
-  it('falls back to generic committee URL when no SiteId found', async () => {
+  it('falls back to empty knessetUrl when no session found', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // committees
-      .mockResolvedValueOnce(mockOdata([]))               // no site codes found
+      .mockResolvedValueOnce(mockOdata([]))               // no sessions found
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
-    expect(res.body[0].knessetUrl).toBe('https://main.knesset.gov.il/apps/committees')
+    expect(res.body[0].knessetUrl).toBe('')
   })
 })
 
