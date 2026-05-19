@@ -16,7 +16,7 @@ try {
 const router = Router()
 const DATA_PATH = path.join(process.cwd(), 'src/data/committees.json')
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour - ensures mapping changes propagate quickly
 const repo = new CommitteeListRepository()
 
 async function odataFetchAll<T>(startPath: string): Promise<T[]> {
