@@ -35,18 +35,26 @@ router.get('/list', async (_req, res) => {
     const cached = await repo.get()
     if (cached && repo.getAgeMs() < CACHE_TTL_MS) return res.json(cached)
 
-    // Fetch committees and site code mappings in parallel
-    const [raw, siteCodes] = await Promise.all([
-      odataFetchAll<{ CommitteeID: number; Name: string }>(
-        `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
-      ),
-      odataFetchAll<{ KnsID: number; SiteId: number }>(
-        `KNS_CmtSiteCode?$select=KnsID,SiteId&$top=500&$format=json`
-      ),
-    ])
+    // Step 1: fetch all Knesset 25 current committees
+    const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
+      `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
+    )
+
+    // Step 2: batch-fetch site codes for only these committee IDs (avoids loading all 720 entries)
+    const BATCH = 40
+    const committeeIds = raw.map((c) => c.CommitteeID)
+    const allSiteCodes: Array<{ KnsID: number; SiteId: number }> = []
+    for (let i = 0; i < committeeIds.length; i += BATCH) {
+      const batch = committeeIds.slice(i, i + BATCH)
+      const filter = batch.map((id) => `KnsID%20eq%20${id}`).join('%20or%20')
+      const page = await odataFetchAll<{ KnsID: number; SiteId: number }>(
+        `KNS_CmtSiteCode?$filter=${filter}&$select=KnsID,SiteId&$top=100&$format=json`
+      )
+      allSiteCodes.push(...page)
+    }
 
     // Build KnsID → SiteId map
-    const siteIdMap = new Map(siteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
+    const siteIdMap = new Map(allSiteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
 
     const committees: CommitteeListItem[] = raw.map((c) => {
       const siteId = siteIdMap.get(c.CommitteeID)

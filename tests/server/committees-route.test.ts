@@ -32,20 +32,31 @@ function mockOdata(value: unknown[], nextLink?: string) {
 
 describe('GET /api/committees/list', () => {
   beforeEach(() => vi.mocked(fetch).mockReset())
-  it('returns 200 with committee list', async () => {
+  it('returns 200 with committee list including SiteId-based URLs', async () => {
+    // committees batch first, then site code batch (filtered by committeeIds)
     const SITE_CODES = [
       { KnsID: 2, SiteId: 100 },
       { KnsID: 3, SiteId: 200 },
     ]
     vi.mocked(fetch)
-      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // committees
-      .mockResolvedValueOnce(mockOdata(SITE_CODES))        // site codes
+      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // Step 1: committee list
+      .mockResolvedValueOnce(mockOdata(SITE_CODES))        // Step 2: site codes batch
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(2)
     expect(res.body[0].committeeId).toBe(2)
     expect(res.body[0].name).toBe('ועדת הכספים')
-    expect(res.body[0].knessetUrl).toContain('/apps/committees')
+    // URL should use the SiteId from KNS_CmtSiteCode
+    expect(res.body[0].knessetUrl).toBe('https://main.knesset.gov.il/apps/committees/100')
+  })
+
+  it('falls back to generic committee URL when no SiteId found', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // committees
+      .mockResolvedValueOnce(mockOdata([]))               // no site codes found
+    const res = await request(app).get('/api/committees/list')
+    expect(res.status).toBe(200)
+    expect(res.body[0].knessetUrl).toBe('https://main.knesset.gov.il/apps/committees')
   })
 })
 
