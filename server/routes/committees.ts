@@ -69,7 +69,7 @@ router.post('/track', async (req, res) => {
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
-  const sourceUrl = knessetUrl ?? ''
+  const sourceUrl = `/api/committees/info/${committeeId}`
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
     id: nextId, oknesset_id: '', name: name.trim(),
@@ -82,3 +82,43 @@ router.post('/track', async (req, res) => {
 })
 
 export default router
+
+router.get('/info/:committeeId', async (req, res) => {
+  const committeeId = parseInt(req.params.committeeId, 10)
+  if (!committeeId) return res.status(400).send('<h1>Invalid committee ID</h1>')
+
+  try {
+    // Fetch committee info and recent sessions from Knesset OData
+    const [committees, sessions] = await Promise.all([
+      fetch(`${ODATA_BASE}/KNS_Committee?$filter=CommitteeID%20eq%20${committeeId}&$format=json`, { headers: { Accept: 'application/json' } })
+        .then(r => r.json() as Promise<{ value: Array<{ CommitteeID: number; Name: string; KnessetNum: number; CommitteeTypeDesc: string; Email: string | null }> }>),
+      fetch(`${ODATA_BASE}/KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=5&$select=CommitteeSessionID,StartDate,StatusDesc,TypeDesc,SessionUrl&$format=json`, { headers: { Accept: 'application/json' } })
+        .then(r => r.json() as Promise<{ value: Array<{ CommitteeSessionID: number; StartDate: string; StatusDesc: string; TypeDesc: string; SessionUrl: string }> }>),
+    ])
+
+    const committee = committees.value?.[0]
+    if (!committee) return res.status(404).send('<h1>Committee not found</h1>')
+
+    const sessionsHtml = sessions.value?.map(s => {
+      const date = new Date(s.StartDate).toLocaleDateString('he-IL')
+      const link = s.SessionUrl?.replace('http://', 'https://') ?? ''
+      return `<li>${date} — ${s.TypeDesc} (${s.StatusDesc})${link ? ` — <a href="${link}" target="_blank">צפה בישיבה ↗</a>` : ''}</li>`
+    }).join('') ?? ''
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>${committee.Name}</title>
+<style>body{font-family:Arial,sans-serif;max-width:700px;margin:2rem auto;padding:1rem;direction:rtl}
+h1{color:#1d4ed8}li{margin:.5rem 0}a{color:#1d4ed8}</style></head>
+<body>
+<h1>${committee.Name}</h1>
+<p><strong>כנסת:</strong> ${committee.KnessetNum} | <strong>סוג:</strong> ${committee.CommitteeTypeDesc}${committee.Email ? ` | <strong>דוא"ל:</strong> ${committee.Email}` : ''}</p>
+<h2>ישיבות אחרונות</h2>
+${sessionsHtml ? `<ul>${sessionsHtml}</ul>` : '<p>אין ישיבות רשומות</p>'}
+<p><small>מקור: מאגר נתוני הכנסת (OData)</small></p>
+</body></html>`)
+  } catch (err) {
+    res.status(500).send(`<h1>Error</h1><p>${err instanceof Error ? err.message : 'Server error'}</p>`)
+  }
+})

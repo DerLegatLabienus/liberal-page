@@ -7,7 +7,7 @@
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://main.knesset.gov.il/apps/committees/14",
+    "sourceUrl": "/api/committees/info/4188",
     "hasNewData": false,
     "lastPolledAt": null
   },
@@ -19,7 +19,7 @@
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://main.knesset.gov.il/apps/committees/750",
+    "sourceUrl": "/api/committees/info/4187",
     "hasNewData": false,
     "lastPolledAt": null
   }
