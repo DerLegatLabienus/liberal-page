@@ -16,7 +16,7 @@ router.get('/list', async (_req, res) => {
     if (cached && mkListRepo.getAgeMs() < CACHE_TTL_MS) {
       return res.json(cached)
     }
-    const members = await fetchAllKnessetMembers(25)
+    const members = await fetchAllKnessetMembers()
     const annotations = await annotationsRepo.getAll()
     const annotated: KnessetMember[] = members.map((m) => ({
       ...m,

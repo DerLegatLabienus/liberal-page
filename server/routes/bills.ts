@@ -6,7 +6,7 @@ import type { Bill, BillSearchResult } from '../../src/types'
 const router = Router()
 const DATA_PATH = path.join(process.cwd(), 'src/data/bills.json')
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
-const CURRENT_KNESSET = 25
+import { getCurrentKnesset } from '../services/knesset-config'
 
 async function readBills(): Promise<Bill[]> {
   try {
@@ -27,7 +27,7 @@ router.get('/search', async (req, res) => {
 
   try {
     const encoded = encodeURIComponent(q)
-    const url = `${ODATA_BASE}/KNS_Bill?$filter=KnessetNum%20eq%20${CURRENT_KNESSET}%20and%20substringof('${encoded}',Name)&$top=20&$select=BillID,Name,StatusID&$format=json`
+    const url = `${ODATA_BASE}/KNS_Bill?$filter=KnessetNum%20eq%20${getCurrentKnesset()}%20and%20substringof('${encoded}',Name)&$top=20&$select=BillID,Name,StatusID&$format=json`
     const response = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!response.ok) throw new Error(`OData error ${response.status}`)
     const data = await response.json() as { value: Array<{ BillID: number; Name: string; StatusID: number }> }

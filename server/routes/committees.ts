@@ -4,6 +4,7 @@ import path from 'path'
 import type { Committee, CommitteeListItem } from '../../src/types'
 import { readFileSync } from 'fs'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+import { getCurrentKnesset } from '../services/knesset-config'
 
 // Local mapping: CommitteeID → apps URL ID (CategoryID-based, with manual overrides)
 // Update src/data/committee-url-mapping.json to add/fix IDs when needed
@@ -46,7 +47,7 @@ router.get('/list', async (_req, res) => {
 
     // Fetch all Knesset 25 current committees
     const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
-      `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
+      `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%20${getCurrentKnesset()}&$select=CommitteeID,Name&$top=200&$format=json`
     )
 
     const committees: CommitteeListItem[] = raw.map((c) => {

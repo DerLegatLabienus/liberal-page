@@ -1,3 +1,4 @@
+import { getCurrentKnesset } from './knesset-config'
 import type { KnessetMember } from '../../src/types'
 
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
@@ -32,7 +33,7 @@ async function odataFetchAll<T>(path: string): Promise<T[]> {
   return results
 }
 
-export async function fetchAllKnessetMembers(_knessetNum: number): Promise<KnessetMember[]> {
+export async function fetchAllKnessetMembers(): Promise<KnessetMember[]> {
   // Step 1: get all current MKs — follow odata.nextLink across pages (API caps at 100/page)
   const persons = await odataFetchAll<PersonRow>(
     `KNS_Person?$filter=IsCurrent%20eq%20true&$top=200&$format=json`

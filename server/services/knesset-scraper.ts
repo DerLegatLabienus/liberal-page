@@ -1,7 +1,7 @@
 import type { MkActivity } from '../../src/types'
 
 const KNESSET_WEBSITE_API = 'https://www.knesset.gov.il/WebSiteApi/knessetapi'
-const CURRENT_KNESSET = 25
+import { getCurrentKnesset } from './knesset-config'
 
 interface KnessetActivityResponse {
   PrivateBills: Array<{
@@ -34,7 +34,7 @@ function parsePlenaryDate(s: string): string {
 }
 
 export async function fetchMkActivity(siteId: number, limit = 10): Promise<MkActivity[]> {
-  const url = `${KNESSET_WEBSITE_API}/MKs/GetParlamentayActivity?mkId=${siteId}&knessetId=${CURRENT_KNESSET}`
+  const url = `${KNESSET_WEBSITE_API}/MKs/GetParlamentayActivity?mkId=${siteId}&knessetId=${getCurrentKnesset()}`
   const res = await fetch(url, {
     headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
   })
