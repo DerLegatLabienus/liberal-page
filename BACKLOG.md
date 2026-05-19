@@ -20,19 +20,7 @@ in each route file — swap those functions for repository calls.
 Member login, personalized tracking lists, email alerts on bill status changes.
 Requires database (item 2 above) and an email service.
 
-## 4. MK Card — Submitted Bills and Parliamentary Queries (Priority: Medium)
-
-Expand the MK card to surface legislative activity:
-
-- **Submitted bills:** bills the MK personally submitted or co-sponsored, fetched from the Knesset API
-- **Parliamentary queries (שאילתות):** questions the MK submitted to ministers, with date and subject
-- Displayed as a collapsible/expandable section inside the card — collapsed by default
-- Each item links out to the official Knesset record
-
-**Notes:**
-- Data should be fetched via the existing `/api/parliament` backend route rather than hard-coded
-
-## 5. API Layer — Centralize All API Calls per Module (Priority: Medium)
+## 4. API Layer — Centralize All API Calls per Module (Priority: Medium)
 
 All API calls should go through a dedicated API layer inside each module.
 
@@ -42,7 +30,7 @@ All API calls should go through a dedicated API layer inside each module.
 - The API layer is the single place to set base URLs, headers, error handling, and response shaping
 - Backend route files follow the same pattern: routes call services only, no direct Knesset API calls in handlers
 
-## 6. Closed Committees — Auto-Remove from All Views (Priority: Medium)
+## 5. Closed Committees — Auto-Remove from All Views (Priority: Medium)
 
 When a Knesset committee is closed/dissolved, it should be removed from the UI everywhere it appears.
 
@@ -52,7 +40,7 @@ When a Knesset committee is closed/dissolved, it should be removed from the UI e
 - Protocols and MK cards that reference a now-closed committee display the committee name as plain text (historical record) rather than a selectable/linked item
 - The backend poller should keep committee status up to date
 
-## 7. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
+## 6. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
 
 When the Knesset is dispersed or a new Knesset is elected, MKs and committees must be updated or removed to reflect the new composition.
 
@@ -68,7 +56,7 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 **Notes:**
 - Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
 
-## 8. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
+## 7. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
 
 The old site at likudliberal.org contains event photos and media that are missing from the new site. These should be scraped and migrated before the old site is decommissioned or goes dark.
 
@@ -83,7 +71,7 @@ The old site at likudliberal.org contains event photos and media that are missin
 - Do this before the old site changes — media on the old site may disappear without warning
 - The scrape should be a one-time migration script, not an ongoing sync
 
-## 9. Upgrade Node.js Version (Priority: Low)
+## 8. Upgrade Node.js Version (Priority: Low)
 
 The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version.
 
@@ -93,7 +81,7 @@ The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the lat
 - Verify all dependencies (Vite, tsx, Express) are compatible after the upgrade
 - Update CI/CD pipeline to use the same LTS version
 
-## 10. Live Parliamentary Content Translation (Priority: Low)
+## 9. Live Parliamentary Content Translation (Priority: Low)
 
 Parliamentary content items (bill titles, MK names, committee names, activity descriptions) are stored as plain Hebrew strings from the Knesset API. No English source exists.
 
@@ -105,7 +93,7 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - The cache is persisted between server restarts
 - Depends on: item 2 (database) for long-term cache storage
 
-## 11. CommitteeCard — Recent Sessions with Links (Priority: Medium)
+## 10. CommitteeCard — Recent Sessions with Links (Priority: Medium)
 
 Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`.
 
@@ -115,7 +103,7 @@ Display the committee's last 3–5 session dates and links directly inside the `
 - `CommitteeCard` renders each session as a dated link: `"13/05/2026 — פתוחה ↗"`
 - Links point to the canonical Knesset session URL from OData's `SessionUrl` field
 
-## 12. Poller — Backoff on Failure (Priority: High)
+## 11. Poller — Backoff on Failure (Priority: High)
 
 On fetch failure the poller currently retries immediately, causing a tight loop of constant GET requests to the Knesset API.
 
@@ -128,9 +116,13 @@ On fetch failure the poller currently retries immediately, causing a tight loop 
 **Notes:**
 - Current observed behavior: a single failure causes the poller to hammer the Knesset API continuously, which risks rate-limiting or IP blocking
 
-## 13. Shareable Language Links — `?lang=en` URL param (Priority: Low)
+## 12. Shareable Language Links — `?lang=en` URL param (Priority: Low)
 
 Add `?lang=en` query param support so language-specific URLs can be shared and bookmarked.
+
+### ✅ MK Card — Submitted Bills and Parliamentary Queries — 2026-05-18
+
+Activity feed in `MkCard` displays `bill_initiated` (📋) and `question` (❓) items with dates and direct links to the official Knesset record. Data is fetched via the Knesset scraper service on the backend and stored in `mks.json`.
 
 ---
 
