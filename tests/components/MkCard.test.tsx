@@ -3,10 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import MkCard from '@/components/parliament/MkCard'
 import type { Mk } from '@/types'
-import mksData from '../../src/data/mks.json'
-
-// Real Knesset data sourced from OData API via knesset-scraper
-const mk1116 = mksData.find((m) => m.knesset_site_id === '1116')! as unknown as Mk
+// Use fixture for mk1116 — avoids dependency on live mks.json content
 const mk1117 = mkFixture({ id: 4, name: 'משה רוט', party: 'יהדות התורה', knesset_site_id: '1117', sourceUrl: 'https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1117' }) as Mk
 
 // Minimal valid Mk for edge-case tests
@@ -28,6 +25,21 @@ function mkFixture(overrides: Partial<Mk>): Mk {
     ...overrides,
   }
 }
+const mk1116 = mkFixture({
+  id: 3,
+  oknesset_id: '30839',
+  knesset_site_id: '1116',
+  name: 'דן אילוז',
+  party: 'הליכוד',
+  photoUrl: 'https://www.knesset.gov.il/mk/images/members/mk_1116.jpg',
+  sourceUrl: 'https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1116',
+  activity: [
+    { type: 'vote' as const, date: '2026-05-13T11:42:00', title: 'הצבעה בנושא', detail: 'הצביע נגד', sourceUrl: 'https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45944' },
+    { type: 'bill_initiated' as const, date: '2026-02-23T00:00:00', title: 'הצעת חוק למניעת הפצת תוכן פוגעני ברשת', sourceUrl: 'https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2236954' },
+  ],
+})
+
+
 
 describe('MkCard — real Knesset data (site ID 1116: דן אילוז)', () => {
   it('renders MK name', () => {
