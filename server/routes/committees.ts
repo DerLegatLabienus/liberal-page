@@ -72,10 +72,20 @@ router.post('/track', async (req, res) => {
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
   // Deduplicate by name AND by committeeId stored in oknesset_id
-  const alreadyTracked = committees.some(
+  const existingIdx = committees.findIndex(
     (c) => c.oknesset_id === String(committeeId) || c.name.trim() === name.trim()
   )
-  if (alreadyTracked) return res.json({ ok: true, duplicate: true })
+  if (existingIdx !== -1) {
+    // Update sourceUrl if the URL has changed (e.g. after mapping fix)
+    const existing = committees[existingIdx]
+    const newUrl = knessetUrl ?? ''
+    if (newUrl && newUrl !== existing.sourceUrl) {
+      committees[existingIdx] = { ...existing, sourceUrl: newUrl }
+      await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
+      return res.json({ ok: true, updated: true, item: committees[existingIdx] })
+    }
+    return res.json({ ok: true, duplicate: true })
+  }
   const sourceUrl = knessetUrl ?? ''
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
