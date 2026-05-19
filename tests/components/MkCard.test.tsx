@@ -56,7 +56,7 @@ describe('MkCard — real Knesset data (site ID 1116: דן אילוז)', () => {
     render(<MkCard mk={mk1116} />)
     const img = screen.getByRole('img', { name: 'דן אילוז' })
     expect(img).toBeInTheDocument()
-    expect(img).toHaveAttribute('src', 'https://main.knesset.gov.il/mk/members/1116/photo')
+    expect(img).toHaveAttribute('src', 'https://www.knesset.gov.il/mk/images/members/mk_1116.jpg')
   })
 
   it('shows exactly 4 activity items (capped)', () => {
