@@ -222,3 +222,17 @@ describe('MkCard — edge cases', () => {
     expect(screen.getByText('בעד')).toBeInTheDocument()
   })
 })
+
+describe('MkCard — inactive MK', () => {
+  it('shows inactive banner when mk.inactive is true', () => {
+    const inactiveMk = mkFixture({ inactive: true })
+    render(<MkCard mk={inactiveMk} />)
+    expect(screen.getByText(/לא חבר/i)).toBeInTheDocument()
+  })
+
+  it('does not show inactive banner when mk.inactive is false', () => {
+    const activeMk = mkFixture({ inactive: false })
+    render(<MkCard mk={activeMk} />)
+    expect(screen.queryByText(/לא חבר/i)).not.toBeInTheDocument()
+  })
+})

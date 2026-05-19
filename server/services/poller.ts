@@ -82,6 +82,7 @@ async function pollMks(): Promise<void> {
   let changed = false
 
   for (const mk of mks) {
+    if (mk.inactive) continue
     const siteId = mk.knesset_site_id ? parseInt(mk.knesset_site_id, 10) : 0
     if (!siteId) continue
 

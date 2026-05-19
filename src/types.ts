@@ -22,6 +22,7 @@ export interface Bill {
   knessetUrl?: string
   hasNewData: boolean
   lastPolledAt: string | null
+  inactive?: boolean
 }
 
 export interface BillSearchResult {
@@ -47,6 +48,7 @@ export interface Committee {
   sourceUrl: string
   hasNewData: boolean
   lastPolledAt: string | null
+  inactive?: boolean
 }
 
 export interface MkVote {
@@ -89,6 +91,7 @@ export interface Mk {
   sourceUrl: string
   hasNewData: boolean
   lastPolledAt: string | null
+  inactive?: boolean
 }
 
 export interface GalleryItem {

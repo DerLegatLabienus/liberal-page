@@ -53,7 +53,7 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
 
   return (
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
-      <div className="w-1 shrink-0 bg-purple-500" />
+      <div className={`w-1 shrink-0 bg-purple-500 ${mk.inactive ? 'opacity-60' : ''}`} />
       <div className="flex-1 p-4" dir="rtl">
 
         <div className="mb-3 flex items-center gap-3">
@@ -75,6 +75,11 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
           </div>
         </div>
 
+        {mk.inactive && (
+          <div className="mb-3 rounded-md bg-slate-100 px-3 py-2">
+            <p className="text-right text-xs font-medium text-slate-500">לא חבר/ת כנסת פעיל/ה</p>
+          </div>
+        )}
         {mk.votingSummary && (
           <div className="mb-3 rounded-md bg-purple-50 p-2">
             <p className="mb-1 text-right text-xs font-semibold text-purple-700">{t('tracker.ai_vote_summary')}</p>
