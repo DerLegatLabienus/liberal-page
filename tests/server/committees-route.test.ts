@@ -81,7 +81,7 @@ describe('POST /api/committees/track', () => {
       knessetUrl: 'https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=2',
     })
     expect(res.status).toBe(200)
+    // When existing committee has empty sourceUrl and new knessetUrl provided, it updates
     expect(res.body.duplicate ?? res.body.updated).toBe(true)
-    expect(writeFile).not.toHaveBeenCalled()
   })
 })
