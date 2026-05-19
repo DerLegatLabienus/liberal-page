@@ -15,87 +15,36 @@ Replace `src/data/*.json` files with a proper database (PostgreSQL or SQLite).
 All server services already read/write through helper functions (`readItems`, `writeItems`)
 in each route file — swap those functions for repository calls.
 
-## 3. Multi-Language Support (Priority: Low)
-
-### 3a. Shareable language links (Priority: Low)
-
-After i18n is shipped, add `?lang=en` query param support so language-specific URLs can be shared and bookmarked. On load, read `?lang=` before `localStorage` and set language accordingly. Enables sharing an English-language URL with diaspora audiences.
-
-Depends on: item 3 (i18n) shipping first.
-
-
-
-Add an English (LTR) version of the site. `useDirection()` already observes
-`document.documentElement.dir` — switching the attribute flips all directional
-components automatically.
-
-## 4. User Accounts & Alerts (Priority: Low)
+## 3. User Accounts & Alerts (Priority: Low)
 
 Member login, personalized tracking lists, email alerts on bill status changes.
 Requires database (item 2 above) and an email service.
 
-## 5. MK Selection — Combobox Instead of Link (Priority: Medium)
+## 4. MK Card — Submitted Bills and Parliamentary Queries (Priority: Medium)
 
-Replace the current link-based MK navigation with a combobox (searchable dropdown). Users should be able to type or select an MK name from the dropdown to switch the active MK card view, rather than clicking through links.
+Expand the MK card to surface legislative activity:
 
-**Requirements:**
-- Combobox with search/filter as the user types
-- Lists all MKs from the representatives data
-- Selecting an MK updates the displayed card immediately
-- Accessible (keyboard navigable, ARIA combobox role)
-- Each MK entry in the combobox displays an icon if they are a "friend of the Likud liberals" (an ally outside the cell who supports liberal positions)
-- New boolean field `liberalFriend` on the `Representative` type to drive the icon
-- Icon should be visually distinct and carry a tooltip/label explaining the designation
-
-## 6. MK Card — Submitted Bills and Parliamentary Queries (Priority: Medium)
-
-Expand the MK (Member of Knesset) card to surface the legislative activity of each representative:
-
-- **Submitted bills:** bills the MK personally submitted or co-sponsored, fetched from the Knesset API (the backend already has `knesset-api.ts` and `oknesset.ts` services)
+- **Submitted bills:** bills the MK personally submitted or co-sponsored, fetched from the Knesset API
 - **Parliamentary queries (שאילתות):** questions the MK submitted to ministers, with date and subject
-- Displayed as a collapsible/expandable section inside the card — collapsed by default to keep the list compact
+- Displayed as a collapsible/expandable section inside the card — collapsed by default
 - Each item links out to the official Knesset record
 
 **Notes:**
 - Data should be fetched via the existing `/api/parliament` backend route rather than hard-coded
-- Keeps the MK card as the single place to understand a representative's track record
 
-## 7. API Layer — Centralize All API Calls per Module (Priority: Medium)
+## 5. API Layer — Centralize All API Calls per Module (Priority: Medium)
 
-All API calls should go through a dedicated API layer inside each module rather than being called directly from business logic or components.
+All API calls should go through a dedicated API layer inside each module.
 
 **Requirements:**
-- Each feature module (bills, representatives, protocols, updates, etc.) has its own `api.ts` file that owns all fetch calls for that domain
-- Components and hooks import from the API layer only — no raw `fetch`/`axios` calls in components, hooks, or service logic
+- Each feature module has its own `api.ts` file that owns all fetch calls for that domain
+- Components and hooks import from the API layer only — no raw `fetch`/`axios` calls in components
 - The API layer is the single place to set base URLs, headers, error handling, and response shaping
-- Backend route files follow the same pattern: no direct Knesset API calls inside route handlers — those belong in the existing `services/` files, and routes call services only
+- Backend route files follow the same pattern: routes call services only, no direct Knesset API calls in handlers
 
-**Why:** Keeps business logic testable and decoupled from transport details. Swapping endpoints, adding auth headers, or mocking in tests requires changing one file per domain, not hunting through components.
+## 6. Closed Committees — Auto-Remove from All Views (Priority: Medium)
 
-## 8. Bill Selection — Combobox for New Bills, Link Fallback for Older Items (Priority: Medium)
-
-New bills should be added and navigated via a searchable combobox. Older bills that already have a direct URL (e.g. a Knesset page link) should continue to be accessible via that link.
-
-**Requirements:**
-- Combobox to search and select a bill by number or title — replaces any direct-link navigation for new bills
-- New field `knessetUrl` on the `Bill` type (optional) — when present, renders a link to the official Knesset record alongside the card
-- Bills without a `knessetUrl` (older or manually entered items) show no link — no broken placeholders
-- Combobox and link coexist: the combobox drives in-app navigation/selection; the link opens the external record in a new tab
-
-## 9. Knesset Committee Selection — Combobox Instead of Link (Priority: Medium)
-
-Knesset committees should be selected via a searchable combobox rather than navigated by link.
-
-**Requirements:**
-- Combobox lists all Knesset committees (sourced from the existing backend/Knesset API data)
-- Selecting a committee filters or displays the relevant content (protocols, MKs, bills associated with that committee)
-- Replaces any direct link-based committee navigation throughout the site
-- Accessible (keyboard navigable, ARIA combobox role)
-- Closed committees are excluded from the combobox and from all committee displays — they should not appear anywhere once marked closed
-
-## 10. Closed Committees — Auto-Remove from All Views (Priority: Medium)
-
-When a Knesset committee is closed/dissolved, it should be removed from the UI everywhere it appears — not just the combobox.
+When a Knesset committee is closed/dissolved, it should be removed from the UI everywhere it appears.
 
 **Requirements:**
 - Committee data includes an `active` boolean (or a `closedDate` field) sourced from the Knesset API
@@ -103,7 +52,7 @@ When a Knesset committee is closed/dissolved, it should be removed from the UI e
 - Protocols and MK cards that reference a now-closed committee display the committee name as plain text (historical record) rather than a selectable/linked item
 - The backend poller should keep committee status up to date
 
-## 11. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
+## 7. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
 
 When the Knesset is dispersed or a new Knesset is elected, MKs and committees must be updated or removed to reflect the new composition.
 
@@ -119,7 +68,7 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 **Notes:**
 - Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
 
-## 12. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
+## 8. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
 
 The old site at likudliberal.org contains event photos and media that are missing from the new site. These should be scraped and migrated before the old site is decommissioned or goes dark.
 
@@ -127,26 +76,24 @@ The old site at likudliberal.org contains event photos and media that are missin
 - Crawl likudliberal.org and extract all image URLs (event photos, gallery content, etc.)
 - Download and store images in cloud storage (Cloudflare R2 or equivalent)
 - Preserve metadata where available: event name, date, caption, original URL
-- Output a structured manifest (JSON) mapping each image to its metadata, ready to feed into the CMS (item 1 in backlog)
-- Do not migrate unrelated UI assets (logos used purely for layout, icons, etc.) — focus on event/content photos
+- Output a structured manifest (JSON) mapping each image to its metadata, ready to feed into the CMS
+- Do not migrate unrelated UI assets — focus on event/content photos
 
 **Notes:**
 - Do this before the old site changes — media on the old site may disappear without warning
 - The scrape should be a one-time migration script, not an ongoing sync
-- Review images manually after download to discard duplicates or low-quality shots before importing into CMS
 
-## 13. Upgrade Node.js Version (Priority: Low)
+## 9. Upgrade Node.js Version (Priority: Low)
 
-
-The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version for long-term support, security patches, and compatibility with current tooling.
+The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version.
 
 **Requirements:**
 - Upgrade to the latest Node LTS (v22.x at time of writing)
-- Add an `.nvmrc` or `engines` field in `package.json` to pin the expected version and prevent accidental mismatches
+- Add an `.nvmrc` or `engines` field in `package.json` to pin the expected version
 - Verify all dependencies (Vite, tsx, Express) are compatible after the upgrade
-- Update CI/CD pipeline (item T3) to use the same LTS version
+- Update CI/CD pipeline to use the same LTS version
 
-## 14. Live Parliamentary Content Translation (Priority: Low)
+## 10. Live Parliamentary Content Translation (Priority: Low)
 
 Parliamentary content items (bill titles, MK names, committee names, activity descriptions) are stored as plain Hebrew strings from the Knesset API. No English source exists.
 
@@ -156,30 +103,57 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - On first English-mode view, translations are requested (via LLM or translation API) and written to the cache
 - Components check the cache before falling back to the raw Hebrew string
 - The cache is persisted between server restarts
-- Depends on: item 3 (i18n) shipped first, item 2 (database) for long-term cache storage
+- Depends on: item 2 (database) for long-term cache storage
 
-## 15. CommitteeCard — Recent Sessions with Links (Priority: Medium)
+## 11. CommitteeCard — Recent Sessions with Links (Priority: Medium)
 
-Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`, instead of only showing the last session date.
+Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`.
 
 **Requirements:**
-- Fetch recent sessions from `KNS_CommitteeSession?$filter=CommitteeID eq {id}&$orderby=StartDate desc&$top=5` at poll time
+- Fetch recent sessions from Knesset OData at poll time
 - Store sessions as a `recentSessions` array on the `Committee` type: `{ date: string; sessionId: number; sessionUrl: string; type: string }[]`
 - `CommitteeCard` renders each session as a dated link: `"13/05/2026 — פתוחה ↗"`
-- Links point to `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID={sessionId}` (the canonical Knesset session URL from OData's `SessionUrl` field)
-- The existing `/api/committees/info/{id}` endpoint (currently unused for source links) can serve as an accessible fallback/preview page
+- Links point to the canonical Knesset session URL from OData's `SessionUrl` field
 
-**Why:** Currently only the last session date is shown with no link. Session links help users jump directly to the Knesset meeting record.
+## 12. Poller — Backoff on Failure (Priority: High)
 
-## 16. Poller — Backoff on Failure, No Tight Retry Loop (Priority: High)
-
-On fetch failure the poller currently retries immediately, causing a tight loop of constant GET requests to the Knesset API for MK, committee, and bill lists. It should back off and wait between cycles instead.
+On fetch failure the poller currently retries immediately, causing a tight loop of constant GET requests to the Knesset API.
 
 **Requirements:**
 - On any failed poll cycle, wait a minimum backoff interval before the next attempt (e.g. 60 seconds, increasing exponentially up to a cap like 10 minutes)
 - A successful cycle resets the backoff to the normal poll interval
-- Errors are logged with the backoff duration so it is visible in server logs
+- Errors are logged with the backoff duration
 - The fix applies to all polled lists: MKs, committees, bills
 
 **Notes:**
 - Current observed behavior: a single failure causes the poller to hammer the Knesset API continuously, which risks rate-limiting or IP blocking
+
+## 13. Shareable Language Links — `?lang=en` URL param (Priority: Low)
+
+Add `?lang=en` query param support so language-specific URLs can be shared and bookmarked.
+
+---
+
+## Completed
+
+Items shipped. Kept for retrospective and reference.
+
+### ✅ Multi-Language Support (i18n) — 2026-05-17
+
+Full Hebrew/English language switching using `react-i18next`. Language toggle in Header sets `document.documentElement.dir`, which `useDirection()` observes. All public sections translated (Hero, About, FAQ, Gallery, Join, ParliamentDrawer tabs). Language persisted in `localStorage`.
+
+### ✅ MK Selection — Combobox — 2026-05-18
+
+Searchable `MkCombobox` in the parliament drawer MK tab. Supports `isLiberal` and `isSupporter` flags with distinct icons. Selecting an MK loads their card and activity feed inline.
+
+### ✅ Bill Selection — Combobox — 2026-05-18
+
+`BillSearchCombobox` searches bills by title or number across the full Knesset bill database. Older tracked bills retain their direct `knessetUrl` link alongside the card.
+
+### ✅ Knesset Committee Selection — Combobox — 2026-05-18
+
+`CommitteeCombobox` lists all active Knesset committees with search. Closed committees are excluded. Selecting a committee displays its card and recent session data.
+
+### ✅ GitHub Pages + Render deployment — 2026-05-19
+
+Frontend deployed to GitHub Pages (`https://derlegatlabienus.github.io/liberal-page/`). Express backend deployed to Render (`https://liberal-page.onrender.com`). GitHub Actions CI (lint → tsc → test → build → smoke test) and deploy workflows in place.
