@@ -2,7 +2,16 @@ import { Router } from 'express'
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import type { Committee, CommitteeListItem } from '../../src/types'
+import { readFileSync } from 'fs'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+
+// Local mapping: CommitteeID → apps URL ID (CategoryID-based, with manual overrides)
+// Update src/data/committee-url-mapping.json to add/fix IDs when needed
+let urlMapping: Record<string, number> = {}
+try {
+  const mappingPath = `${process.cwd()}/src/data/committee-url-mapping.json`
+  urlMapping = JSON.parse(readFileSync(mappingPath, 'utf-8'))
+} catch { /* mapping unavailable, use empty */ }
 
 const router = Router()
 const DATA_PATH = path.join(process.cwd(), 'src/data/committees.json')
@@ -40,27 +49,16 @@ router.get('/list', async (_req, res) => {
       `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025&$select=CommitteeID,Name&$top=200&$format=json`
     )
 
-    // For each committee, get the most recent session URL from OData (authoritative link)
-    const BATCH = 20
-    const sessionUrlMap = new Map<number, string>()
-    for (let i = 0; i < raw.length; i += BATCH) {
-      const batch = raw.slice(i, i + BATCH)
-      const filter = batch.map((c) => `CommitteeID%20eq%20${c.CommitteeID}`).join('%20or%20')
-      const sessions = await odataFetchAll<{ CommitteeID: number; SessionUrl?: string }>(
-        `KNS_CommitteeSession?$filter=(${filter})&$orderby=StartDate%20desc&$top=${BATCH * 2}&$select=CommitteeID,SessionUrl&$format=json`
-      )
-      for (const s of sessions) {
-        if (!sessionUrlMap.has(s.CommitteeID) && s.SessionUrl) {
-          sessionUrlMap.set(s.CommitteeID, s.SessionUrl.replace('http://', 'https://'))
-        }
+    const committees: CommitteeListItem[] = raw.map((c) => {
+      const appsId = urlMapping[String(c.CommitteeID)]
+      return {
+        committeeId: c.CommitteeID,
+        name: c.Name.trim(),
+        knessetUrl: appsId
+          ? `https://main.knesset.gov.il/apps/committees/${appsId}`
+          : '',
       }
-    }
-
-    const committees: CommitteeListItem[] = raw.map((c) => ({
-      committeeId: c.CommitteeID,
-      name: c.Name.trim(),
-      knessetUrl: sessionUrlMap.get(c.CommitteeID) ?? '',
-    }))
+    })
 
     await repo.set(committees)
     res.json(committees)

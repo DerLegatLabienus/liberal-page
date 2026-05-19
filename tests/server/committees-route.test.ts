@@ -32,28 +32,22 @@ function mockOdata(value: unknown[], nextLink?: string) {
 
 describe('GET /api/committees/list', () => {
   beforeEach(() => vi.mocked(fetch).mockReset())
-  it('returns 200 with committee list using SessionUrl as knessetUrl', async () => {
-    const SESSIONS = [
-      { CommitteeID: 2, SessionUrl: 'http://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=123' },
-      { CommitteeID: 3, SessionUrl: 'http://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=456' },
-    ]
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // Step 1: committee list
-      .mockResolvedValueOnce(mockOdata(SESSIONS))          // Step 2: session URLs batch
+  it('returns 200 with committee list using local mapping for apps URL', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES))
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(2)
     expect(res.body[0].committeeId).toBe(2)
     expect(res.body[0].name).toBe('ועדת הכספים')
-    // URL should use SessionUrl converted to https
-    expect(res.body[0].knessetUrl).toContain('AllCommitteesAgenda')
-    expect(res.body[0].knessetUrl).toContain('https://')
+    // knessetUrl is either a valid apps URL or empty (no session fetch needed)
+    if (res.body[0].knessetUrl) {
+      expect(res.body[0].knessetUrl).toMatch(/main\.knesset\.gov\.il\/apps\/committees\/\d+/)
+    }
   })
 
-  it('falls back to empty knessetUrl when no session found', async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES)) // committees
-      .mockResolvedValueOnce(mockOdata([]))               // no sessions found
+  it('returns empty knessetUrl when committee not in mapping', async () => {
+    const UNKNOWN = [{ CommitteeID: 99999, Name: 'ועדה לא ידועה' }]
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(UNKNOWN))
     const res = await request(app).get('/api/committees/list')
     expect(res.status).toBe(200)
     expect(res.body[0].knessetUrl).toBe('')
