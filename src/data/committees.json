@@ -7,7 +7,19 @@
     "lastSessionDate": null,
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
-    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=4188",
+    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2229354",
+    "hasNewData": false,
+    "lastPolledAt": null
+  },
+  {
+    "id": 2,
+    "oknesset_id": "",
+    "name": "הוועדה לביטחון לאומי",
+    "chair": "",
+    "lastSessionDate": null,
+    "lastSessionSummary": null,
+    "lastSessionDocumentUrl": null,
+    "sourceUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2242358",
     "hasNewData": false,
     "lastPolledAt": null
   }

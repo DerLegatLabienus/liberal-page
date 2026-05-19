@@ -40,7 +40,7 @@ router.get('/list', async (_req, res) => {
     const committees: CommitteeListItem[] = raw.map((c) => ({
       committeeId: c.CommitteeID,
       name: c.Name.trim(),
-      knessetUrl: `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteeAgenda.aspx?ItemID=${c.CommitteeID}`,
+      knessetUrl: `https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?ItemID=${c.CommitteeID}`,
     }))
     await repo.set(committees)
     res.json(committees)
@@ -49,17 +49,31 @@ router.get('/list', async (_req, res) => {
   }
 })
 
+async function fetchLatestSessionUrl(committeeId: number): Promise<string> {
+  try {
+    const url = `${ODATA_BASE}/KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=1&$select=SessionUrl&$format=json`
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
+    if (!res.ok) return ''
+    const data = await res.json() as { value: Array<{ SessionUrl?: string }> }
+    const raw = data.value?.[0]?.SessionUrl ?? ''
+    return raw.replace('http://', 'https://')
+  } catch {
+    return ''
+  }
+}
+
 router.post('/track', async (req, res) => {
-  const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
+  const { committeeId, name } = req.body as { committeeId?: number; name?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
   const committees = await readCommittees()
   const alreadyTracked = committees.some((c) => c.oknesset_id === String(committeeId))
   if (alreadyTracked) return res.json({ ok: true, duplicate: true })
+  const sourceUrl = await fetchLatestSessionUrl(committeeId)
   const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
   const newCommittee: Committee = {
     id: nextId, oknesset_id: '', name: name.trim(),
     chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
-    sourceUrl: knessetUrl ?? '', hasNewData: false, lastPolledAt: null,
+    sourceUrl, hasNewData: false, lastPolledAt: null,
   }
   committees.push(newCommittee)
   await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
