@@ -1,10 +1,10 @@
 import path from 'path'
-import { readFile } from 'fs/promises'
+import { readFile as _readFile } from 'fs/promises'
 import type { CommitteeSession } from '../../src/types'
 
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
-const MK_LIST_CACHE = path.join(process.cwd(), 'src/data/knesset-members-cache.json')
-const ANNOTATIONS_PATH = path.join(process.cwd(), 'src/data/mk-annotations.json')
+const _MK_LIST_CACHE = path.join(process.cwd(), 'src/data/knesset-members-cache.json')
+const _ANNOTATIONS_PATH = path.join(process.cwd(), 'src/data/mk-annotations.json')
 
 interface ODataSession {
   CommitteeSessionID: number
