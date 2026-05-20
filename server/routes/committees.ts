@@ -4,6 +4,7 @@ import path from 'path'
 import type { Committee, CommitteeListItem } from '../../src/types'
 import { readFileSync } from 'fs'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+import { enrichCommitteeSessions } from '../services/committee-session-enricher'
 import { getCurrentKnesset } from '../services/knesset-config'
 
 // Local mapping: CommitteeID → apps URL ID (CategoryID-based, with manual overrides)
@@ -96,6 +97,22 @@ router.post('/track', async (req, res) => {
   }
   committees.push(newCommittee)
   await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
+
+  // Enrich immediately in background — don't block the response
+  const aiEnabled = process.env.COMMITTEE_AI === 'true'
+  enrichCommitteeSessions(name.trim(), [], aiEnabled)
+    .then(async (sessions) => {
+      if (!sessions.length) return
+      const updated = JSON.parse(await readFile(DATA_PATH, 'utf-8') as string) as Committee[]
+      const idx = updated.findIndex((c) => c.id === nextId)
+      if (idx !== -1) {
+        updated[idx].recentSessions = sessions
+        updated[idx].lastSessionDate = sessions[0].date
+        await writeFile(DATA_PATH, JSON.stringify(updated, null, 2), 'utf-8')
+      }
+    })
+    .catch(() => { /* enrichment failure is non-critical */ })
+
   res.json({ ok: true, item: newCommittee })
 })
 
