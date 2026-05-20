@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile } from 'fs/promises'
 
 // Mock the fs/promises module so poller never touches real files
 vi.mock('fs/promises', () => ({

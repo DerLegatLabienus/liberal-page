@@ -1,4 +1,3 @@
-import { getCurrentKnesset } from './knesset-config'
 import type { KnessetMember } from '../../src/types'
 
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
