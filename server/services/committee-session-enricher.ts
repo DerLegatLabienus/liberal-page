@@ -35,6 +35,17 @@ async function resolveCommitteeId(committeeName: string): Promise<number | null>
   return results[0]?.CommitteeID ?? null
 }
 
+// Load committee URL mapping (CommitteeID → apps siteId)
+let urlMappingCache: Record<string, number> | null = null
+function getUrlMapping(): Record<string, number> {
+  if (urlMappingCache) return urlMappingCache
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    urlMappingCache = require(path.join(process.cwd(), 'src/data/committee-url-mapping.json')) as Record<string, number>
+  } catch { urlMappingCache = {} }
+  return urlMappingCache ?? {}
+}
+
 export async function enrichCommitteeSessions(
   committeeName: string,
   _trackedMkSiteIds: string[],
@@ -43,6 +54,9 @@ export async function enrichCommitteeSessions(
   try {
     const committeeId = await resolveCommitteeId(committeeName)
     if (!committeeId) return []
+
+    const urlMapping = getUrlMapping()
+    const committeeAppUrl = urlMapping[String(committeeId)]
 
     const sessions = await odataGet<ODataSession>(
       `KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=2&$select=CommitteeSessionID,StartDate,KnessetNum,SessionUrl&$format=json`
@@ -56,12 +70,18 @@ export async function enrichCommitteeSessions(
       )
       const title = items.map(i => i.Name).filter(Boolean).join(' · ').slice(0, 120)
 
+      // Use /APPS/committees/{siteId}/sessions URL which works as an external link
+      // The raw SessionUrl (AllCommitteesAgenda.aspx) redirects to lobby when opened externally
+      const sessionsUrl = committeeAppUrl
+        ? `https://main.knesset.gov.il/APPS/committees/${committeeAppUrl}/sessions?SearchType=1`
+        : session.SessionUrl.replace('http://', 'https://')
+
       results.push({
         sessionId: session.CommitteeSessionID,
         date: session.StartDate,
         knessetNum: session.KnessetNum,
         title,
-        sessionUrl: session.SessionUrl.replace('http://', 'https://'),
+        sessionUrl: sessionsUrl,
         attendingSiteIds: [],
       })
     }
