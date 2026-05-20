@@ -79,4 +79,77 @@ export class Summarizer {
       return null
     }
   }
+
+  async summarizeAndExtractAttendees(docUrl: string): Promise<{
+    derivedTitle?: string
+    aiSummary?: string
+    attendees: string[]
+  }> {
+    try {
+      const res = await fetch(docUrl)
+      if (!res.ok) return { attendees: [] }
+      const buffer = Buffer.from(await res.arrayBuffer())
+      const format = docUrl.toLowerCase().includes('.doc') ? 'docx' : 'pdf'
+      const md5 = createHash('md5').update(buffer).digest('hex')
+
+      const cache = await this.readCache()
+      const entry = cache[md5]
+
+      // Return from cache if already processed with attendees
+      if (entry && entry.attendees !== undefined) {
+        return {
+          derivedTitle: entry.derivedTitle,
+          aiSummary: entry.summary,
+          attendees: entry.attendees,
+        }
+      }
+
+      // Extract text and call Claude for title + summary + attendees in one pass
+      const text = await this.extractText(buffer, format)
+      const message = await this.client.messages.create({
+        model: MODEL,
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `קרא את פרוטוקול ועדה זה בעברית וענה ב-JSON בפורמט הבא בלבד (ללא טקסט נוסף):
+{"title":"כותרת קצרה של הנושא הראשי (משפט אחד)","summary":"סיכום קצר של הדיון (משפט אחד)","attendees":["שם ח\\\"כ 1","שם ח\\\"כ 2"]}
+
+חברי הכנסת שנכחו מופיעים בתחילת המסמך תחת "נכחו" או "חברי הכנסת".
+
+פרוטוקול:
+${text.slice(0, 8000)}`,
+        }],
+      })
+      const block = message.content[0]
+      if (block.type !== 'text') return { attendees: [] }
+
+      let parsed: { title?: string; summary?: string; attendees?: string[] } = {}
+      try {
+        parsed = JSON.parse(block.text) as typeof parsed
+      } catch {
+        const attendeeMatch = block.text.match(/"attendees"\s*:\s*\[(.*?)\]/s)
+        if (attendeeMatch) {
+          parsed.attendees = attendeeMatch[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, '')) ?? []
+        }
+      }
+
+      // Write to cache
+      cache[md5] = {
+        summary: parsed.summary ?? '',
+        createdAt: new Date().toISOString(),
+        sourceUrl: docUrl,
+        attendees: parsed.attendees ?? [],
+        derivedTitle: parsed.title,
+      }
+      await this.writeCache(cache)
+
+      return {
+        derivedTitle: parsed.title,
+        aiSummary: parsed.summary,
+        attendees: parsed.attendees ?? [],
+      }
+    } catch {
+      return { attendees: [] }
+    }
+  }
 }
