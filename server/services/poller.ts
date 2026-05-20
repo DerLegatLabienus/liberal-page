@@ -152,8 +152,12 @@ async function runAndSchedule(): Promise<void> {
   if (success) {
     currentDelayMs = INTERVAL_MS
   } else {
-    currentDelayMs = Math.min(currentDelayMs * 2, BACKOFF_MAX_MS)
-    currentDelayMs = Math.max(currentDelayMs, BACKOFF_INITIAL_MS)
+    // Start from BACKOFF_INITIAL_MS when coming from normal mode; otherwise double
+    if (currentDelayMs === INTERVAL_MS) {
+      currentDelayMs = BACKOFF_INITIAL_MS
+    } else {
+      currentDelayMs = Math.min(currentDelayMs * 2, BACKOFF_MAX_MS)
+    }
     console.warn(`Poller: all polls failed — backing off ${currentDelayMs / 1000}s before next cycle`)
   }
   setTimeout(runAndSchedule, currentDelayMs)
