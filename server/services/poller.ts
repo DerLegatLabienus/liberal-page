@@ -3,6 +3,7 @@ import path from 'path'
 import { OknessetClient } from './oknesset'
 import { Summarizer } from './summarizer'
 import { fetchMkActivity } from './knesset-scraper'
+import { enrichCommitteeSessions } from './committee-session-enricher'
 import type { Bill, Committee, Mk } from '../../src/types'
 
 const DATA_DIR = path.join(process.cwd(), 'src/data')

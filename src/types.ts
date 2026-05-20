@@ -37,6 +37,16 @@ export interface CommitteeListItem {
   knessetUrl: string
 }
 
+export interface CommitteeSession {
+  sessionId: number
+  date: string
+  knessetNum: number
+  title: string
+  sessionUrl: string
+  attendingSiteIds: string[]
+  aiSummary?: string
+}
+
 export interface Committee {
   id: number
   oknesset_id: string
@@ -49,6 +59,7 @@ export interface Committee {
   hasNewData: boolean
   lastPolledAt: string | null
   inactive?: boolean
+  recentSessions?: CommitteeSession[]
 }
 
 export interface MkVote {
@@ -127,6 +138,8 @@ export interface SummaryCache {
     summary: string
     createdAt: string
     sourceUrl: string
+    attendees?: string[]
+    derivedTitle?: string
   }
 }
 
