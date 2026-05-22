@@ -4,27 +4,27 @@
     "oknesset_id": "",
     "name": "ועדת הכספים",
     "chair": "",
-    "lastSessionDate": "2026-05-20T09:30:00",
+    "lastSessionDate": "2026-05-27T10:15:00",
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
     "sourceUrl": "https://main.knesset.gov.il/apps/committees/2213",
     "hasNewData": true,
-    "lastPolledAt": "2026-05-20T03:26:38.122Z",
+    "lastPolledAt": "2026-05-22T13:36:36.253Z",
     "recentSessions": [
       {
-        "sessionId": 2243211,
-        "date": "2026-05-20T09:30:00",
+        "sessionId": 2243414,
+        "date": "2026-05-27T10:15:00",
         "knessetNum": 25,
-        "title": "הצעת חוק לעידוד פעילות בשוק ההון (תיקוני חקיקה), התשפ\"ד-2024",
-        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2213/sessions/2243211",
+        "title": "הצעת תקציב המועצה לסדר ההימורים בספורט לשנת התקציב 2026 ",
+        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2213/sessions/2243414",
         "attendingSiteIds": []
       },
       {
-        "sessionId": 2243210,
-        "date": "2026-05-19T15:00:00",
+        "sessionId": 2243413,
+        "date": "2026-05-27T09:30:00",
         "knessetNum": 25,
-        "title": "פרק י\"ב (פיקוח על מוצרי עישון לצורכי מס) מתוך הצעת חוק התוכנית הכלכלית (תיקוני חקיקה ליישום המדיניות הכלכלית לשנת התקציב",
-        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2213/sessions/2243210",
+        "title": "הצעת תקנות להסדר ההימורים בספורט (כללים למתן גמול ליושב ראש המועצה), התשפ\"ו-2026",
+        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2213/sessions/2243413",
         "attendingSiteIds": []
       }
     ]
@@ -34,27 +34,27 @@
     "oknesset_id": "",
     "name": "הוועדה לביטחון לאומי",
     "chair": "",
-    "lastSessionDate": "2026-05-20T10:00:00",
+    "lastSessionDate": "2026-06-03T09:30:00",
     "lastSessionSummary": null,
     "lastSessionDocumentUrl": null,
     "sourceUrl": "https://main.knesset.gov.il/apps/committees/2229",
     "hasNewData": true,
-    "lastPolledAt": "2026-05-20T03:26:38.717Z",
+    "lastPolledAt": "2026-05-22T13:36:36.918Z",
     "recentSessions": [
       {
-        "sessionId": 2242358,
-        "date": "2026-05-20T10:00:00",
+        "sessionId": 2242992,
+        "date": "2026-06-03T09:30:00",
         "knessetNum": 25,
-        "title": "משמעויות סגירת מדור ההסתות במשטרת ישראל",
-        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2229/sessions/2242358",
+        "title": "הצעה לדיון מהיר בנושא: החרפה מתמשכת בגל האלימות והפשיעה הקטלנית בישראל בכלל ובקרב בני הנוער בפרט והיעדר מענה ממשלתי מספק",
+        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2229/sessions/2242992",
         "attendingSiteIds": []
       },
       {
-        "sessionId": 2243191,
-        "date": "2026-05-19T09:30:00",
+        "sessionId": 2243241,
+        "date": "2026-05-27T09:00:00",
         "knessetNum": 25,
-        "title": "סירובה של היועמשית לייצג שוטרים בתביעות נזיקין על מילוי תפקידם, והפקרת השוטרים בשטח",
-        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2229/sessions/2243191",
+        "title": "גילויי הסתה במוסדות להשכלה גבוהה בישראל - לבקשת חבר הכנסת ניסים ואטורי",
+        "sessionUrl": "https://main.knesset.gov.il/APPS/committees/2229/sessions/2243241",
         "attendingSiteIds": []
       }
     ]
@@ -69,7 +69,7 @@
     "lastSessionDocumentUrl": null,
     "sourceUrl": "https://main.knesset.gov.il/apps/committees/2231",
     "hasNewData": true,
-    "lastPolledAt": "2026-05-20T03:26:39.425Z",
+    "lastPolledAt": "2026-05-22T13:36:37.526Z",
     "recentSessions": [
       {
         "sessionId": 2243005,
@@ -99,7 +99,7 @@
     "lastSessionDocumentUrl": null,
     "sourceUrl": "https://main.knesset.gov.il/apps/committees/2214",
     "hasNewData": true,
-    "lastPolledAt": "2026-05-20T03:26:40.043Z",
+    "lastPolledAt": "2026-05-22T13:36:38.134Z",
     "recentSessions": [
       {
         "sessionId": 2243100,
@@ -129,7 +129,7 @@
     "lastSessionDocumentUrl": null,
     "sourceUrl": "https://main.knesset.gov.il/apps/committees/2215",
     "hasNewData": false,
-    "lastPolledAt": null,
+    "lastPolledAt": "2026-05-22T13:36:38.748Z",
     "recentSessions": [
       {
         "sessionId": 2243376,
