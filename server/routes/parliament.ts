@@ -3,7 +3,6 @@ import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { OknessetClient } from '../services/oknesset'
 import type { Bill, Committee, Mk, TrackingType } from '../../src/types'
-import { enrichCommitteeSessions } from '../services/committee-session-enricher'
 
 const router = Router()
 const DATA_DIR = path.join(process.cwd(), 'src/data')
@@ -61,34 +60,6 @@ router.get('/:type', async (req, res) => {
     await writeFile(filePath, JSON.stringify(refreshed, null, 2), 'utf-8')
   } catch {
     // non-fatal — still return the data
-  }
-
-  // For committees: re-enrich sessions if data is older than 1 hour
-  if (type === 'committee') {
-    const aiEnabled = process.env.COMMITTEE_AI === 'true'
-    const now = Date.now()
-    const staleMs = 60 * 60 * 1000 // 1 hour
-    const needsRefresh = refreshed.some((item) => {
-      const c = item as Committee
-      return !c.lastPolledAt || (now - new Date(c.lastPolledAt).getTime()) > staleMs
-    })
-    if (needsRefresh) {
-      // Re-enrich in background, write updated data; serve current data immediately
-      Promise.all(
-        (refreshed as Committee[]).map(async (committee) => {
-          const sessions = await enrichCommitteeSessions(committee.name, [], aiEnabled).catch(() => [])
-          if (sessions.length) {
-            committee.recentSessions = sessions
-            committee.lastSessionDate = sessions[0].date
-            committee.lastPolledAt = new Date().toISOString()
-          }
-        })
-      ).then(async () => {
-        try {
-          await writeFile(path.join(DATA_DIR, FILE_MAP['committee']), JSON.stringify(refreshed, null, 2), 'utf-8')
-        } catch { /* non-critical */ }
-      }).catch(() => { /* non-critical */ })
-    }
   }
 
   res.json(refreshed)
