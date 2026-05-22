@@ -70,10 +70,9 @@ export async function enrichCommitteeSessions(
       )
       const title = items.map(i => i.Name).filter(Boolean).join(' · ').slice(0, 120)
 
-      // Use /APPS/committees/{siteId}/sessions URL which works as an external link
-      // The raw SessionUrl (AllCommitteesAgenda.aspx) redirects to lobby when opened externally
+      // Per-session deep link: /APPS/committees/{siteId}/sessions/{sessionId}
       const sessionsUrl = committeeAppUrl
-        ? `https://main.knesset.gov.il/APPS/committees/${committeeAppUrl}/sessions?SearchType=1`
+        ? `https://main.knesset.gov.il/APPS/committees/${committeeAppUrl}/sessions/${session.CommitteeSessionID}`
         : session.SessionUrl.replace('http://', 'https://')
 
       results.push({
