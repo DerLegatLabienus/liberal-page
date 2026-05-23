@@ -53,10 +53,23 @@ One-time migration that:
 
 ## Future Cloud Storage Swap
 
-No code abstraction is needed now. When migrating to Cloudflare R2 or S3:
-- Upload `public/images/gallery/*` to the bucket
-- Rewrite `src` values in `gallery.json` from `/images/gallery/...` to the CDN URL
-- `GallerySection.tsx` requires no changes
+Images live in the repo for Phase 1. Phase 2 migrates them to a CDN. Two supported targets:
+
+### Cloudflare R2 (recommended)
+- Free egress, CDN-native, pairs well with GitHub Pages (same edge network)
+- Upload with `wrangler r2 object put` or the R2 S3-compatible API
+- Public bucket URL: `https://pub-<hash>.r2.dev/gallery/filename.jpg`
+
+### AWS S3 + CloudFront
+- Industry standard, more configuration overhead
+- Upload with `aws s3 sync public/images/gallery/ s3://<bucket>/gallery/`
+- Serve via CloudFront distribution for global CDN
+
+### Swap procedure (either target)
+1. Upload `public/images/gallery/*` to the chosen bucket under a `gallery/` prefix
+2. Run a one-liner to rewrite `src` fields in `gallery.json` from `/images/gallery/...` to the CDN base URL
+3. `GallerySection.tsx` requires no changes — it renders `item.src` directly
+4. Delete `public/images/gallery/` from the repo to reclaim space
 
 ## Testing
 
