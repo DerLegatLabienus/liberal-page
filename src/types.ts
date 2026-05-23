@@ -68,10 +68,7 @@ export interface Committee {
   sourceUrl: string
   hasNewData: boolean
   lastPolledAt: string | null
-<<<<<<< HEAD
   inactive?: boolean
-=======
->>>>>>> 7f983cd... feat: CommitteeCard renders 2 sessions with liberal MK badges; add enricher + card tests
   recentSessions?: CommitteeSession[]
 }
 
