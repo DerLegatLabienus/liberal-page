@@ -3,13 +3,14 @@
  * These make real network requests — they catch endpoint changes, renames,
  * and schema drift that mocked unit tests cannot detect.
  *
- * Run with: npm test -- knesset-api-health
+ * Run with: RUN_LIVE_KNESSET_TESTS=1 npm test -- knesset-api-health
  */
 
 const SITE_ID = 1116 // Dan Ilouz — a current MK unlikely to be removed
 const KNESSET_NUM = 25
+const runLiveKnessetTests = process.env.RUN_LIVE_KNESSET_TESTS === '1'
 
-describe('Knesset Website API — GetParlamentayActivity', () => {
+describe.runIf(runLiveKnessetTests)('Knesset Website API — GetParlamentayActivity', () => {
   let data: Record<string, unknown>
 
   beforeAll(async () => {
