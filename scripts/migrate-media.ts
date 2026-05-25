@@ -52,8 +52,38 @@ export function mergeGalleryEntries(
 }
 
 async function crawlImageUrls(): Promise<string[]> {
-  // placeholder — implemented in Task 3
-  return []
+  const collectedUrls = new Set<string>()
+  const browser = await chromium.launch({ headless: true })
+  const page = await browser.newPage()
+
+  page.on('request', (request) => {
+    const url = request.url()
+    if (shouldKeepUrl(url)) collectedUrls.add(url)
+  })
+
+  console.log('  Loading homepage...')
+  await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30_000 })
+  await page.waitForTimeout(3_000)
+
+  const galleryLinks: string[] = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('a[href]'))
+      .map((a) => (a as HTMLAnchorElement).href)
+      .filter((href) => /gallery|גלריה|אירועים|תמונות/i.test(href))
+  )
+
+  console.log(`  Found ${galleryLinks.length} gallery page(s) to crawl`)
+  for (const link of galleryLinks.slice(0, 10)) {
+    try {
+      console.log(`  Crawling: ${link}`)
+      await page.goto(link, { waitUntil: 'networkidle', timeout: 20_000 })
+      await page.waitForTimeout(2_000)
+    } catch {
+      console.warn(`  Skipped (timeout/error): ${link}`)
+    }
+  }
+
+  await browser.close()
+  return [...collectedUrls]
 }
 
 async function downloadImages(urls: string[]): Promise<string[]> {
