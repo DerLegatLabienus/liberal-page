@@ -23,7 +23,7 @@ export default function GallerySection() {
               <div key={item.id} className="group overflow-hidden rounded-xl border border-border bg-white shadow-sm">
                 <div className="relative h-44 w-full bg-slate-100">
                   <img
-                    src={item.src}
+                    src={item.src.startsWith('/') ? `${import.meta.env.BASE_URL}${item.src.slice(1)}` : item.src}
                     alt={i18n.language === 'he' ? item.caption : (item.captionEn ?? item.caption)}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
