@@ -47,16 +47,6 @@ export interface CommitteeSession {
   aiSummary?: string
 }
 
-export interface CommitteeSession {
-  sessionId: number
-  date: string
-  knessetNum: number
-  title: string
-  sessionUrl: string
-  attendingSiteIds: string[]
-  aiSummary?: string
-}
-
 export interface Committee {
   id: number
   oknesset_id: string
@@ -68,10 +58,7 @@ export interface Committee {
   sourceUrl: string
   hasNewData: boolean
   lastPolledAt: string | null
-<<<<<<< HEAD
   inactive?: boolean
-=======
->>>>>>> 7f983cd... feat: CommitteeCard renders 2 sessions with liberal MK badges; add enricher + card tests
   recentSessions?: CommitteeSession[]
 }
 

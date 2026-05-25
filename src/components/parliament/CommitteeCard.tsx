@@ -1,9 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import annotationsData from '@/data/mk-annotations.json'
+import memberCacheData from '@/data/knesset-members-cache.json'
 import type { Committee } from '@/types'
 
 const annotations = annotationsData as Record<string, { isLiberal: boolean; isSupporter: boolean }>
+
+const nameByMkSiteId: Record<string, string> = Object.fromEntries(
+  (memberCacheData as { members: { siteId: number; name: string }[] }).members
+    .map(m => [String(m.siteId), m.name])
+)
 
 interface CommitteeCardProps {
   committee: Committee
@@ -14,7 +20,7 @@ export default function CommitteeCard({ committee, onRemove }: CommitteeCardProp
   const { t } = useTranslation()
   const direction = useDirection()
   const sessions = committee.recentSessions ?? []
-  const [extended, compact] = [sessions[0], sessions[1]]
+  const [extended, ...compactSessions] = sessions
 
   return (
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
@@ -46,7 +52,7 @@ export default function CommitteeCard({ committee, onRemove }: CommitteeCardProp
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         ann.isLiberal ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                      {ann.isLiberal ? '💙' : '⭐'} {siteId}
+                      {ann.isLiberal ? '💙' : '⭐'} {nameByMkSiteId[siteId] ?? siteId}
                     </span>
                   )
                 })}
@@ -62,8 +68,8 @@ export default function CommitteeCard({ committee, onRemove }: CommitteeCardProp
           </div>
         )}
 
-        {compact && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+        {compactSessions.slice(0, 3).map((compact) => (
+          <div key={compact.sessionId} className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
             <span className="shrink-0">{new Date(compact.date).toLocaleDateString('he-IL')}</span>
             <span className="mx-1">·</span>
             <a href={compact.sessionUrl} target="_blank" rel="noopener noreferrer"
@@ -71,7 +77,7 @@ export default function CommitteeCard({ committee, onRemove }: CommitteeCardProp
               {compact.title}
             </a>
           </div>
-        )}
+        ))}
 
         <div className="flex items-center justify-between">
           {committee.sourceUrl && (

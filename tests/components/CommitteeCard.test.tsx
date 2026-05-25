@@ -69,4 +69,24 @@ describe('CommitteeCard', () => {
     render(<CommitteeCard committee={committeeFixture()} />)
     expect(screen.queryByText(/הצעת חוק/)).not.toBeInTheDocument()
   })
+
+  it('renders MK name in attendance badge instead of raw siteId', () => {
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} />)
+    expect(screen.getByText(/אמיר אוחנה/)).toBeInTheDocument()
+    expect(screen.queryByText(/\b1116\b/)).not.toBeInTheDocument()
+  })
+
+  it('renders all 4 sessions when recentSessions has 4 entries', () => {
+    const sessions: CommitteeSession[] = [
+      SESSION_EXTENDED,
+      { ...SESSION_COMPACT, sessionId: 2241001, title: 'ישיבה שנייה' },
+      { ...SESSION_COMPACT, sessionId: 2241002, title: 'ישיבה שלישית' },
+      { ...SESSION_COMPACT, sessionId: 2241003, title: 'ישיבה רביעית' },
+    ]
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: sessions })} />)
+    expect(screen.getByText('הצעת חוק לתיקון פקודת מס הכנסה')).toBeInTheDocument()
+    expect(screen.getByText('ישיבה שנייה')).toBeInTheDocument()
+    expect(screen.getByText('ישיבה שלישית')).toBeInTheDocument()
+    expect(screen.getByText('ישיבה רביעית')).toBeInTheDocument()
+  })
 })
