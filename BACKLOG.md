@@ -93,28 +93,13 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - The cache is persisted between server restarts
 - Depends on: item 2 (database) for long-term cache storage
 
-## 10. CommitteeCard — Recent Sessions with Links (Priority: Medium)
+### ✅ CommitteeCard — Recent Sessions with Links — 2026-05-25
 
-Display the committee's last 3–5 session dates and links directly inside the `CommitteeCard`.
+CommitteeCard shows up to 5 recent sessions from Knesset OData. Most recent is extended (title, date, AI summary, liberal MK badges with names). Up to 3 additional compact rows. Links use canonical OData SessionUrl.
 
-**Requirements:**
-- Fetch recent sessions from Knesset OData at poll time
-- Store sessions as a `recentSessions` array on the `Committee` type: `{ date: string; sessionId: number; sessionUrl: string; type: string }[]`
-- `CommitteeCard` renders each session as a dated link: `"13/05/2026 — פתוחה ↗"`
-- Links point to the canonical Knesset session URL from OData's `SessionUrl` field
+### ✅ Poller — Backoff on Failure — 2026-05-25
 
-## 11. Poller — Backoff on Failure (Priority: High)
-
-On fetch failure the poller currently retries immediately, causing a tight loop of constant GET requests to the Knesset API.
-
-**Requirements:**
-- On any failed poll cycle, wait a minimum backoff interval before the next attempt (e.g. 60 seconds, increasing exponentially up to a cap like 10 minutes)
-- A successful cycle resets the backoff to the normal poll interval
-- Errors are logged with the backoff duration
-- The fix applies to all polled lists: MKs, committees, bills
-
-**Notes:**
-- Current observed behavior: a single failure causes the poller to hammer the Knesset API continuously, which risks rate-limiting or IP blocking
+Exponential backoff on total poll failure: starts at 1 min, doubles each cycle, caps at 10 min. Successful cycle resets to normal interval (POLL_INTERVAL_MS, default 6 h).
 
 ## 12. Shareable Language Links — `?lang=en` URL param (Priority: Low)
 
