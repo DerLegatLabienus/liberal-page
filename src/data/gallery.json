@@ -1,23 +1,93 @@
 [
   {
     "id": 1,
-    "src": "https://likudliberal.org/wp-content/uploads/2020/05/amir1-300x282.jpg",
+    "src": "/images/gallery/amir1-300x282.jpg",
     "caption": "אמיר וייצמן — מייסד ויו\"ר",
     "date": "2020-05-01",
     "captionEn": "Amir Weitzman — Founder & Chairman"
   },
   {
     "id": 2,
-    "src": "https://likudliberal.org/wp-content/uploads/2020/05/elad1-300x282.jpg",
+    "src": "/images/gallery/elad1-300x282.jpg",
     "caption": "אלעד מלכה — סגן יו\"ר",
     "date": "2020-05-01",
     "captionEn": "Elad Malka — Deputy Chairman"
   },
   {
     "id": 3,
-    "src": "https://likudliberal.org/wp-content/uploads/2020/05/dz7h5hxt.png",
+    "src": "/images/gallery/dz7h5hxt.png",
     "caption": "הליברלים בליכוד",
     "date": "2020-05-01",
     "captionEn": "Liberals in Likud"
+  },
+  {
+    "id": 4,
+    "src": "/images/gallery/avia-merged-styles-6ac524d05bfb01e40fa23fbee4d33b6c-63fd182364131.css",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 5,
+    "src": "/images/gallery/dz7h5hxt-300x95.png",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 6,
+    "src": "/images/gallery/avia-footer-scripts-c2036c26605336c8920c8ae4c9df5bcc-63fd1f8ea5dc4.js",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 7,
+    "src": "/images/gallery/7.png",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 8,
+    "src": "/images/gallery/84697126-300x200.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 9,
+    "src": "/images/gallery/2242.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 10,
+    "src": "/images/gallery/img_4811-1.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 11,
+    "src": "/images/gallery/img_4653.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 12,
+    "src": "/images/gallery/121220-2242.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
+  },
+  {
+    "id": 13,
+    "src": "/images/gallery/121220-2242-3.jpg",
+    "caption": "",
+    "captionEn": "",
+    "date": "2026-05-25"
   }
 ]

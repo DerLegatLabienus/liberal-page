@@ -160,7 +160,26 @@ async function downloadImages(urls: string[]): Promise<string[]> {
 }
 
 async function main(): Promise<void> {
-  // placeholder — implemented in Task 5
+  console.log('=== Media Migration ===')
+
+  console.log('\nStep 1: Crawling likudliberal.org for image URLs...')
+  const urls = await crawlImageUrls()
+  console.log(`Found ${urls.length} candidate image URL(s)`)
+
+  console.log('\nStep 2: Downloading images...')
+  const localPaths = await downloadImages(urls)
+  console.log(`Downloaded ${localPaths.length} image(s) to public/images/gallery/`)
+
+  console.log('\nStep 3: Updating gallery.json...')
+  const raw = await readFile(GALLERY_JSON, 'utf-8')
+  const existing: GalleryItem[] = JSON.parse(raw)
+  const today = new Date().toISOString().slice(0, 10)
+  const updated = mergeGalleryEntries(existing, localPaths, today)
+  await writeFile(GALLERY_JSON, JSON.stringify(updated, null, 2) + '\n', 'utf-8')
+
+  const rewrote = existing.filter(i => i.src.startsWith('https://likudliberal.org')).length
+  const newItems = updated.length - existing.length
+  console.log(`Done — ${rewrote} entr${rewrote === 1 ? 'y' : 'ies'} rewritten, ${newItems} new entr${newItems === 1 ? 'y' : 'ies'} added`)
 }
 
 const isMain = process.argv[1]?.replace(/\.js$/, '.ts').endsWith('migrate-media.ts')
