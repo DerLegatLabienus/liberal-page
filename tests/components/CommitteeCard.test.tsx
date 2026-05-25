@@ -72,7 +72,7 @@ describe('CommitteeCard', () => {
 
   it('renders MK name in attendance badge instead of raw siteId', () => {
     render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} />)
-    expect(screen.getByText(/אמיר אוחנה/)).toBeInTheDocument()
+    expect(screen.getByText(/דן אילוז/)).toBeInTheDocument()
     expect(screen.queryByText(/\b1116\b/)).not.toBeInTheDocument()
   })
 
