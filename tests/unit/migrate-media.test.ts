@@ -22,6 +22,14 @@ describe('sanitizeFilename', () => {
   it('strips leading/trailing hyphens', () => {
     expect(sanitizeFilename('https://example.com/-foo-.jpg')).toBe('foo.jpg')
   })
+
+  it('falls back to "image" for fully non-ASCII filenames', () => {
+    expect(sanitizeFilename('https://likudliberal.org/wp-content/uploads/אמיר-כץ.jpg')).toBe('image.jpg')
+  })
+
+  it('handles a realistic WordPress thumbnail URL', () => {
+    expect(sanitizeFilename('https://likudliberal.org/wp-content/uploads/2020/05/amir1-300x282.jpg')).toBe('amir1-300x282.jpg')
+  })
 })
 
 describe('shouldKeepUrl', () => {
@@ -47,6 +55,10 @@ describe('shouldKeepUrl', () => {
 
   it('rejects URLs not containing wp-content/uploads', () => {
     expect(shouldKeepUrl('https://likudliberal.org/custom/path/image.jpg')).toBe(false)
+  })
+
+  it('rejects URLs that prefix-match the domain but are on a different host', () => {
+    expect(shouldKeepUrl('https://likudliberal.org.evil.com/wp-content/uploads/photo.jpg')).toBe(false)
   })
 })
 

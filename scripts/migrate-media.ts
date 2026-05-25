@@ -12,18 +12,19 @@ const BLOCKED_PATTERNS = ['/wp-includes/', '/wp-content/themes/', '/wp-content/p
 
 export function sanitizeFilename(url: string): string {
   const raw = url.split('/').pop()?.split('?')[0] ?? 'image'
-  const ext = raw.includes('.') ? '.' + raw.split('.').pop()!.toLowerCase() : ''
-  const nameWithoutExt = ext ? raw.slice(0, raw.lastIndexOf('.')) : raw
-  const sanitized = nameWithoutExt
+  const ext = path.extname(raw).toLowerCase()
+  const base = path.basename(raw, path.extname(raw))
+  const sanitizedBase = base
     .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/[^a-z0-9_-]/g, '-')
     .replace(/-{2,}/g, '-')
     .replace(/^-+|-+$/g, '')
-  return sanitized + ext
+  const stem = sanitizedBase || 'image'
+  return stem + ext
 }
 
 export function shouldKeepUrl(url: string): boolean {
-  if (!url.startsWith(BASE_URL)) return false
+  if (!url.startsWith(BASE_URL + '/')) return false
   if (!url.includes('/wp-content/uploads/')) return false
   return !BLOCKED_PATTERNS.some(p => url.includes(p))
 }
