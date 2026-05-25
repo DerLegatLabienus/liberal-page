@@ -54,35 +54,46 @@ export function mergeGalleryEntries(
 async function crawlImageUrls(): Promise<string[]> {
   const collectedUrls = new Set<string>()
   const browser = await chromium.launch({ headless: true })
-  const page = await browser.newPage()
+  try {
+    const page = await browser.newPage()
 
-  page.on('request', (request) => {
-    const url = request.url()
-    if (shouldKeepUrl(url)) collectedUrls.add(url)
-  })
+    page.on('request', (request) => {
+      const url = request.url()
+      if (shouldKeepUrl(url)) collectedUrls.add(url)
+    })
 
-  console.log('  Loading homepage...')
-  await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30_000 })
-  await page.waitForTimeout(3_000)
+    console.log('  Loading homepage...')
+    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30_000 })
+    // Extra wait to capture JS-driven slideshow requests fired after networkidle
+    await page.waitForTimeout(3_000)
 
-  const galleryLinks: string[] = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('a[href]'))
-      .map((a) => (a as HTMLAnchorElement).href)
-      .filter((href) => /gallery|גלריה|אירועים|תמונות/i.test(href))
-  )
+    const galleryLinks: string[] = await page.evaluate(() =>
+      [...new Set(
+        Array.from(document.querySelectorAll('a[href]'))
+          .filter((a) => {
+            const href = (a as HTMLAnchorElement).href
+            const text = a.textContent ?? ''
+            const raw  = a.getAttribute('href') ?? ''
+            return /gallery|גלריה|אירועים|תמונות/i.test(href + ' ' + text + ' ' + raw)
+          })
+          .map((a) => (a as HTMLAnchorElement).href)
+      )]
+    )
 
-  console.log(`  Found ${galleryLinks.length} gallery page(s) to crawl`)
-  for (const link of galleryLinks.slice(0, 10)) {
-    try {
-      console.log(`  Crawling: ${link}`)
-      await page.goto(link, { waitUntil: 'networkidle', timeout: 20_000 })
-      await page.waitForTimeout(2_000)
-    } catch {
-      console.warn(`  Skipped (timeout/error): ${link}`)
+    console.log(`  Found ${galleryLinks.length} gallery page(s) to crawl`)
+    // Only initial page load is captured per sub-page; paginated galleries need additional traversal
+    for (const link of galleryLinks.slice(0, 10)) {
+      try {
+        console.log(`  Crawling: ${link}`)
+        await page.goto(link, { waitUntil: 'networkidle', timeout: 20_000 })
+        await page.waitForTimeout(2_000)
+      } catch {
+        console.warn(`  Skipped (timeout/error): ${link}`)
+      }
     }
+  } finally {
+    await browser.close()
   }
-
-  await browser.close()
   return [...collectedUrls]
 }
 
