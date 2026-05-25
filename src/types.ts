@@ -47,16 +47,6 @@ export interface CommitteeSession {
   aiSummary?: string
 }
 
-export interface CommitteeSession {
-  sessionId: number
-  date: string
-  knessetNum: number
-  title: string
-  sessionUrl: string
-  attendingSiteIds: string[]
-  aiSummary?: string
-}
-
 export interface Committee {
   id: number
   oknesset_id: string
