@@ -42,9 +42,39 @@ describe('enrichCommitteeSessions', () => {
     expect(result[0].sessionId).toBe(2242870)
     expect(result[0].title).toBe('הצעת חוק לתיקון פקודת מס הכנסה')
     expect(result[0].knessetNum).toBe(25)
-    expect(result[0].sessionUrl).toContain('https://')
+    // URL must come from OData SessionUrl (http → https upgrade), not a custom-built path
+    expect(result[0].sessionUrl).toBe(
+      'https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2242870'
+    )
     expect(result[0].attendingSiteIds).toEqual([])
     expect(result[0].aiSummary).toBeUndefined()
+  })
+
+  it('committee lookup query does not contain KnessetNum', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEE))
+      .mockResolvedValueOnce(mockOdata(ODATA_SESSIONS))
+      .mockResolvedValueOnce(mockOdata(ODATA_ITEMS))
+      .mockResolvedValueOnce(mockOdata(ODATA_ITEMS))
+
+    await enrichCommitteeSessions('ועדת הכספים', [], false)
+
+    const committeeCall = vi.mocked(fetch).mock.calls[0][0] as string
+    expect(committeeCall).not.toContain('KnessetNum')
+    expect(committeeCall).toContain('IsCurrent')
+  })
+
+  it('session query uses $top=5', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEE))
+      .mockResolvedValueOnce(mockOdata(ODATA_SESSIONS))
+      .mockResolvedValueOnce(mockOdata(ODATA_ITEMS))
+      .mockResolvedValueOnce(mockOdata(ODATA_ITEMS))
+
+    await enrichCommitteeSessions('ועדת הכספים', [], false)
+
+    const sessionCall = vi.mocked(fetch).mock.calls[1][0] as string
+    expect(sessionCall).toContain('$top=5')
   })
 
   it('returns empty title when no agenda items and AI is off', async () => {

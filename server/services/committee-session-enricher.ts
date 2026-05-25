@@ -30,20 +30,9 @@ async function odataGet<T>(path: string): Promise<T[]> {
 async function resolveCommitteeId(committeeName: string): Promise<number | null> {
   const encoded = encodeURIComponent(committeeName.trim())
   const results = await odataGet<ODataCommittee>(
-    `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%2025%20and%20Name%20eq%20'${encoded}'&$select=CommitteeID,Name&$top=1&$format=json`
+    `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20Name%20eq%20'${encoded}'&$select=CommitteeID,Name&$top=1&$format=json`
   )
   return results[0]?.CommitteeID ?? null
-}
-
-// Load committee URL mapping (CommitteeID → apps siteId)
-let urlMappingCache: Record<string, number> | null = null
-function getUrlMapping(): Record<string, number> {
-  if (urlMappingCache) return urlMappingCache
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    urlMappingCache = require(path.join(process.cwd(), 'src/data/committee-url-mapping.json')) as Record<string, number>
-  } catch { urlMappingCache = {} }
-  return urlMappingCache ?? {}
 }
 
 export async function enrichCommitteeSessions(
@@ -55,11 +44,8 @@ export async function enrichCommitteeSessions(
     const committeeId = await resolveCommitteeId(committeeName)
     if (!committeeId) return []
 
-    const urlMapping = getUrlMapping()
-    const committeeAppUrl = urlMapping[String(committeeId)]
-
     const sessions = await odataGet<ODataSession>(
-      `KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=2&$select=CommitteeSessionID,StartDate,KnessetNum,SessionUrl&$format=json`
+      `KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=5&$select=CommitteeSessionID,StartDate,KnessetNum,SessionUrl&$format=json`
     )
     if (!sessions.length) return []
 
@@ -70,17 +56,14 @@ export async function enrichCommitteeSessions(
       )
       const title = items.map(i => i.Name).filter(Boolean).join(' · ').slice(0, 120)
 
-      // Per-session deep link: /APPS/committees/{siteId}/sessions/{sessionId}
-      const sessionsUrl = committeeAppUrl
-        ? `https://main.knesset.gov.il/APPS/committees/${committeeAppUrl}/sessions/${session.CommitteeSessionID}`
-        : session.SessionUrl.replace('http://', 'https://')
+      const sessionUrl = session.SessionUrl.replace('http://', 'https://')
 
       results.push({
         sessionId: session.CommitteeSessionID,
         date: session.StartDate,
         knessetNum: session.KnessetNum,
         title,
-        sessionUrl: sessionsUrl,
+        sessionUrl,
         attendingSiteIds: [],
       })
     }
