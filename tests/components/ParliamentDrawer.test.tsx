@@ -33,6 +33,11 @@ describe('ParliamentDrawer', () => {
     expect(screen.getByText('הצעת חוק בדיקה')).toBeInTheDocument()
   })
 
+  it('uses an opaque native site surface for the drawer shell', () => {
+    render(<ParliamentDrawer {...defaultProps} />)
+    expect(document.querySelector('[data-slot="sheet-content"]')).toHaveClass('bg-white')
+  })
+
   it('switches to committees tab on click', async () => {
     const user = userEvent.setup()
     render(<ParliamentDrawer {...defaultProps} />)
