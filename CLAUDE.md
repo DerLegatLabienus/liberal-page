@@ -1,72 +1,130 @@
-# Liberal Page — Dev Instructions
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Stack
 
 - **Frontend:** React 18 + Vite (port 5173)
-- **Backend:** Express + tsx (port 3001)
+- **Backend:** Express 5 + `tsx` (port 3001)
 - Both live in the same repo. Vite proxies `/api/*` → `localhost:3001`.
 
-## Running the Dev Environment
-
-Always start **both** servers before testing. Use the combined command:
+## Commands
 
 ```bash
-npm run dev
+npm run dev              # both servers concurrently (Vite + tsx watch)
+npm run dev:frontend     # Vite only on :5173
+npm run dev:server       # Express only on :3001
+npm run lint             # ESLint 9
+npx tsc --noEmit         # type check (both app and server tsconfigs)
+npm test                 # Vitest run (no servers needed)
+npm run build            # tsc -b && vite build
 ```
 
-This runs `vite` and `tsx watch server/index.ts` concurrently.
-
-Or start separately:
-
+Run a single test file:
 ```bash
-npm run dev:frontend   # Vite on :5173
-npm run dev:server     # Express on :3001
+npx vitest run tests/server/poller.test.ts
 ```
 
-## Restarting After Changes
-
-- **Backend (`server/`):** Must be manually restarted — `tsx watch` handles file changes automatically when using `npm run dev:server`, but if the process was started manually (`tsx server/index.ts`), kill and restart it.
-- **Frontend (`src/`):** Vite hot-reloads automatically; no restart needed for most changes. Restart if config files change (`vite.config.ts`, `tailwind.config.ts`, `index.css`).
-
-**When in doubt, restart both.** Kill any running processes first:
-
-```bash
-pkill -f "vite|tsx server" && npm run dev
-```
-
-## Testing
-
-Run the unit test suite (does not require the servers to be running):
-
-```bash
-npm test
-```
-
-After making backend changes, also manually verify the API:
-
+After backend changes, smoke-test the API:
 ```bash
 curl http://localhost:3001/api/health
 ```
 
+## Restarting
+
+- **Backend (`server/`):** `tsx watch` auto-reloads when using `npm run dev:server`. If started manually, kill and restart.
+- **Frontend (`src/`):** Vite hot-reloads automatically. Restart only when config files change (`vite.config.ts`, `tailwind.config.ts`, `index.css`).
+
+When in doubt: `pkill -f "vite|tsx server" && npm run dev`
+
 ## Key Ports
 
-| Service | Port | URL |
-|---------|------|-----|
-| Frontend | 5173 | http://localhost:5173 |
-| Backend | 3001 | http://localhost:3001 |
+| Service  | Port | URL                    |
+|----------|------|------------------------|
+| Frontend | 5173 | http://localhost:5173  |
+| Backend  | 3001 | http://localhost:3001  |
 
-The frontend is accessible from Windows at `http://localhost:5173` (WSL2 localhost forwarding is enabled via `host: '0.0.0.0'` in vite.config.ts).
+Frontend is accessible from Windows at `http://localhost:5173` (via `host: '0.0.0.0'` in vite.config.ts).
+
+## Architecture
+
+### Data model
+
+`src/data/*.json` is both the **frontend static seed** and the **server datastore**. The files are imported directly by the frontend as initial state and read/written by the Express server and poller. Mutations happen on disk; there is no database.
+
+Key files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.json`, `knesset-members-cache.json`.
+
+The single source of truth for all TypeScript shapes is `src/types.ts` — shared by both frontend and `server/`.
+
+### Frontend flow
+
+`App.tsx` owns `useParliament()` state and passes it down. `useParliament` initialises from static JSON imports, then immediately refreshes from the API on mount.
+
+The site is **Hebrew-first**. Language is detected via `?lang=` query param or `localStorage`, then stored in `document.documentElement.lang/dir`. The parliamentary tracker and several sections only render when `i18n.language === 'he'`. Direction-sensitive components use `useDirection()`, which reads `document.documentElement.dir`.
+
+### Backend API
+
+| Method   | Path                          | Notes |
+|----------|-------------------------------|-------|
+| `GET`    | `/api/health`                 | health check |
+| `GET`    | `/api/parliament/:type`       | reads JSON, may enrich, returns data |
+| `POST`   | `/api/tracking/add`           | parse URL → fetch metadata → append to JSON |
+| `DELETE` | `/api/tracking/:type/:id`     | remove by local `id` |
+| `POST`   | `/api/summarize`              | download PDF/DOCX → Claude → cache |
+| `GET`    | `/api/bills/search`           | search Knesset OData API |
+| `POST`   | `/api/bills/track`            | add bill by Knesset bill ID |
+| `GET`    | `/api/committees/list`        | list committees from Knesset API |
+| `POST`   | `/api/committees/track`       | add committee by Knesset committee ID |
+| `GET`    | `/api/mks/list`               | list all Knesset members (cached 6 h) |
+| `GET`    | `/api/mks/activity`           | fetch MK activity by `siteId` |
+
+`type` is one of `bill`, `committee`, or `mk`.
+
+### External data sources
+
+- **oknesset.org REST API** — bill status, committee sessions (used by poller and tracking routes)
+- **Knesset OData API** (`knesset.gov.il/Odata/ParliamentInfo.svc`) — member identity, bill/committee lookup for comboboxes. Uses `SiteId` in URLs but internal `KnsID` in the OData layer; `KNS_MkSiteCode` is the join table.
+- **Knesset website API** (`GetParlamentayActivity`) — MK activity feed. Identified by `knesset_site_id` (integer, e.g. `1116`).
+- **Main knesset.gov.il site** — bot-protected; only scraped for specific activity endpoints.
+
+### Poller
+
+Started by `server/index.ts` on listen. Default interval: 6 hours (`POLL_INTERVAL_MS`). On total failure, backs off exponentially from 1 min up to 10 min.
+
+Each cycle: polls bills via oknesset, fetches committee sessions and runs `committee-session-enricher`, fetches MK activity via `knesset-scraper`. Sets `hasNewData: true` when new content is detected. Writes the JSON file only when content changed.
+
+### Repositories and caches
+
+`server/repositories/` wraps the on-disk caches with TTL logic:
+- `MkListRepository` — `knesset-members-cache.json`, refreshed on stale reads
+- `CommitteeListRepository` — `knesset-committees-cache.json`
+- `MkAnnotationsRepository` — `mk-annotations.json` (liberal/supporter flags)
+
+### Tests
+
+- `tests/components/` — happy-dom environment, `react-i18next` auto-mocked via `src/__mocks__/react-i18next.ts`
+- `tests/server/` — node environment (see `vitest.config.ts` `environmentMatchGlobs`)
+- `tests/unit/` — pure logic, happy-dom
 
 ## Visual Companion (Brainstorming)
 
-WSL2 is detected as Linux, so the brainstorm server's auto-detection does **not** enable foreground mode. Without `--foreground`, the server starts then dies within seconds because its owner PID tracking kills it when the spawning background task exits.
+WSL2 is detected as Linux, so the brainstorm server's auto-detection does **not** enable foreground mode. Without `--foreground`, the server dies within seconds.
 
-**Always start the visual companion with `--foreground` + `run_in_background: true`:**
+**Always start with `--foreground` + `run_in_background: true`:**
 
 ```bash
-# Correct — foreground mode keeps the process alive under the background task
 bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --url-host localhost --foreground
-# (Bash tool must use run_in_background: true)
+# Bash tool must use run_in_background: true
 ```
 
-Without `--foreground`, the server starts successfully (outputs JSON) but dies 2–30 seconds later and the browser gets connection refused.
+## Documentation Files
+
+| What changed | File to update |
+|---|---|
+| Dev workflow, scripts, ports | `CLAUDE.md` |
+| Architecture, data flow, API | `docs/architecture.md` |
+| UI components — props, responsibilities | `docs/components.md` |
+| Data shapes, JSON schema | `docs/data-schema.md` |
+| Feature design / requirements | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
+| Implementation plan steps | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
+| Backlog items | `BACKLOG.md` — commit immediately after adding |
