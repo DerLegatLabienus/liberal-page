@@ -56,20 +56,9 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 **Notes:**
 - Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
 
-## 7. Media Migration — Fetch Event Photos from likudliberal.org (Priority: Medium)
+### ✅ Media Migration — Fetch Event Photos from likudliberal.org — 2026-05-25
 
-The old site at likudliberal.org contains event photos and media that are missing from the new site. These should be scraped and migrated before the old site is decommissioned or goes dark.
-
-**Requirements:**
-- Crawl likudliberal.org and extract all image URLs (event photos, gallery content, etc.)
-- Download and store images in cloud storage (Cloudflare R2 or equivalent)
-- Preserve metadata where available: event name, date, caption, original URL
-- Output a structured manifest (JSON) mapping each image to its metadata, ready to feed into the CMS
-- Do not migrate unrelated UI assets — focus on event/content photos
-
-**Notes:**
-- Do this before the old site changes — media on the old site may disappear without warning
-- The scrape should be a one-time migration script, not an ongoing sync
+Playwright script crawls likudliberal.org, downloads 11 images to `public/images/gallery/`, rewrites `src/data/gallery.json` to use local paths. Extension whitelist prevents non-image assets from being captured. Script at `scripts/migrate-media.ts` — run with `npx tsx scripts/migrate-media.ts`.
 
 ## 8. Upgrade Node.js Version (Priority: Low)
 
