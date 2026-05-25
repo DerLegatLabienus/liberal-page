@@ -47,8 +47,33 @@ export function mergeGalleryEntries(
   newLocalPaths: string[],
   today: string
 ): GalleryItem[] {
-  // placeholder — implemented in Task 2
-  return existing
+  const usedSrcs = new Set<string>()
+  const result: GalleryItem[] = []
+
+  for (const item of existing) {
+    if (!item.src.startsWith('https://likudliberal.org/')) {
+      usedSrcs.add(item.src)
+      result.push(item)
+      continue
+    }
+    const filename = sanitizeFilename(item.src)
+    const resolved = resolveFilename(filename, usedSrcs)
+    const localPath = `/images/gallery/${resolved}`
+    usedSrcs.add(localPath)
+    result.push({ ...item, src: localPath })
+  }
+
+  const maxId = result.reduce((m, item) => Math.max(m, item.id), 0)
+  let nextId = maxId + 1
+
+  for (const localPath of newLocalPaths) {
+    if (!usedSrcs.has(localPath)) {
+      usedSrcs.add(localPath)
+      result.push({ id: nextId++, src: localPath, caption: '', captionEn: '', date: today })
+    }
+  }
+
+  return result
 }
 
 async function crawlImageUrls(): Promise<string[]> {
@@ -98,8 +123,40 @@ async function crawlImageUrls(): Promise<string[]> {
 }
 
 async function downloadImages(urls: string[]): Promise<string[]> {
-  // placeholder — implemented in Task 4
-  return []
+  await mkdir(OUTPUT_DIR, { recursive: true })
+  const usedNames = new Set<string>()
+  const localPaths: string[] = []
+
+  for (const url of urls) {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15_000)
+      let res: Response
+      try {
+        res = await fetch(url, { signal: controller.signal })
+      } finally {
+        clearTimeout(timer)
+      }
+      if (!res.ok) { console.warn(`  Skip (${res.status}): ${url}`); continue }
+      const buffer = Buffer.from(await res.arrayBuffer())
+      if (buffer.byteLength < MIN_SIZE_BYTES) {
+        console.warn(`  Skip (too small, ${buffer.byteLength} B): ${url}`)
+        continue
+      }
+
+      const rawFilename = sanitizeFilename(url)
+      const filename = resolveFilename(rawFilename, usedNames)
+      usedNames.add(filename)
+
+      await writeFile(path.join(OUTPUT_DIR, filename), buffer)
+      localPaths.push(`/images/gallery/${filename}`)
+      console.log(`  ✓ ${filename} (${(buffer.byteLength / 1024).toFixed(1)} KB)`)
+    } catch (err) {
+      console.warn(`  Error fetching ${url}:`, err)
+    }
+  }
+
+  return localPaths
 }
 
 async function main(): Promise<void> {

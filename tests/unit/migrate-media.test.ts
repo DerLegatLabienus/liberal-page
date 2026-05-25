@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeFilename, shouldKeepUrl, resolveFilename } from '../../scripts/migrate-media'
+import { sanitizeFilename, shouldKeepUrl, resolveFilename, mergeGalleryEntries } from '../../scripts/migrate-media'
+import type { GalleryItem } from '@/types'
 
 describe('sanitizeFilename', () => {
   it('extracts filename and lowercases it', () => {
@@ -73,5 +74,64 @@ describe('resolveFilename', () => {
 
   it('increments counter until free', () => {
     expect(resolveFilename('photo.jpg', new Set(['photo.jpg', 'photo-1.jpg']))).toBe('photo-2.jpg')
+  })
+})
+
+describe('mergeGalleryEntries', () => {
+  const existing: GalleryItem[] = [
+    {
+      id: 1,
+      src: 'https://likudliberal.org/wp-content/uploads/2020/05/amir1-300x282.jpg',
+      caption: 'Amir',
+      captionEn: 'Amir',
+      date: '2020-05-01',
+    },
+    {
+      id: 2,
+      src: '/images/gallery/local.jpg',
+      caption: 'Local',
+      date: '2021-01-01',
+    },
+  ]
+
+  it('rewrites likudliberal.org src to local path', () => {
+    const result = mergeGalleryEntries(existing, [], '2026-05-25')
+    expect(result[0].src).toBe('/images/gallery/amir1-300x282.jpg')
+  })
+
+  it('preserves caption and captionEn on rewritten entries', () => {
+    const result = mergeGalleryEntries(existing, [], '2026-05-25')
+    expect(result[0].caption).toBe('Amir')
+    expect(result[0].captionEn).toBe('Amir')
+  })
+
+  it('leaves already-local paths unchanged', () => {
+    const result = mergeGalleryEntries(existing, [], '2026-05-25')
+    expect(result[1].src).toBe('/images/gallery/local.jpg')
+  })
+
+  it('appends new local paths not already present', () => {
+    const result = mergeGalleryEntries(existing, ['/images/gallery/new.jpg'], '2026-05-25')
+    expect(result).toHaveLength(3)
+    expect(result[2]).toMatchObject({ src: '/images/gallery/new.jpg', caption: '', date: '2026-05-25' })
+  })
+
+  it('does not duplicate a path already present after rewrite', () => {
+    const result = mergeGalleryEntries(
+      existing,
+      ['/images/gallery/amir1-300x282.jpg'],
+      '2026-05-25'
+    )
+    expect(result).toHaveLength(2)
+  })
+
+  it('assigns sequential ids for new entries', () => {
+    const result = mergeGalleryEntries(
+      existing,
+      ['/images/gallery/new1.jpg', '/images/gallery/new2.jpg'],
+      '2026-05-25'
+    )
+    expect(result[2].id).toBe(3)
+    expect(result[3].id).toBe(4)
   })
 })
