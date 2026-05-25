@@ -9,6 +9,7 @@ const BASE_URL = 'https://likudliberal.org'
 const MIN_SIZE_BYTES = 10 * 1024
 
 const BLOCKED_PATTERNS = ['/wp-includes/', '/wp-content/themes/', '/wp-content/plugins/']
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'])
 
 export function sanitizeFilename(url: string): string {
   const raw = url.split('/').pop()?.split('?')[0] ?? 'image'
@@ -26,7 +27,9 @@ export function sanitizeFilename(url: string): string {
 export function shouldKeepUrl(url: string): boolean {
   if (!url.startsWith(BASE_URL + '/')) return false
   if (!url.includes('/wp-content/uploads/')) return false
-  return !BLOCKED_PATTERNS.some(p => url.includes(p))
+  if (BLOCKED_PATTERNS.some(p => url.includes(p))) return false
+  const ext = path.extname(url.split('?')[0]).toLowerCase()
+  return IMAGE_EXTENSIONS.has(ext)
 }
 
 export function resolveFilename(filename: string, existingNames: Set<string>): string {

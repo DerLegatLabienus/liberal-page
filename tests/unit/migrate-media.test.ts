@@ -61,6 +61,11 @@ describe('shouldKeepUrl', () => {
   it('rejects URLs that prefix-match the domain but are on a different host', () => {
     expect(shouldKeepUrl('https://likudliberal.org.evil.com/wp-content/uploads/photo.jpg')).toBe(false)
   })
+
+  it('rejects non-image files (CSS, JS) even when under wp-content/uploads', () => {
+    expect(shouldKeepUrl('https://likudliberal.org/wp-content/uploads/styles.css')).toBe(false)
+    expect(shouldKeepUrl('https://likudliberal.org/wp-content/uploads/script.js')).toBe(false)
+  })
 })
 
 describe('resolveFilename', () => {
