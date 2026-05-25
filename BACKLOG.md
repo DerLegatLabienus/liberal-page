@@ -101,9 +101,9 @@ CommitteeCard shows up to 5 recent sessions from Knesset OData. Most recent is e
 
 Exponential backoff on total poll failure: starts at 1 min, doubles each cycle, caps at 10 min. Successful cycle resets to normal interval (POLL_INTERVAL_MS, default 6 h).
 
-## 12. Shareable Language Links — `?lang=en` URL param (Priority: Low)
+### ✅ Shareable Language Links — `?lang=en` URL param — 2026-05-25
 
-Add `?lang=en` query param support so language-specific URLs can be shared and bookmarked.
+`detectInitialLanguage()` reads `?lang=` on init and persists to localStorage. Language toggle updates URL via `history.replaceState`. Tested in `tests/unit/detectInitialLanguage.test.ts` and `tests/components/Header.test.tsx`.
 
 ### ✅ MK Card — Submitted Bills and Parliamentary Queries — 2026-05-18
 
