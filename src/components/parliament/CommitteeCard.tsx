@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import annotationsData from '@/data/mk-annotations.json'
-import memberCacheData from '@/data/knesset-members-cache.json'
+import trackedMksData from '@/data/mks.json'
 import type { Committee } from '@/types'
 
 const annotations = annotationsData as Record<string, { isLiberal: boolean; isSupporter: boolean }>
 
 const nameByMkSiteId: Record<string, string> = Object.fromEntries(
-  (memberCacheData as { members: { siteId: number; name: string }[] }).members
-    .map(m => [String(m.siteId), m.name])
+  (trackedMksData as { knesset_site_id?: string; name: string }[])
+    .filter(m => m.knesset_site_id)
+    .map(m => [m.knesset_site_id, m.name])
 )
 
 interface CommitteeCardProps {
