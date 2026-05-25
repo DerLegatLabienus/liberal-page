@@ -108,6 +108,7 @@ export interface Mk {
 export interface GalleryItem {
   id: number
   src: string
+  srcFull?: string
   caption: string
   captionEn?: string
   date: string

@@ -32,6 +32,16 @@ export function shouldKeepUrl(url: string): boolean {
   return IMAGE_EXTENSIONS.has(ext)
 }
 
+export function fullResUrl(url: string): string | null {
+  const noQuery = url.split('?')[0]
+  const ext = path.extname(noQuery)
+  const base = path.basename(noQuery, ext)
+  const stripped = base.replace(/-\d+x\d+$/, '')
+  if (stripped === base) return null
+  const dir = noQuery.slice(0, noQuery.length - path.basename(noQuery).length)
+  return dir + stripped + ext
+}
+
 export function resolveFilename(filename: string, existingNames: Set<string>): string {
   if (!existingNames.has(filename)) return filename
   const ext = path.extname(filename)
@@ -47,7 +57,7 @@ export function resolveFilename(filename: string, existingNames: Set<string>): s
 
 export function mergeGalleryEntries(
   existing: GalleryItem[],
-  newLocalPaths: string[],
+  newItems: Array<{ src: string; srcFull?: string }>,
   today: string
 ): GalleryItem[] {
   const usedSrcs = new Set<string>()
@@ -63,16 +73,24 @@ export function mergeGalleryEntries(
     const resolved = resolveFilename(filename, usedSrcs)
     const localPath = `/images/gallery/${resolved}`
     usedSrcs.add(localPath)
-    result.push({ ...item, src: localPath })
+    const fullOrig = fullResUrl(item.src)
+    const srcFull = fullOrig ? `/images/gallery/${sanitizeFilename(fullOrig)}` : undefined
+    result.push({ ...item, src: localPath, ...(srcFull ? { srcFull } : {}) })
   }
 
   const maxId = result.reduce((m, item) => Math.max(m, item.id), 0)
   let nextId = maxId + 1
+  const srcToIndex = new Map(result.map((item, i) => [item.src, i]))
 
-  for (const localPath of newLocalPaths) {
-    if (!usedSrcs.has(localPath)) {
-      usedSrcs.add(localPath)
-      result.push({ id: nextId++, src: localPath, caption: '', captionEn: '', date: today })
+  for (const newItem of newItems) {
+    if (usedSrcs.has(newItem.src)) {
+      const idx = srcToIndex.get(newItem.src)
+      if (idx !== undefined && newItem.srcFull && !result[idx].srcFull) {
+        result[idx] = { ...result[idx], srcFull: newItem.srcFull }
+      }
+    } else {
+      usedSrcs.add(newItem.src)
+      result.push({ id: nextId++, src: newItem.src, ...(newItem.srcFull ? { srcFull: newItem.srcFull } : {}), caption: '', captionEn: '', date: today })
     }
   }
 
@@ -125,41 +143,58 @@ async function crawlImageUrls(): Promise<string[]> {
   return [...collectedUrls]
 }
 
-async function downloadImages(urls: string[]): Promise<string[]> {
+async function fetchWithTimeout(url: string): Promise<Buffer | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15_000)
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    if (!res.ok) { console.warn(`  Skip (${res.status}): ${url}`); return null }
+    return Buffer.from(await res.arrayBuffer())
+  } catch (err) {
+    console.warn(`  Error fetching ${url}:`, err)
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function downloadImages(urls: string[]): Promise<Array<{ src: string; srcFull?: string }>> {
   await mkdir(OUTPUT_DIR, { recursive: true })
   const usedNames = new Set<string>()
-  const localPaths: string[] = []
+  const results: Array<{ src: string; srcFull?: string }> = []
 
   for (const url of urls) {
-    try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 15_000)
-      let res: Response
-      try {
-        res = await fetch(url, { signal: controller.signal })
-      } finally {
-        clearTimeout(timer)
-      }
-      if (!res.ok) { console.warn(`  Skip (${res.status}): ${url}`); continue }
-      const buffer = Buffer.from(await res.arrayBuffer())
-      if (buffer.byteLength < MIN_SIZE_BYTES) {
-        console.warn(`  Skip (too small, ${buffer.byteLength} B): ${url}`)
-        continue
-      }
-
-      const rawFilename = sanitizeFilename(url)
-      const filename = resolveFilename(rawFilename, usedNames)
-      usedNames.add(filename)
-
-      await writeFile(path.join(OUTPUT_DIR, filename), buffer)
-      localPaths.push(`/images/gallery/${filename}`)
-      console.log(`  ✓ ${filename} (${(buffer.byteLength / 1024).toFixed(1)} KB)`)
-    } catch (err) {
-      console.warn(`  Error fetching ${url}:`, err)
+    const buffer = await fetchWithTimeout(url)
+    if (!buffer) continue
+    if (buffer.byteLength < MIN_SIZE_BYTES) {
+      console.warn(`  Skip (too small, ${buffer.byteLength} B): ${url}`)
+      continue
     }
+
+    const rawFilename = sanitizeFilename(url)
+    const filename = resolveFilename(rawFilename, usedNames)
+    usedNames.add(filename)
+    await writeFile(path.join(OUTPUT_DIR, filename), buffer)
+    const src = `/images/gallery/${filename}`
+    console.log(`  ✓ ${filename} (${(buffer.byteLength / 1024).toFixed(1)} KB)`)
+
+    let srcFull: string | undefined
+    const hiResUrl = fullResUrl(url)
+    if (hiResUrl) {
+      const hiBuffer = await fetchWithTimeout(hiResUrl)
+      if (hiBuffer && hiBuffer.byteLength >= MIN_SIZE_BYTES && hiBuffer.byteLength !== buffer.byteLength) {
+        const hiFilename = resolveFilename(sanitizeFilename(hiResUrl), usedNames)
+        usedNames.add(hiFilename)
+        await writeFile(path.join(OUTPUT_DIR, hiFilename), hiBuffer)
+        srcFull = `/images/gallery/${hiFilename}`
+        console.log(`    ↑ full-res: ${hiFilename} (${(hiBuffer.byteLength / 1024).toFixed(1)} KB)`)
+      }
+    }
+
+    results.push({ src, ...(srcFull ? { srcFull } : {}) })
   }
 
-  return localPaths
+  return results
 }
 
 async function main(): Promise<void> {
@@ -170,14 +205,14 @@ async function main(): Promise<void> {
   console.log(`Found ${urls.length} candidate image URL(s)`)
 
   console.log('\nStep 2: Downloading images...')
-  const localPaths = await downloadImages(urls)
-  console.log(`Downloaded ${localPaths.length} image(s) to public/images/gallery/`)
+  const downloadedItems = await downloadImages(urls)
+  console.log(`Downloaded ${downloadedItems.length} image(s) to public/images/gallery/`)
 
   console.log('\nStep 3: Updating gallery.json...')
   const raw = await readFile(GALLERY_JSON, 'utf-8')
   const existing: GalleryItem[] = JSON.parse(raw)
   const today = new Date().toISOString().slice(0, 10)
-  const updated = mergeGalleryEntries(existing, localPaths, today)
+  const updated = mergeGalleryEntries(existing, downloadedItems, today)
   await writeFile(GALLERY_JSON, JSON.stringify(updated, null, 2) + '\n', 'utf-8')
 
   const rewrote = existing.filter(i => i.src.startsWith('https://likudliberal.org')).length

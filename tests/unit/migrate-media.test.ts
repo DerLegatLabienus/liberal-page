@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeFilename, shouldKeepUrl, resolveFilename, mergeGalleryEntries } from '../../scripts/migrate-media'
+import { sanitizeFilename, shouldKeepUrl, resolveFilename, fullResUrl, mergeGalleryEntries } from '../../scripts/migrate-media'
 import type { GalleryItem } from '@/types'
 
 describe('sanitizeFilename', () => {
@@ -82,6 +82,22 @@ describe('resolveFilename', () => {
   })
 })
 
+describe('fullResUrl', () => {
+  it('strips WordPress size suffix from thumbnail URL', () => {
+    expect(fullResUrl('https://likudliberal.org/wp-content/uploads/2020/05/amir1-300x282.jpg'))
+      .toBe('https://likudliberal.org/wp-content/uploads/2020/05/amir1.jpg')
+  })
+
+  it('returns null for URLs without a size suffix', () => {
+    expect(fullResUrl('https://likudliberal.org/wp-content/uploads/photo.jpg')).toBeNull()
+  })
+
+  it('handles other dimensions', () => {
+    expect(fullResUrl('https://likudliberal.org/wp-content/uploads/img-2024-1024x768.png'))
+      .toBe('https://likudliberal.org/wp-content/uploads/img-2024.png')
+  })
+})
+
 describe('mergeGalleryEntries', () => {
   const existing: GalleryItem[] = [
     {
@@ -104,6 +120,11 @@ describe('mergeGalleryEntries', () => {
     expect(result[0].src).toBe('/images/gallery/amir1-300x282.jpg')
   })
 
+  it('adds srcFull for entries with a size suffix in the original URL', () => {
+    const result = mergeGalleryEntries(existing, [], '2026-05-25')
+    expect(result[0].srcFull).toBe('/images/gallery/amir1.jpg')
+  })
+
   it('preserves caption and captionEn on rewritten entries', () => {
     const result = mergeGalleryEntries(existing, [], '2026-05-25')
     expect(result[0].caption).toBe('Amir')
@@ -115,16 +136,25 @@ describe('mergeGalleryEntries', () => {
     expect(result[1].src).toBe('/images/gallery/local.jpg')
   })
 
-  it('appends new local paths not already present', () => {
-    const result = mergeGalleryEntries(existing, ['/images/gallery/new.jpg'], '2026-05-25')
+  it('appends new items not already present', () => {
+    const result = mergeGalleryEntries(existing, [{ src: '/images/gallery/new.jpg' }], '2026-05-25')
     expect(result).toHaveLength(3)
     expect(result[2]).toMatchObject({ src: '/images/gallery/new.jpg', caption: '', date: '2026-05-25' })
+  })
+
+  it('propagates srcFull from new items', () => {
+    const result = mergeGalleryEntries(
+      existing,
+      [{ src: '/images/gallery/new-300x200.jpg', srcFull: '/images/gallery/new.jpg' }],
+      '2026-05-25'
+    )
+    expect(result[2].srcFull).toBe('/images/gallery/new.jpg')
   })
 
   it('does not duplicate a path already present after rewrite', () => {
     const result = mergeGalleryEntries(
       existing,
-      ['/images/gallery/amir1-300x282.jpg'],
+      [{ src: '/images/gallery/amir1-300x282.jpg' }],
       '2026-05-25'
     )
     expect(result).toHaveLength(2)
@@ -133,7 +163,7 @@ describe('mergeGalleryEntries', () => {
   it('assigns sequential ids for new entries', () => {
     const result = mergeGalleryEntries(
       existing,
-      ['/images/gallery/new1.jpg', '/images/gallery/new2.jpg'],
+      [{ src: '/images/gallery/new1.jpg' }, { src: '/images/gallery/new2.jpg' }],
       '2026-05-25'
     )
     expect(result[2].id).toBe(3)
