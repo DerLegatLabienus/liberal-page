@@ -1,50 +1,84 @@
-# React + TypeScript + Vite
+# הליברלים בליכוד
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Hebrew-first public website for **הליברלים בליכוד**: a liberal movement working inside Likud to promote individual liberty, free markets, civil rights, accountable government, and democratic institutions.
 
-Currently, two official plugins are available:
+The site combines public movement content with a practical Knesset tracking tool. It is built to help members and supporters understand what is happening in the Knesset, follow relevant bills and committees, and connect parliamentary activity back to the movement's public work.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## What This Project Includes
 
-## Expanding the ESLint configuration
+- A responsive public homepage with movement messaging, gallery content, FAQ, and join calls to action.
+- Hebrew/English UI support, with the parliamentary tracker currently enabled for Hebrew users.
+- A Knesset tracker drawer for monitored bills, committees, and MKs.
+- Search and tracking flows for Knesset bills, committees, and members.
+- Local JSON-backed content and tracking data under `src/data/`.
+- An Express API for tracking actions, Knesset data refreshes, summaries, and cache-backed lookup routes.
+- Polling services that refresh tracked parliamentary data and mark new updates.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Tech Stack
 
-- Configure the top-level `parserOptions` property like this:
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS, shadcn-style local UI primitives |
+| Backend | Express 5, `tsx` |
+| Data | JSON files in `src/data/` |
+| External sources | Knesset OData API, Knesset website APIs, oknesset.org |
+| Tests | Vitest, Testing Library |
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+Run the frontend and backend together:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+npm run dev
 ```
+
+The frontend runs at `http://localhost:5173` and proxies `/api/*` requests to the Express backend at `http://localhost:3001`.
+
+Useful commands:
+
+```bash
+npm run dev:frontend
+npm run dev:server
+npm run build
+npm run lint
+npm test
+```
+
+## Project Structure
+
+```text
+src/
+  components/
+    layout/       Header, footer, Knesset tracker drawer
+    sections/     Homepage sections
+    parliament/   Bill, committee, MK, and tracking UI
+    ui/           Local UI primitives
+  data/           JSON content and local datastore
+  hooks/          Direction, parliament, and lookup hooks
+  lib/            API client helpers
+server/
+  routes/         Express API routes
+  services/       Knesset integrations, polling, summarization
+  repositories/   JSON cache repositories
+tests/            Component, unit, and server tests
+docs/             Architecture and project documentation
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Components](docs/components.md)
+- [Data schema](docs/data-schema.md)
+- [Project knowledge base](docs/README.md)
+- [Backlog](BACKLOG.md)
+
+## Notes
+
+This repository is the application code for the movement website and tracker. It is not an official Knesset service. Parliamentary data is fetched from public sources and cached locally for the site experience.
