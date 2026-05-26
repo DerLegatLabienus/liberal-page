@@ -25,7 +25,7 @@ interface ParliamentStripProps {
 export default function ParliamentStrip({ bills, committees, onOpenDrawer }: ParliamentStripProps) {
   const { t } = useTranslation()
   const direction = useDirection()
-  const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה').slice(0, 3)
+  const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה')
 
   return (
     <section className="border-y border-border bg-blue-50/60 py-8" dir={direction}>
@@ -38,7 +38,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             {t('ui.strip_see_all')}
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="flex flex-wrap gap-3">
           {activeBills.map((bill) => (
             <div
               key={bill.id}
@@ -50,7 +50,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
               <p className={`text-xs font-medium ${STATUS_DOT[bill.status] ?? ''}`}>● {bill.status}</p>
             </div>
           ))}
-          {committees.slice(0, 1).map((c) => (
+          {committees.map((c) => (
             <div
               key={c.id}
               dir={direction}
