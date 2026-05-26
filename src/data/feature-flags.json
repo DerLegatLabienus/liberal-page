@@ -1,0 +1,7 @@
+{
+  "bills": {
+    "trendingAlgorithm": "manual",
+    "recentRanking": "newest",
+    "policyFilterEnabled": true
+  }
+}

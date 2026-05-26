@@ -159,3 +159,27 @@ export interface KnessetMember {
   isLiberal: boolean
   isSupporter: boolean
 }
+
+export interface KnessetBillOverviewItem {
+  billId: number
+  title: string
+  statusId: number
+  status: string        // Hebrew label mapped from statusId; '' if unknown
+  committee: string      // reserved; '' in Phase 1 (committee-name resolution is Phase 2)
+  lastUpdatedDate: string
+  summary: string        // SummaryLaw; may be ''
+  knessetUrl: string
+  reason?: string        // present only for curated trending items
+}
+
+export interface TrendingBillEntry {
+  billId: number
+  title: string
+  reason: string
+}
+
+export interface BillsFeatureFlags {
+  trendingAlgorithm: 'manual' | 'amendments' | 'sponsorship'
+  recentRanking: 'newest' | 'progress'
+  policyFilterEnabled: boolean
+}
