@@ -66,20 +66,33 @@ describe('fetchPolicyAlignedBills', () => {
     _resetBillsCache()
   })
 
-  it('builds an OData filter OR-ing the liberal keywords with substringof', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
+  it('queries keywords in batches with substringof, ordered by BillID desc', async () => {
+    vi.mocked(fetch).mockResolvedValue(mockOdata(RAW))
     await fetchPolicyAlignedBills(10)
-    const calledUrl = decodeURIComponent(vi.mocked(fetch).mock.calls[0][0] as string)
     expect(LIBERAL_KEYWORDS.length).toBeGreaterThan(0)
-    expect(calledUrl).toContain(`substringof('${LIBERAL_KEYWORDS[0]}',Name)`)
-    expect(calledUrl).toContain(' or ')
-    expect(calledUrl).toContain('$orderby=BillID desc')
+    const firstUrl = decodeURIComponent(vi.mocked(fetch).mock.calls[0][0] as string)
+    expect(firstUrl).toContain(`substringof('${LIBERAL_KEYWORDS[0]}',Name)`)
+    expect(firstUrl).toContain('$orderby=BillID desc')
   })
 
-  it('returns mapped overview items', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
+  it('never issues a query with 3+ substringof clauses (OData 473 guard)', async () => {
+    vi.mocked(fetch).mockResolvedValue(mockOdata(RAW))
+    await fetchPolicyAlignedBills(10)
+    // Six keywords batched in pairs => 3 requests, each with at most 2 substringof clauses
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(3)
+    for (const call of vi.mocked(fetch).mock.calls) {
+      const url = decodeURIComponent(call[0] as string)
+      expect((url.match(/substringof\(/g) ?? []).length).toBeLessThanOrEqual(2)
+    }
+  })
+
+  it('returns merged, deduped items sorted by billId desc', async () => {
+    vi.mocked(fetch).mockResolvedValue(mockOdata(RAW))
     const items = await fetchPolicyAlignedBills(10)
+    // RAW has billIds 1044632 and 1044000; deduped across batches, sorted desc
+    expect(items).toHaveLength(2)
     expect(items[0].billId).toBe(1044632)
+    expect(items[1].billId).toBe(1044000)
   })
 })
 

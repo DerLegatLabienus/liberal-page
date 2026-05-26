@@ -62,15 +62,30 @@ export async function fetchRecentBills(limit: number): Promise<KnessetBillOvervi
 
 export const LIBERAL_KEYWORDS = ['חירות', 'שוק חופשי', 'זכויות', 'תחרות', 'רגולציה', 'קניין']
 
+// The Knesset OData server rejects filters with 3+ substringof clauses (HTTP 473),
+// so keywords are queried in pairs and the results merged.
+const POLICY_KEYWORD_BATCH = 2
+
 export async function fetchPolicyAlignedBills(limit: number): Promise<KnessetBillOverviewItem[]> {
   const k = getCurrentKnesset()
-  const ors = LIBERAL_KEYWORDS.map((kw) => `substringof('${kw}',Name)`).join(' or ')
-  const filter = `KnessetNum eq ${k} and (${ors})`
-  const path =
-    `KNS_Bill?$filter=${encodeURIComponent(filter)}` +
-    `&$orderby=${encodeURIComponent('BillID desc')}&$top=${limit}` +
-    `&$select=${SELECT}&$format=json`
-  return cachedQuery(`policy:${k}:${limit}`, path)
+  const batches: string[][] = []
+  for (let i = 0; i < LIBERAL_KEYWORDS.length; i += POLICY_KEYWORD_BATCH) {
+    batches.push(LIBERAL_KEYWORDS.slice(i, i + POLICY_KEYWORD_BATCH))
+  }
+  const results = await Promise.all(
+    batches.map((kws) => {
+      const ors = kws.map((kw) => `substringof('${kw}',Name)`).join(' or ')
+      const filter = `KnessetNum eq ${k} and (${ors})`
+      const path =
+        `KNS_Bill?$filter=${encodeURIComponent(filter)}` +
+        `&$orderby=${encodeURIComponent('BillID desc')}&$top=${limit}` +
+        `&$select=${SELECT}&$format=json`
+      return cachedQuery(`policy:${k}:${limit}:${kws.join(',')}`, path)
+    }),
+  )
+  const byId = new Map<number, KnessetBillOverviewItem>()
+  for (const batch of results) for (const item of batch) byId.set(item.billId, item)
+  return [...byId.values()].sort((a, b) => b.billId - a.billId).slice(0, limit)
 }
 
 const DATA_DIR = path.join(process.cwd(), 'src/data')
