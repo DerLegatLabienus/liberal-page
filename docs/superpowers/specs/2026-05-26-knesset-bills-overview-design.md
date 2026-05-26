@@ -14,15 +14,22 @@ Currently the site shows bills the Liberals faction is tracking. Users need visi
 
 ## Verified API Constraints
 
-Confirmed against the live Knesset OData API (`KNS_Bill` entity) during design:
+Confirmed against the live Knesset OData API during design:
 
-- **`$orderby` is supported** (used elsewhere for `KNS_CommitteeSession`), so "recent" ordering works.
-- **`LastUpdatedDate` field exists** on `KNS_Bill` → drives the "recent" tab and "recent_activity" algorithm.
-- **`SummaryLaw` field exists** → provides real summary text for the expanded view.
+- **`$orderby` is supported** (used elsewhere for `KNS_CommitteeSession`), so server-side ordering works.
+- **`SummaryLaw` field exists** on `KNS_Bill` → provides real summary text for the expanded view.
 - **`substringof(...)` filtering works** (used by `/api/bills/search`) → drives keyword-based "policy-aligned" tab.
-- **Status is numeric only**: `KNS_Bill` has `StatusID` (number) but **no `StatusDesc`**. A StatusID→Hebrew label map is required (small sub-task; either hardcode the known status codes or query the `KNS_Status` lookup entity once and cache it).
+- **Status is numeric only**: `KNS_Bill` has `StatusID` (number) but **no `StatusDesc`**. The `KNS_Status` lookup entity exists and maps `StatusID → Desc` (Hebrew); `TypeID eq 2` are bill statuses (e.g. 101 → "הכנה לקריאה ראשונה"). The status map is built by querying `KNS_Status` once and caching it — no hardcoded guesses.
 - **Committee is numeric only**: `KNS_Bill.CommitteeID` is an ID, not a name. Resolve via the existing `knesset-committees-cache.json`, or omit committee name in v1.
-- **No amendment-count or sponsor fields** on `KNS_Bill`. The "amendments" and "sponsorship" trending algorithms require other OData entities (e.g. a bill-initiator join) that are **not yet verified to exist** — they are out of scope for the initial implementation (see Feature Flags below).
+
+### Recency signal — known trap (from prior incident)
+
+`KNS_Bill.LastUpdatedDate` and `KNS_BillHistoryInitiator.LastUpdatedDate` reflect **administrative** updates, not real legislative activity. Ordering by them previously surfaced **old bills as "recent"** — the team switched away from this. **Do not order the Recent tab by `LastUpdatedDate`.**
+
+- **Recent v1 (this spec / Phase 1):** order by `BillID` descending — newest-introduced bills, Knesset-wide. Simple, avoids the trap.
+- **Recent v2 (Phase 2, separate spec):** re-rank by the most recent *genuine legislative event* per bill. Verified-available building blocks: `KNS_CmtSessionItem` (`ItemID`/`ItemTypeID` + `CommitteeSessionID`) joins bills to committee sessions, which carry reliable `StartDate`; `KNS_PlmSessionItem` joins bills to plenum sessions (votes/discussions). Aggregating "latest real event per bill" across these is a backend subsystem in its own right — out of scope here, gated behind the `recentRanking` flag.
+
+**No amendment-count or sponsor fields** on `KNS_Bill`. The "amendments" and "sponsorship" trending algorithms require other OData entities that are not verified — out of scope (see Feature Flags below).
 
 ## Architecture
 
@@ -50,7 +57,9 @@ Confirmed against the live Knesset OData API (`KNS_Bill` entity) during design:
   "bills": {
     "$comment": "Feature flags for bills overview section",
     "trendingAlgorithm": "manual",
-    "$trendingAlgorithm_comment": "Implemented now: 'manual' (curated list from trending-bills.json), 'recent_activity' (KNS_Bill ordered by LastUpdatedDate desc). NOT yet implemented (require unverified OData entities): 'amendments', 'sponsorship' — backend falls back to 'manual' if these are set. Changing this switches the data source without code changes.",
+    "$trendingAlgorithm_comment": "Implemented now: 'manual' (curated list from trending-bills.json). NOT yet implemented (require unverified OData entities): 'amendments', 'sponsorship' — backend falls back to 'manual' if these are set. Changing this switches the data source without code changes.",
+    "recentRanking": "newest",
+    "$recentRanking_comment": "Controls the Recent tab ordering. 'newest' (Phase 1, implemented): KNS_Bill ordered by BillID desc = newest-introduced bills. 'progress' (Phase 2, NOT implemented): re-rank by most recent genuine legislative event (committee/plenum session dates). Backend falls back to 'newest' if set to 'progress' before Phase 2 ships.",
     "policyFilterEnabled": true,
     "$policyFilterEnabled_comment": "If true, the 'Policy-aligned' tab filters Knesset bills by Liberal keywords (חירות, שוק חופשי, זכויות אזרח, וכו'). If false, the tab is hidden. The frontend imports this flag to decide whether to render the tab; the backend reads it to guard the route."
   }
@@ -61,9 +70,9 @@ Confirmed against the live Knesset OData API (`KNS_Bill` entity) during design:
 
 New routes live under `/api/bills/*`, co-located with the existing `/api/bills/search` and `/api/bills/track` (NOT under `/api/parliament/*`, whose `/:type` route would parse `bills` as a tracking type and 400). Each queries the Knesset OData API live (same pattern as `/api/bills/search`), wrapped in a short in-memory TTL cache (~5 min) to avoid hammering OData. No new on-disk cache file is introduced.
 
-- **`GET /api/bills/recent?limit=10`** — `KNS_Bill?$filter=KnessetNum eq {current}&$orderby=LastUpdatedDate desc&$top={limit}&$select=BillID,Name,StatusID,CommitteeID,LastUpdatedDate,SummaryLaw`. Returns `{ billId, title, statusId, status, committee, lastUpdatedDate, summary, knessetUrl }[]` (status/committee resolved server-side — see below).
-- **`GET /api/bills/trending`** — returns curated `trending-bills.json` when `trendingAlgorithm` is `manual`; when `recent_activity`, delegates to the same query as `/recent`. Unimplemented algorithms fall back to `manual`.
-- **`GET /api/bills/policy-aligned?limit=10`** — `KNS_Bill` filtered by `substringof` against the Liberal keyword list, ordered by `LastUpdatedDate desc`. Hidden entirely when `policyFilterEnabled` is false.
+- **`GET /api/bills/recent?limit=10`** — `KNS_Bill?$filter=KnessetNum eq {current}&$orderby=BillID desc&$top={limit}&$select=BillID,Name,StatusID,CommitteeID,LastUpdatedDate,SummaryLaw`. `BillID desc` = newest-introduced bills (Recent v1; see "Recency signal" above — `LastUpdatedDate` is deliberately NOT used for ordering). Returns `{ billId, title, statusId, status, committee, lastUpdatedDate, summary, knessetUrl }[]` (status/committee resolved server-side — see below).
+- **`GET /api/bills/trending`** — returns curated `trending-bills.json` when `trendingAlgorithm` is `manual` (the only implemented value), each entry hydrated with live status/summary from OData. Unimplemented algorithms fall back to `manual`.
+- **`GET /api/bills/policy-aligned?limit=10`** — `KNS_Bill` filtered by `substringof` against the Liberal keyword list, ordered by `BillID desc` (newest matching bills; `LastUpdatedDate` is deliberately avoided). Hidden entirely when `policyFilterEnabled` is false.
 
 **Server-side enrichment** (shared helper): map numeric `StatusID` → Hebrew label via a hardcoded status-code map (`src/data` or a small server module), and resolve `CommitteeID` → committee name via the existing `knesset-committees-cache.json`. Unknown status/committee falls back to an empty string.
 
@@ -141,13 +150,18 @@ KnessetBillsOverview (mount)
 
 ### Feature Flag Implementation
 
-In `src/data/feature-flags.json`, the `trendingAlgorithm` flag controls the backend's `/api/bills/trending` response:
+Two independent flags in `src/data/feature-flags.json`:
+
+**`trendingAlgorithm`** controls `/api/bills/trending`:
 - `"manual"` *(default, implemented)*: returns `src/data/trending-bills.json`, hydrated with live status/summary from OData
-- `"recent_activity"` *(implemented)*: `KNS_Bill` ordered by `LastUpdatedDate` descending, top N
-- `"amendments"` *(not implemented)*: would need a per-bill amendment count, which is not a field on `KNS_Bill`; requires research into other OData entities. Backend falls back to `manual`.
+- `"amendments"` *(not implemented)*: would need a per-bill amendment count, not a field on `KNS_Bill`; requires research into other OData entities. Backend falls back to `manual`.
 - `"sponsorship"` *(not implemented)*: would need a bill-initiator join (cross-party co-sponsors); entity unverified. Backend falls back to `manual`.
 
-For the two implemented values, no code changes are needed to swap — edit the flag and restart the backend. The two unimplemented values are reserved names so the flag contract is stable; implementing them is a follow-up once the supporting OData entities are confirmed.
+**`recentRanking`** controls `/api/bills/recent`:
+- `"newest"` *(default, implemented)*: `KNS_Bill` ordered by `BillID` descending — newest-introduced bills
+- `"progress"` *(not implemented, Phase 2)*: re-rank by most recent genuine legislative event (committee/plenum session dates per `KNS_CmtSessionItem` / `KNS_PlmSessionItem`). Backend falls back to `newest`.
+
+Unimplemented values are reserved names so the flag contract is stable; implementing them is a follow-up. No code changes are needed to swap between implemented values — edit the flag and restart the backend.
 
 ## Integration
 
