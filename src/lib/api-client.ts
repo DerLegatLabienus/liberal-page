@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem } from '@/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
@@ -41,6 +41,9 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ billId, name, knessetUrl }),
       }),
+    recent: (limit = 10) => apiFetch<KnessetBillOverviewItem[]>(`/bills/recent?limit=${limit}`),
+    trending: () => apiFetch<KnessetBillOverviewItem[]>('/bills/trending'),
+    policyAligned: (limit = 10) => apiFetch<KnessetBillOverviewItem[]>(`/bills/policy-aligned?limit=${limit}`),
   },
   mks: {
     list: () => apiFetch<KnessetMember[]>('/mks/list'),
