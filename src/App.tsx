@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer'
 import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
 import HeroSection from '@/components/sections/HeroSection'
 import ParliamentStrip from '@/components/sections/ParliamentStrip'
+import KnessetBillsOverview from '@/components/sections/KnessetBillsOverview'
 import AboutSection from '@/components/sections/AboutSection'
 import LiberalsShowcase from '@/components/sections/LiberalsShowcase'
 import GallerySection from '@/components/sections/GallerySection'
@@ -53,7 +54,10 @@ export default function App() {
       <main>
         <HeroSection onOpenDrawer={handleOpenDrawer} trackerEnabled={isHebrew} />
         {isHebrew && (
-          <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
+          <>
+            <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
+            <KnessetBillsOverview />
+          </>
         )}
         <AboutSection />
         <LiberalsShowcase />
