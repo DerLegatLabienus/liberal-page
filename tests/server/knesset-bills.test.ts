@@ -6,7 +6,7 @@ vi.mock('../../server/services/bill-status-map', () => ({
 }))
 vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
-import { fetchRecentBills, _resetBillsCache } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -55,5 +55,28 @@ describe('fetchRecentBills', () => {
     await fetchRecentBills(10)
     await fetchRecentBills(10)
     expect(fetch).toHaveBeenCalledOnce()
+  })
+})
+
+describe('fetchPolicyAlignedBills', () => {
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset()
+    _resetBillsCache()
+  })
+
+  it('builds an OData filter OR-ing the liberal keywords with substringof', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
+    await fetchPolicyAlignedBills(10)
+    const calledUrl = decodeURIComponent(vi.mocked(fetch).mock.calls[0][0] as string)
+    expect(LIBERAL_KEYWORDS.length).toBeGreaterThan(0)
+    expect(calledUrl).toContain(`substringof('${LIBERAL_KEYWORDS[0]}',Name)`)
+    expect(calledUrl).toContain(' or ')
+    expect(calledUrl).toContain('$orderby=BillID desc')
+  })
+
+  it('returns mapped overview items', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
+    const items = await fetchPolicyAlignedBills(10)
+    expect(items[0].billId).toBe(1044632)
   })
 })

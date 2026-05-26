@@ -57,3 +57,16 @@ export async function fetchRecentBills(limit: number): Promise<KnessetBillOvervi
   const path = `KNS_Bill?$filter=KnessetNum%20eq%20${k}&$orderby=BillID%20desc&$top=${limit}&$select=${SELECT}&$format=json`
   return cachedQuery(`recent:${k}:${limit}`, path)
 }
+
+export const LIBERAL_KEYWORDS = ['חירות', 'שוק חופשי', 'זכויות', 'תחרות', 'רגולציה', 'קניין']
+
+export async function fetchPolicyAlignedBills(limit: number): Promise<KnessetBillOverviewItem[]> {
+  const k = getCurrentKnesset()
+  const ors = LIBERAL_KEYWORDS.map((kw) => `substringof('${kw}',Name)`).join(' or ')
+  const filter = `KnessetNum eq ${k} and (${ors})`
+  const path =
+    `KNS_Bill?$filter=${encodeURIComponent(filter)}` +
+    `&$orderby=${encodeURIComponent('BillID desc')}&$top=${limit}` +
+    `&$select=${SELECT}&$format=json`
+  return cachedQuery(`policy:${k}:${limit}`, path)
+}
