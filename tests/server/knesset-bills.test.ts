@@ -1,12 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { readFile } from 'fs/promises'
 
 vi.stubGlobal('fetch', vi.fn())
+vi.mock('fs/promises')
 vi.mock('../../server/services/bill-status-map', () => ({
   getBillStatusMap: vi.fn(async () => new Map([[101, 'הכנה לקריאה ראשונה']])),
 }))
 vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
-import { fetchRecentBills, _resetBillsCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills, getBillsFlags } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -78,5 +80,36 @@ describe('fetchPolicyAlignedBills', () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
     const items = await fetchPolicyAlignedBills(10)
     expect(items[0].billId).toBe(1044632)
+  })
+})
+
+describe('getTrendingBills (manual)', () => {
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset()
+    _resetBillsCache()
+  })
+
+  it('returns curated entries hydrated with reason, status resolved live', async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({
+      bills: [{ billId: 1044632, title: 'הצעת חוק א', reason: 'סיבה' }],
+    }) as never)
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([
+      { BillID: 1044632, Name: 'הצעת חוק א', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: 'תקציר' },
+    ]))
+    const items = await getTrendingBills()
+    expect(items[0].billId).toBe(1044632)
+    expect(items[0].reason).toBe('סיבה')
+    expect(items[0].status).toBe('הכנה לקריאה ראשונה')
+  })
+})
+
+describe('getBillsFlags', () => {
+  it('reads flags from feature-flags.json', async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({
+      bills: { trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: false },
+    }) as never)
+    const flags = await getBillsFlags()
+    expect(flags.policyFilterEnabled).toBe(false)
+    expect(flags.trendingAlgorithm).toBe('manual')
   })
 })

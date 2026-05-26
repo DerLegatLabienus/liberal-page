@@ -1,4 +1,6 @@
-import type { KnessetBillOverviewItem } from '../../src/types'
+import { readFile } from 'fs/promises'
+import path from 'path'
+import type { BillsFeatureFlags, KnessetBillOverviewItem, TrendingBillEntry } from '../../src/types'
 import { getBillStatusMap } from './bill-status-map'
 import { getCurrentKnesset } from './knesset-config'
 
@@ -69,4 +71,45 @@ export async function fetchPolicyAlignedBills(limit: number): Promise<KnessetBil
     `&$orderby=${encodeURIComponent('BillID desc')}&$top=${limit}` +
     `&$select=${SELECT}&$format=json`
   return cachedQuery(`policy:${k}:${limit}`, path)
+}
+
+const DATA_DIR = path.join(process.cwd(), 'src/data')
+
+export async function getBillsFlags(): Promise<BillsFeatureFlags> {
+  const raw = await readFile(path.join(DATA_DIR, 'feature-flags.json'), 'utf-8')
+  return (JSON.parse(raw) as { bills: BillsFeatureFlags }).bills
+}
+
+async function fetchBillsByIds(ids: number[]): Promise<Map<number, KnessetBillOverviewItem>> {
+  if (ids.length === 0) return new Map()
+  const ors = ids.map((id) => `BillID eq ${id}`).join(' or ')
+  const odataPath = `KNS_Bill?$filter=${encodeURIComponent(ors)}&$top=${ids.length}&$select=${SELECT}&$format=json`
+  const res = await fetch(`${ODATA_BASE}/${odataPath}`, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error(`OData error ${res.status}`)
+  const data = (await res.json()) as { value: RawBill[] }
+  const mapped = await mapRows(data.value ?? [])
+  return new Map(mapped.map((b) => [b.billId, b]))
+}
+
+// Phase 1: only the 'manual' trending algorithm is implemented (curated list).
+export async function getTrendingBills(): Promise<KnessetBillOverviewItem[]> {
+  const raw = await readFile(path.join(DATA_DIR, 'trending-bills.json'), 'utf-8')
+  const entries = (JSON.parse(raw) as { bills: TrendingBillEntry[] }).bills
+  const live = await fetchBillsByIds(entries.map((e) => e.billId))
+  return entries.map((e) => {
+    const hydrated = live.get(e.billId)
+    return hydrated
+      ? { ...hydrated, reason: e.reason }
+      : {
+          billId: e.billId,
+          title: e.title,
+          statusId: 0,
+          status: '',
+          committee: '',
+          lastUpdatedDate: '',
+          summary: '',
+          knessetUrl: knessetUrl(e.billId),
+          reason: e.reason,
+        }
+  })
 }
