@@ -7,6 +7,7 @@ const router = Router()
 const DATA_PATH = path.join(process.cwd(), 'src/data/bills.json')
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 import { getCurrentKnesset } from '../services/knesset-config'
+import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, getBillsFlags } from '../services/knesset-bills'
 
 async function readBills(): Promise<Bill[]> {
   try {
@@ -72,6 +73,37 @@ router.post('/track', async (req, res) => {
   bills.push(newBill)
   await writeBills(bills)
   res.json({ ok: true, item: newBill })
+})
+
+function parseLimit(q: unknown): number {
+  const n = Number(q)
+  return Number.isFinite(n) && n > 0 && n <= 50 ? Math.floor(n) : 10
+}
+
+router.get('/recent', async (req, res) => {
+  try {
+    res.json(await fetchRecentBills(parseLimit(req.query.limit)))
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
+  }
+})
+
+router.get('/trending', async (_req, res) => {
+  try {
+    res.json(await getTrendingBills())
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
+  }
+})
+
+router.get('/policy-aligned', async (req, res) => {
+  try {
+    const flags = await getBillsFlags()
+    if (!flags.policyFilterEnabled) return res.status(404).json({ error: 'Policy filter disabled' })
+    res.json(await fetchPolicyAlignedBills(parseLimit(req.query.limit)))
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
+  }
 })
 
 export default router
