@@ -29,7 +29,7 @@ export default function ConstitutionPage() {
   return (
     <div className="min-h-screen bg-background" dir={direction}>
       <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
-      <main className="container mx-auto max-w-4xl px-4 py-12">
+      <main className="container mx-auto max-w-6xl px-4 py-12">
         <h1 className="mb-2 text-3xl font-bold text-foreground">{labels.title}</h1>
         <p className="mb-6 text-sm text-muted-foreground">{labels.subtitle}</p>
 

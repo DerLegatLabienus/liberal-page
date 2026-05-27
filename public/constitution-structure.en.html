@@ -577,6 +577,22 @@
     .branch-tree { flex-direction: column; align-items: center; }
     .branch-node { max-width: 100%; }
   }
+
+  /* ====== ENGLISH (LTR) OVERRIDES — base CSS is authored RTL ====== */
+  body { direction: ltr; }
+  .section--blue   { border-right: none; border-left: 4px solid var(--blue); }
+  .section--gold   { border-right: none; border-left: 4px solid var(--gold); }
+  .section--teal   { border-right: none; border-left: 4px solid var(--teal); }
+  .section--red    { border-right: none; border-left: 4px solid var(--red); }
+  .section--green  { border-right: none; border-left: 4px solid var(--green); }
+  .section--purple { border-right: none; border-left: 4px solid var(--purple); }
+  .section--orange { border-right: none; border-left: 4px solid var(--orange); }
+  .section--navy   { border-right: none; border-left: 4px solid var(--navy); }
+  .callout { border-right: none; border-left: 4px solid var(--blue); border-radius: 10px 0 0 10px; }
+  .section details .expand-content li { padding-right: 0; padding-left: 16px; }
+  .section details .expand-content li::before { right: auto; left: 0; }
+  .section--hero details { text-align: left; }
+  .chairman-box details .expand-content { text-align: left; }
 </style>
 </head>
 <body>
