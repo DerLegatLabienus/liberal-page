@@ -4,14 +4,14 @@ import { describe, it, expect } from 'vitest'
 import Header from '@/components/layout/Header'
 
 describe('Header constitution link', () => {
-  it('renders a link to /constitution', () => {
+  it('does not render a /constitution link (CTA lives in the hero)', () => {
     render(
       <MemoryRouter>
         <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
       </MemoryRouter>,
     )
-    const links = screen.getAllByRole('link', { name: /חוקת/i })
-    expect(links.length).toBeGreaterThan(0)
-    expect(links[0]).toHaveAttribute('href', '/constitution')
+    const links = screen.queryAllByRole('link', { name: /חוקת/i })
+    const constitutionLink = links.find((l) => l.getAttribute('href') === '/constitution')
+    expect(constitutionLink).toBeFalsy()
   })
 })

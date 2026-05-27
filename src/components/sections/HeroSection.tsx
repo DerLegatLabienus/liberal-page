@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 interface HeroSectionProps {
@@ -41,6 +42,15 @@ export default function HeroSection({ onOpenDrawer, trackerEnabled = true }: Her
               {t('hero.cta_tracker')}
             </Button>
           )}
+          <Link
+            to="/constitution"
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'lg' }),
+              'border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
+            )}
+          >
+            📚 {t('hero.cta_constitution')}
+          </Link>
         </div>
       </div>
     </section>

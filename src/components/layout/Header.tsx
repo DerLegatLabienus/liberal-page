@@ -70,12 +70,6 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
               {link.label}
             </a>
           ))}
-          <Link
-            to="/constitution"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t('ui.nav_constitution')}
-          </Link>
           <button
             onClick={toggleLang}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -122,13 +116,6 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
                 {link.label}
               </a>
             ))}
-            <Link
-              to="/constitution"
-              className="text-sm text-muted-foreground"
-              onClick={() => setMobileOpen(false)}
-            >
-              {t('ui.nav_constitution')}
-            </Link>
             <button
               onClick={() => { toggleLang(); setMobileOpen(false) }}
               className="text-start text-sm text-muted-foreground"
