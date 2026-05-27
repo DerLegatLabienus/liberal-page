@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Bill, Committee } from '@/types'
@@ -35,14 +34,9 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
             {t('ui.strip_heading')}
           </h2>
-          <div className="flex items-center gap-3">
-            <Link to="/constitution" className="text-xs font-medium text-primary hover:underline">
-              {t('ui.strip_constitution')}
-            </Link>
-            <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
-              {t('ui.strip_see_all')}
-            </button>
-          </div>
+          <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
+            {t('ui.strip_see_all')}
+          </button>
         </div>
         <div className="flex flex-wrap gap-3">
           {activeBills.map((bill) => (

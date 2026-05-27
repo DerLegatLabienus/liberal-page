@@ -53,14 +53,14 @@ export default function HomePage() {
       />
       <main>
         <HeroSection onOpenDrawer={handleOpenDrawer} trackerEnabled={isHebrew} />
+        <AboutSection />
+        <LiberalsShowcase />
         {isHebrew && (
           <>
             <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
             <KnessetBillsOverview />
           </>
         )}
-        <AboutSection />
-        <LiberalsShowcase />
         <GallerySection />
         <FaqSection />
         <JoinSection />

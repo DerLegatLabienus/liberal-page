@@ -4,13 +4,15 @@ import { describe, it, expect, vi } from 'vitest'
 import ParliamentStrip from '@/components/sections/ParliamentStrip'
 
 describe('ParliamentStrip', () => {
-  it('renders a link to the constitution in the header', () => {
+  it('does not render a constitution link (it lives in the hero CTA)', () => {
     render(
       <MemoryRouter>
         <ParliamentStrip bills={[]} committees={[]} onOpenDrawer={vi.fn()} />
       </MemoryRouter>,
     )
-    const link = screen.getByRole('link', { name: /חוקת/i })
-    expect(link).toHaveAttribute('href', '/constitution')
+    const constitutionLink = screen
+      .queryAllByRole('link')
+      .find((l) => l.getAttribute('href') === '/constitution')
+    expect(constitutionLink).toBeFalsy()
   })
 })
