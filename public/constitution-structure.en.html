@@ -593,6 +593,8 @@
   .section details .expand-content li::before { right: auto; left: 0; }
   .section--hero details { text-align: left; }
   .chairman-box details .expand-content { text-align: left; }
+  .section details summary::before { content: '\25B6'; }
+  .section details[open] summary::before { transform: rotate(90deg); }
 </style>
 </head>
 <body>
