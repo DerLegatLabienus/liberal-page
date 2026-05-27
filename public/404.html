@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="he">
+  <head>
+    <meta charset="utf-8" />
+    <title>הליברלים בליכוד</title>
+    <script>
+      // GitHub Pages SPA redirect (spa-github-pages technique).
+      // basename is a single segment (/liberal-page/) => segmentCount = 1.
+      (function () {
+        var l = window.location
+        var segmentCount = 1
+        l.replace(
+          l.protocol +
+            '//' +
+            l.host +
+            l.pathname.split('/').slice(0, 1 + segmentCount).join('/') +
+            '/?/' +
+            l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash,
+        )
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>
