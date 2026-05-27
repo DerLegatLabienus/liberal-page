@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
@@ -16,23 +17,31 @@ vi.mock('@/hooks/useDirection', () => ({ useDirection: () => (h.lang === 'he' ? 
 
 import ConstitutionPage from '@/pages/ConstitutionPage'
 
-function renderPage() {
-  return render(<MemoryRouter><ConstitutionPage /></MemoryRouter>)
-}
+const renderPage = () => render(<MemoryRouter><ConstitutionPage /></MemoryRouter>)
 
 describe('ConstitutionPage', () => {
   beforeEach(() => { h.lang = 'he' })
 
-  it('renders Hebrew chapter titles by default, no disclaimer', () => {
+  it('defaults to the rich (iframe) view in the current language; no chapter cards yet', () => {
     renderPage()
-    expect(screen.getByText('חברי התנועה')).toBeInTheDocument()
-    expect(screen.getByText('בית הדין')).toBeInTheDocument()
-    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+    const iframe = screen.getByTitle(/organizational structure/i)
+    expect(iframe.getAttribute('src')).toMatch(/constitution-structure\.he\.html$/)
+    expect(screen.queryByText('חברי התנועה')).not.toBeInTheDocument()
   })
 
-  it('renders English titles + disclaimer when language is en', () => {
+  it('switches to the reader view showing chapter cards', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'תצוגת קריאה' }))
+    expect(screen.getByText('חברי התנועה')).toBeInTheDocument()
+    expect(screen.getByText('בית הדין')).toBeInTheDocument()
+  })
+
+  it('uses the English iframe and shows the disclaimer in reader view when language is en', async () => {
     h.lang = 'en'
     renderPage()
+    const iframe = screen.getByTitle(/organizational structure/i)
+    expect(iframe.getAttribute('src')).toMatch(/constitution-structure\.en\.html$/)
+    await userEvent.click(screen.getByRole('button', { name: 'Reader view' }))
     expect(screen.getByText('Movement Members')).toBeInTheDocument()
     expect(screen.getByRole('note')).toHaveTextContent(/unofficial translation/i)
   })

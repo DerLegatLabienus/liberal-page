@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organizational Structure — Likud, a National Liberal Movement</title>
+<script>
+  // ============================================================
+  // CENTRALIZED PDF CONFIGURATION — Edit this section only
+  // ============================================================
+  const PDF_CONFIG = {
+    // Hosted PDF (served from the site's public/ under the GitHub Pages base).
+    path: '/liberal-page/constitution.pdf',
+
+    // PDF page numbers for each chapter
+    // Verified by visual inspection of each PDF page
+    chapters: {
+      'members':      3,   // פרק ג׳ — חברות
+      'branches':     7,   // פרק ד׳ — סניפים
+      'convention':   9,   // פרק ה׳ — הוועידה
+      'center':       9,   // פרק ה׳ — המרכז
+      'chairman':    17,   // פרק ו׳ — יושב ראש התנועה
+      'oversight':   17,   // פרק ו׳ — ועדת הפיקוח
+      'bureau':      19,   // פרק ז׳ — לשכת הליכוד
+      'secretariat': 21,   // פרק ח׳ — מזכירות הליכוד
+      'court':       22,   // פרק ט׳ — בית הדין
+      'auditor':     24,   // פרק י׳ — המבקר הפנימי
+      'knesset':     25,   // פרק י״א — סיעת הכנסת
+      'histadrut':   25,   // פרק י״ב — סיעת הליכוד בהסתדרות
+      'youth':       26,   // פרק י״ב 2 — צעירי הליכוד
+      'local_gov':   28,   // פרק י״ב 2 — השלטון המקומי
+      'world':       29,   // פרק י״ב 3 — הליכוד העולמי
+    }
+  };
+
+  function openPdfChapter(chapterKey) {
+    const page = PDF_CONFIG.chapters[chapterKey] || 1;
+    const url = PDF_CONFIG.path + '#page=' + page;
+    window.open(url, '_blank');
+  }
+
+  // Report height to the embedding page so the iframe can size to fit (no nested scrollbars).
+  function reportHeight() {
+    var h = document.documentElement.scrollHeight;
+    parent.postMessage({ type: 'constitution-height', height: h }, '*');
+  }
+  window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.ResizeObserver) {
+    new ResizeObserver(reportHeight).observe(document.documentElement);
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Heebo', 'Segoe UI', system-ui, sans-serif;
+    --font-display: 'Rubik', 'Heebo', system-ui, sans-serif;
+
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #e8eef4;
+    --surface-elevated: #f7faff;
+    --border: rgba(0, 40, 100, 0.08);
+    --border-bright: rgba(0, 40, 100, 0.18);
+    --text: #1a2332;
+    --text-dim: #6b7a8d;
+
+    --blue: #1e40af;
+    --blue-dim: rgba(30, 64, 175, 0.08);
+    --blue-light: #3b82f6;
+    --blue-glow: rgba(59, 130, 246, 0.15);
+
+    --gold: #b45309;
+    --gold-dim: rgba(180, 83, 9, 0.08);
+
+    --navy: #1e3a5f;
+    --navy-dim: rgba(30, 58, 95, 0.08);
+
+    --teal: #0d7377;
+    --teal-dim: rgba(13, 115, 119, 0.08);
+
+    --red: #b91c1c;
+    --red-dim: rgba(185, 28, 28, 0.08);
+
+    --green: #15803d;
+    --green-dim: rgba(21, 128, 61, 0.08);
+
+    --purple: #6d28d9;
+    --purple-dim: rgba(109, 40, 217, 0.08);
+
+    --orange: #c2410c;
+    --orange-dim: rgba(194, 65, 12, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1724;
+      --surface: #182236;
+      --surface2: #1e2d44;
+      --surface-elevated: #223350;
+      --border: rgba(150, 200, 255, 0.08);
+      --border-bright: rgba(150, 200, 255, 0.16);
+      --text: #e2e8f0;
+      --text-dim: #8899aa;
+      --blue: #60a5fa;
+      --blue-dim: rgba(96, 165, 250, 0.12);
+      --blue-light: #93c5fd;
+      --blue-glow: rgba(96, 165, 250, 0.2);
+      --gold: #fbbf24;
+      --gold-dim: rgba(251, 191, 36, 0.12);
+      --navy: #93c5fd;
+      --navy-dim: rgba(147, 197, 253, 0.1);
+      --teal: #5eead4;
+      --teal-dim: rgba(94, 234, 212, 0.1);
+      --red: #fca5a5;
+      --red-dim: rgba(252, 165, 165, 0.1);
+      --green: #86efac;
+      --green-dim: rgba(134, 239, 172, 0.1);
+      --purple: #c4b5fd;
+      --purple-dim: rgba(196, 181, 253, 0.1);
+      --orange: #fb923c;
+      --orange-dim: rgba(251, 146, 60, 0.1);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 80% 0%, var(--blue-dim) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 100%, var(--gold-dim) 0%, transparent 40%);
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 40px 24px;
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section, .flow-arrow, .header {
+    animation: fadeUp 0.45s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.05s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+    }
+  }
+
+  /* ====== HEADER ====== */
+  .header { text-align: center; margin-bottom: 36px; }
+
+  .header-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--blue), #1e3a8a);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  /* ====== LAYOUT ====== */
+  .diagram {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ====== SECTION ====== */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    transition: box-shadow 0.2s;
+  }
+
+  .section:hover {
+    box-shadow: 0 4px 24px rgba(0, 40, 100, 0.06);
+  }
+
+  .section--hero {
+    background: var(--surface-elevated);
+    border-color: color-mix(in srgb, var(--border) 40%, var(--blue) 60%);
+    box-shadow: 0 6px 30px var(--blue-glow);
+    padding: 28px 32px;
+    text-align: center;
+  }
+
+  .section--recessed {
+    background: var(--surface2);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.04);
+  }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .section--blue { border-right: 4px solid var(--blue); }
+  .section--blue .section-label { color: var(--blue); }
+  .section--blue .dot { background: var(--blue); }
+
+  .section--gold { border-right: 4px solid var(--gold); }
+  .section--gold .section-label { color: var(--gold); }
+  .section--gold .dot { background: var(--gold); }
+
+  .section--teal { border-right: 4px solid var(--teal); }
+  .section--teal .section-label { color: var(--teal); }
+  .section--teal .dot { background: var(--teal); }
+
+  .section--red { border-right: 4px solid var(--red); }
+  .section--red .section-label { color: var(--red); }
+  .section--red .dot { background: var(--red); }
+
+  .section--green { border-right: 4px solid var(--green); }
+  .section--green .section-label { color: var(--green); }
+  .section--green .dot { background: var(--green); }
+
+  .section--purple { border-right: 4px solid var(--purple); }
+  .section--purple .section-label { color: var(--purple); }
+  .section--purple .dot { background: var(--purple); }
+
+  .section--orange { border-right: 4px solid var(--orange); }
+  .section--orange .section-label { color: var(--orange); }
+  .section--orange .dot { background: var(--orange); }
+
+  .section--navy { border-right: 4px solid var(--navy); }
+  .section--navy .section-label { color: var(--navy); }
+  .section--navy .dot { background: var(--navy); }
+
+  /* ====== FLOW ARROW ====== */
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 0;
+  }
+
+  .flow-arrow svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: var(--blue-light);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ====== GRIDS ====== */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .inner-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .inner-card .title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .inner-card .desc {
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+
+  .tag--blue { background: var(--blue-dim); color: var(--blue); }
+  .tag--gold { background: var(--gold-dim); color: var(--gold); }
+  .tag--teal { background: var(--teal-dim); color: var(--teal); }
+  .tag--red { background: var(--red-dim); color: var(--red); }
+  .tag--green { background: var(--green-dim); color: var(--green); }
+
+  /* ====== HERO ELEMENTS ====== */
+  .hero-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+  }
+
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .hero-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ====== CHAIRMAN BOX ====== */
+  .chairman-box {
+    background: linear-gradient(135deg, var(--blue-dim), var(--gold-dim));
+    border: 2px solid var(--blue);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .chairman-box .title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+
+  .chairman-box .desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ====== BRANCH TREE ====== */
+  .branch-tree {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .branch-node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+  }
+
+  .branch-node .title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  .branch-node .desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* ====== LEGEND ====== */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+  }
+
+  /* ====== CALLOUT ====== */
+  .callout {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-right: 4px solid var(--blue);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .callout strong { color: var(--text); }
+
+  /* ====== FOOTER ====== */
+  .footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ====== EXPANDABLE PANELS ====== */
+  .section details {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .section details summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+    list-style: none;
+  }
+
+  .section details summary::-webkit-details-marker { display: none; }
+
+  .section details summary::before {
+    content: '◀';
+    font-size: 10px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+
+  .section details[open] summary::before {
+    transform: rotate(-90deg);
+  }
+
+  .section details .expand-content {
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-dim);
+  }
+
+  .section details .expand-content ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .section details .expand-content li {
+    padding: 3px 0;
+    padding-right: 16px;
+    position: relative;
+  }
+
+  .section details .expand-content li::before {
+    content: '•';
+    position: absolute;
+    right: 0;
+    color: var(--blue-light);
+  }
+
+  .section details .expand-content strong {
+    color: var(--text);
+  }
+
+  .pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue);
+    background: var(--blue-dim);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+
+  .pdf-link:hover {
+    background: var(--blue-glow);
+    box-shadow: 0 2px 8px var(--blue-glow);
+  }
+
+  .pdf-link svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .section--hero details {
+    text-align: right;
+  }
+
+  .chairman-box details summary {
+    justify-content: center;
+  }
+
+  .chairman-box details .expand-content {
+    text-align: right;
+  }
+
+  /* ====== RESPONSIVE ====== */
+  @media (max-width: 900px) {
+    .two-col, .three-col, .four-col { grid-template-columns: 1fr; }
+    .inner-grid { grid-template-columns: 1fr; }
+    .branch-tree { flex-direction: column; align-items: center; }
+    .branch-node { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header" style="--i:0">
+  <div class="header-badge">Movement Charter — in force since 1 July 2015</div>
+  <h1>Organizational Structure — Likud</h1>
+  <p class="subtitle">A national liberal movement &mdash; institutions, powers, and election flow</p>
+</div>
+
+<div role="note" style="max-width:1200px;margin:0 auto 18px;padding:12px 18px;border:1px solid var(--gold);border-radius:10px;background:var(--gold-dim);color:var(--text);font-size:13px;line-height:1.6">
+  &#9888; Unofficial translation for convenience. The binding text is the original Hebrew constitution.
+</div>
+
+<div class="diagram">
+
+  <div class="section section--hero" style="--i:1">
+    <div class="hero-icon">&#128499;&#65039;</div>
+    <div class="hero-title">Movement Members</div>
+    <div class="hero-desc">
+      An Israeli citizen aged 17+, resident in Israel, who identifies with the movement's goals. Pays annual dues.
+      <br>Directly elects the movement chairman and the convention delegates.
+    </div>
+    <details>
+      <summary>Chapter C — Expanded summary: Membership</summary>
+      <div class="expand-content">
+        <ul>
+          <li><strong>Membership:</strong> Israeli citizen aged 17+, resident, identifies with the movement's goals and pays annual dues</li>
+          <li><strong>Right to vote:</strong> after 16 consecutive months of membership, may vote in internal elections</li>
+          <li><strong>Right to be elected:</strong> after 3 consecutive years of membership, may run for office</li>
+          <li><strong>Termination:</strong> the Tribunal may terminate membership for charter violations; the member may appeal within 15 days</li>
+          <li><strong>Movement Honoree:</strong> a member over 70 with 25+ years of activity — a special standing</li>
+        </ul>
+        <a class="pdf-link" onclick="openPdfChapter('members')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+      </div>
+    </details>
+  </div>
+
+  <div class="flow-arrow" style="--i:2">
+    <svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>
+    Direct elections
+  </div>
+
+  <div class="chairman-box section" style="--i:3">
+    <div class="title">&#127963;&#65039; Movement Chairman</div>
+    <div class="desc">
+      Directly elected by all movement members &bull; heads the convention and the center
+      <br>The Likud candidate for Prime Minister of Israel &bull; appoints the oversight committee
+    </div>
+    <details>
+      <summary>Chapter F — Expanded summary: Movement Chairman</summary>
+      <div class="expand-content">
+        <ul>
+          <li><strong>Direct election:</strong> elected by all members in personal, equal and secret elections</li>
+          <li><strong>Candidacy:</strong> 500 supporting signatures from members are required to submit a candidacy</li>
+          <li><strong>Two-round system:</strong> 40% threshold in the first round; if no candidate passes — a runoff between the top two</li>
+          <li><strong>Oversight committee:</strong> supervises the election process, sets rules and timetables</li>
+          <li><strong>Campaign rules:</strong> equal access for all candidates, ban on using public funds, full financial transparency</li>
+        </ul>
+        <a class="pdf-link" onclick="openPdfChapter('chairman')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+      </div>
+    </details>
+  </div>
+
+  <div class="flow-arrow" style="--i:4">
+    <svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>
+    Heads
+  </div>
+
+  <div class="two-col">
+    <div class="section section--blue" style="--i:5">
+      <div class="section-label"><span class="dot"></span>The Convention — Supreme Body</div>
+      <div class="inner-grid">
+        <div class="inner-card"><div class="title">~2,500 delegates</div><div class="desc">60% by branch affiliation, 40% by eligible voters in the voter rolls</div></div>
+        <div class="inner-card"><div class="title">Powers</div><div class="desc">Sets the charter, elects the Tribunal and auditor, approves policy</div></div>
+        <div class="inner-card"><div class="title">Frequency</div><div class="desc">Once every 4 years, before Knesset or local elections</div><span class="tag tag--blue">Chapter E</span></div>
+        <div class="inner-card"><div class="title">Founders</div><div class="desc">Members over 70, active 30+ years — delegates by standing</div></div>
+      </div>
+      <details>
+        <summary>Chapter E — Expanded summary: The Convention</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Composition:</strong> ~2,500 delegates — 60% by branch affiliation, 40% by voter rolls</li>
+            <li><strong>Frequency:</strong> convenes once every 4 years, before Knesset or local-authority elections</li>
+            <li><strong>Supreme authority:</strong> sets the charter, elects the Tribunal and internal auditor</li>
+            <li><strong>Founders:</strong> members over 70, active 30+ years — automatic delegates by standing</li>
+            <li><strong>Election method:</strong> general, direct, equal, secret and proportional</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('convention')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--gold" style="--i:6">
+      <div class="section-label"><span class="dot"></span>The Center — Between Conventions</div>
+      <div class="inner-grid">
+        <div class="inner-card"><div class="title">Powers</div><div class="desc">Decides all matters; may amend resolutions by a majority of members</div></div>
+        <div class="inner-card"><div class="title">First session</div><div class="desc">Within 30 days of the convention's close, convened by the chairman</div></div>
+        <div class="inner-card"><div class="title">Agenda</div><div class="desc">Set by the chairman, changeable by majority</div><span class="tag tag--gold">Chapter E</span></div>
+        <div class="inner-card"><div class="title">Meetings</div><div class="desc">At least every 6 months; a check on the Bureau</div></div>
+      </div>
+      <details>
+        <summary>Chapter E — Expanded summary: The Center</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Authority:</strong> decides all movement matters between conventions</li>
+            <li><strong>Amending resolutions:</strong> may amend convention resolutions by a majority of its members</li>
+            <li><strong>First session:</strong> within 30 days of the convention's close</li>
+            <li><strong>Frequency:</strong> convenes at least once every 6 months</li>
+            <li><strong>Agenda:</strong> set by the movement chairman, changeable by majority</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('center')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="flow-arrow" style="--i:7"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>Executive bodies</div>
+
+  <div class="three-col">
+    <div class="section section--navy" style="--i:8">
+      <div class="section-label"><span class="dot"></span>The Likud Bureau</div>
+      <div class="inner-card" style="margin-bottom:8px"><div class="title">~91 members</div><div class="desc">Knesset faction members, branch heads, elected officials. Convenes within 90 days of the convention.</div></div>
+      <div class="inner-card"><div class="title">Management</div><div class="desc">Led by a chair; handles day-to-day matters, subordinate to the Bureau</div></div>
+      <span class="tag tag--blue">Chapter G</span>
+      <details>
+        <summary>Chapter G — Expanded summary: The Likud Bureau</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Convening:</strong> meets within 90 days of the convention</li>
+            <li><strong>Composition:</strong> Knesset faction members, heads of local authorities, branch heads, elected and ex-officio members</li>
+            <li><strong>Management:</strong> handles day-to-day matters, subordinate to the Bureau</li>
+            <li><strong>Advisory council:</strong> the Bureau may establish an advisory economic-social council</li>
+            <li><strong>Elections:</strong> conducted by the central elections committee</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('bureau')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--teal" style="--i:9">
+      <div class="section-label"><span class="dot"></span>The Likud Secretariat</div>
+      <div class="inner-card"><div class="title">Administrative body</div><div class="desc">Records management, coordinating the management's actions, implementing decisions. Manages branches' ongoing activity.</div></div>
+      <span class="tag tag--teal">Chapter H</span>
+      <details>
+        <summary>Chapter H — Expanded summary: The Likud Secretariat</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Election:</strong> elected by the convention in personal elections</li>
+            <li><strong>Records:</strong> manages the movement's documents and protocols</li>
+            <li><strong>Coordination:</strong> coordinates the management's actions and oversees implementation</li>
+            <li><strong>Branches:</strong> reviews branch activity and monitors implementation</li>
+            <li><strong>Reporting:</strong> receives reports from all bodies; the secretary serves as the Bureau's secretary</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('secretariat')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--red" style="--i:10">
+      <div class="section-label"><span class="dot"></span>The Oversight Committee</div>
+      <div class="inner-card"><div class="title">Oversees elections</div><div class="desc">Supervises chairman elections, sets rules, hears appeals, may disqualify candidates.</div></div>
+      <span class="tag tag--red">Chapter F</span>
+      <details>
+        <summary>Chapter F — Expanded summary: The Oversight Committee</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Appointment:</strong> appointed by the Center, chaired by a retired Supreme or District Court judge</li>
+            <li><strong>Composition:</strong> up to 7 members; the Center may appoint 2 alternate members</li>
+            <li><strong>Powers:</strong> supervises chairman elections — sets rules, hears appeals, may disqualify candidates</li>
+            <li><strong>Decisions:</strong> by majority vote, with a casting vote for the presiding judge</li>
+            <li><strong>Finality:</strong> decisions are not appealable in the ordinary courts (except the High Court of Justice)</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('oversight')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="flow-arrow" style="--i:11"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>Independent bodies</div>
+
+  <div class="two-col">
+    <div class="section section--purple" style="--i:12">
+      <div class="section-label"><span class="dot"></span>The Tribunal — Chapter I</div>
+      <div class="inner-card" style="margin-bottom:8px"><div class="title">Up to 15 judges</div><div class="desc">President — a retired Supreme or District Court judge. Elected by the convention.</div></div>
+      <div class="inner-card"><div class="title">Powers</div><div class="desc">Termination of membership, reprimand, suspension, fine, expulsion. Final rulings — no appeal to the courts.</div></div>
+      <details>
+        <summary>Chapter I — Expanded summary: The Tribunal</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Composition:</strong> up to 15 judges, elected by the convention in personal elections</li>
+            <li><strong>President:</strong> a retired Supreme or District Court judge</li>
+            <li><strong>Sanctions:</strong> warning, reprimand, suspension, removal, fine, expulsion</li>
+            <li><strong>Jurisdiction:</strong> internal disputes, termination of membership, disciplinary matters</li>
+            <li><strong>Finality:</strong> rulings are final — no appeal to civil courts</li>
+            <li><strong>Costs:</strong> may award costs; acts as an authorized arbitrator</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('court')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--green" style="--i:13">
+      <div class="section-label"><span class="dot"></span>The Internal Auditor — Chapter J</div>
+      <div class="inner-card" style="margin-bottom:8px"><div class="title">Appointment</div><div class="desc">Elected by the convention, a retired judge. Holds no other position in the movement.</div></div>
+      <div class="inner-card"><div class="title">Powers</div><div class="desc">Financial, operational and branch audits. Sets methods, submits an annual report to the chairman and secretariat.</div></div>
+      <details>
+        <summary>Chapter J — Expanded summary: The Internal Auditor</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Appointment:</strong> elected by the convention, a retired judge, may not hold another position in the movement</li>
+            <li><strong>Audit:</strong> financial and operational audit of all bodies and branches</li>
+            <li><strong>Methods:</strong> determines audit methods independently, submits an annual report to the chairman and secretariat</li>
+            <li><strong>Assistants:</strong> may appoint advisors and assistants</li>
+            <li><strong>Appeal:</strong> findings may be appealed to the Tribunal within 30 days</li>
+            <li><strong>Observer:</strong> participates as an observer in Center, Bureau and Secretariat meetings</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('auditor')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="flow-arrow" style="--i:14"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>Local structure</div>
+
+  <div class="section section--orange" style="--i:15">
+    <div class="section-label"><span class="dot"></span>Branches — the local organizational unit (Chapter D)</div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
+      At least 300 members in a local authority. Its geographic scope is set by the local authority.
+      The movement organization may establish a branch even without 300 members.
+    </p>
+    <div class="branch-tree">
+      <div class="branch-node"><div class="title">Branch council</div><div class="desc">21-151 members by size. The branch's supreme body.</div></div>
+      <div class="branch-node"><div class="title">Branch management</div><div class="desc">Up to a third of the council, max 51. Day-to-day matters.</div></div>
+      <div class="branch-node"><div class="title">Branch secretariat</div><div class="desc">Ongoing management, oversight, implementing decisions.</div></div>
+      <div class="branch-node"><div class="title">Elections committee</div><div class="desc">5 members, runs local elections, approves voter rolls.</div></div>
+    </div>
+    <details>
+      <summary>Chapter D — Expanded summary: Branches</summary>
+      <div class="expand-content">
+        <ul>
+          <li><strong>Minimum:</strong> 300 members in a local authority; geographic scope by the authority</li>
+          <li><strong>Branch council:</strong> 21-151 members — the branch's supreme body</li>
+          <li><strong>Branch management:</strong> up to a third of council members, maximum 51 members</li>
+          <li><strong>Branch secretariat:</strong> up to a third of management members, handles day-to-day matters</li>
+          <li><strong>Elections committee:</strong> 5 members, runs local elections</li>
+          <li><strong>Dues:</strong> annual collection, 10% of revenue transferred to the movement</li>
+        </ul>
+        <a class="pdf-link" onclick="openPdfChapter('branches')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+      </div>
+    </details>
+  </div>
+
+  <div class="flow-arrow" style="--i:16"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg>Special wings</div>
+
+  <div class="four-col">
+    <div class="section section--teal" style="--i:17">
+      <div class="section-label"><span class="dot"></span>Likud Youth</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">Members up to age 35. Their own convention, national council, executive committee and chairman.<br><span class="tag tag--teal">Chapter L.1</span></div>
+      <details>
+        <summary>Expanded summary: Likud Youth</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Age:</strong> movement members up to age 35</li>
+            <li><strong>Institutions:</strong> convention, national council, executive committee (20 members), chairman</li>
+            <li><strong>Representation:</strong> the convention elects 20% of the national council by secret ballot</li>
+            <li><strong>Chairman election:</strong> elected directly, two-round system (40% threshold)</li>
+            <li><strong>Representation:</strong> presence in all movement bodies; Knesset faction members included</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('youth')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--navy" style="--i:18">
+      <div class="section-label"><span class="dot"></span>The Knesset Faction</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">The movement's Knesset members and ministers. Elects a faction chair and committees.<br><span class="tag tag--blue">Chapter K</span></div>
+      <details>
+        <summary>Expanded summary: The Knesset Faction</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Composition:</strong> the Knesset members and ministers on behalf of the movement</li>
+            <li><strong>Internal elections:</strong> elects a faction chair, Deputy Speaker candidates, committee chairs</li>
+            <li><strong>PM candidate:</strong> recommends a candidate per the movement chairman</li>
+            <li><strong>Primaries:</strong> direct, personal, equal and secret elections for the Knesset list</li>
+            <li><strong>Oversight:</strong> central and oversight committees run the primaries</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('knesset')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--red" style="--i:19">
+      <div class="section-label"><span class="dot"></span>The Likud Faction in the Histadrut</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">The Likud faction in the General Histadrut. Operates within the Great Assembly and the conventions.<br><span class="tag tag--blue">Chapter L</span></div>
+      <details>
+        <summary>Expanded summary: The Likud Faction in the Histadrut</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Nature:</strong> the Likud faction in the General Federation of Labor in Israel</li>
+            <li><strong>Activity:</strong> operates within the Histadrut institutions — the Great Assembly, conventions and committees</li>
+            <li><strong>Goal:</strong> representing the movement's positions and advancing workers' rights</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('histadrut')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--green" style="--i:20">
+      <div class="section-label"><span class="dot"></span>World Likud</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">A world Zionist movement. The Israel branch sends delegates to the Zionist Congress and the WZO.<br><span class="tag tag--green">Chapter L.3</span></div>
+      <details>
+        <summary>Expanded summary: World Likud</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Nature:</strong> a world Zionist movement uniting branches in Israel and the diaspora</li>
+            <li><strong>Representation:</strong> the Israel branch sends delegates to the Zionist Congress and the WZO institutions</li>
+            <li><strong>Charter:</strong> operates under the World Likud charter; the movement may issue directives</li>
+            <li><strong>Eligibility:</strong> only those meeting all eligibility conditions may be elected as delegates</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('world')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="section section--gold" style="--i:21">
+      <div class="section-label"><span class="dot"></span>Local Government</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">Likud factions in the local authorities. Selecting candidates for councils and for mayor.<br><span class="tag tag--gold">Chapter L.2</span></div>
+      <details>
+        <summary>Expanded summary: Local Government</summary>
+        <div class="expand-content">
+          <ul>
+            <li><strong>Factions:</strong> Likud factions in the local-authority councils</li>
+            <li><strong>Primaries:</strong> direct elections for local-council candidates</li>
+            <li><strong>Steering committee:</strong> appointed by the movement chairman with the Center's approval</li>
+            <li><strong>Authority head:</strong> candidates for mayor are elected by the branch members</li>
+          </ul>
+          <a class="pdf-link" onclick="openPdfChapter('local_gov')"><svg viewBox="0 0 20 20"><path d="M6 2h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v4h4"/><path d="M10 9v6m-3-3l3 3 3-3"/></svg>Open in the constitution (PDF)</a>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="callout section section--recessed" style="--i:22">
+    <strong>&#128260; Election flow:</strong>
+    Movement members directly elect the <strong>movement chairman</strong> and the <strong>convention delegates</strong>.
+    The convention elects the <strong>Tribunal</strong>, the <strong>internal auditor</strong>, and the <strong>central elections committee</strong>.
+    The Center acts between conventions. The Bureau convenes within 90 days of the convention and includes representatives of all bodies.
+  </div>
+
+  <div class="legend" style="--i:23">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--blue);"></div>Supreme bodies</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--gold);"></div>Execution &amp; policy</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--purple);"></div>Adjudication</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--green);"></div>Audit</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--red);"></div>Oversight</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--orange);"></div>Branches</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--teal);"></div>Special wings</div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Likud Charter — a national liberal movement &bull; as in force on 14 Tammuz 5775, 1 July 2015 &bull; interactive organizational chart
+</div>
+
+</body>
+</html>
