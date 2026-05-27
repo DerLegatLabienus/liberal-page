@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,11 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
   const { t, i18n } = useTranslation()
   const direction = useDirection()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const isHome = useLocation().pathname === '/'
+
+  // On the homepage, hash anchors scroll in-page; off-route they point back to
+  // the homepage (with the section hash) so the link still works and returns home.
+  const navHref = (hash: string) => (isHome ? hash : `${import.meta.env.BASE_URL}${hash}`)
 
   const NAV_LINKS = [
     { label: t('ui.nav_about'), href: '#about' },
@@ -39,7 +44,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2" aria-label={t('site.party_name')}>
           {site.logoPath ? (
             <img
               src={site.logoPath}
@@ -53,13 +58,13 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
             </div>
           )}
           <span className="font-bold text-foreground">{t('site.party_name')}</span>
-        </div>
+        </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
-              href={link.href}
+              href={navHref(link.href)}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
