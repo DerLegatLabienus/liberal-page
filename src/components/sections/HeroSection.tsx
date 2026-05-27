@@ -49,7 +49,7 @@ export default function HeroSection({ onOpenDrawer, trackerEnabled = true }: Her
               'border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
             )}
           >
-            📚 {t('hero.cta_constitution')}
+            📜 {t('hero.cta_constitution')}
           </Link>
         </div>
       </div>
