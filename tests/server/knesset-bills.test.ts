@@ -8,7 +8,7 @@ vi.mock('../../server/services/bill-status-map', () => ({
 }))
 vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
-import { fetchRecentBills, _resetBillsCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills, getBillsFlags } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills, getBillsFlags } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -23,6 +23,7 @@ describe('fetchRecentBills', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
     _resetBillsCache()
+    _resetCommitteeMapCache()
   })
 
   it('maps OData rows to overview items with resolved status', async () => {
@@ -33,7 +34,17 @@ describe('fetchRecentBills', () => {
     expect(items[0].status).toBe('הכנה לקריאה ראשונה')
     expect(items[0].summary).toBe('תקציר')
     expect(items[0].knessetUrl).toContain('lawitemid=1044632')
-    expect(items[0].committee).toBe('') // Phase 1: committee name not resolved
+    expect(items[0].committee).toBe('') // cache absent → graceful empty string
+  })
+
+  it('resolves committee name from cache when CommitteeID is present', async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({
+      committees: [{ committeeId: 5, name: 'ועדת הכספים' }],
+    }) as never)
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
+    const items = await fetchRecentBills(10)
+    expect(items[0].committee).toBe('ועדת הכספים') // CommitteeID=5 → resolved
+    expect(items[1].committee).toBe('') // CommitteeID=null → no resolution
   })
 
   it('falls back to empty status string for unknown StatusID', async () => {
@@ -64,6 +75,7 @@ describe('fetchPolicyAlignedBills', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
     _resetBillsCache()
+    _resetCommitteeMapCache()
   })
 
   it('queries keywords in batches with substringof, ordered by BillID desc', async () => {
@@ -100,6 +112,7 @@ describe('getTrendingBills (manual)', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
     _resetBillsCache()
+    _resetCommitteeMapCache()
   })
 
   it('returns curated entries hydrated with reason, status resolved live', async () => {

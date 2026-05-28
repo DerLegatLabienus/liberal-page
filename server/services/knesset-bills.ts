@@ -21,13 +21,13 @@ interface RawBill {
 }
 
 async function mapRows(rows: RawBill[]): Promise<KnessetBillOverviewItem[]> {
-  const statusMap = await getBillStatusMap()
+  const [statusMap, committeeMap] = await Promise.all([getBillStatusMap(), getCommitteeNameMap()])
   return rows.map((r) => ({
     billId: r.BillID,
     title: r.Name.trim(),
     statusId: r.StatusID,
     status: statusMap.get(r.StatusID) ?? '',
-    committee: '', // Phase 1: committee name not resolved
+    committee: r.CommitteeID ? (committeeMap.get(r.CommitteeID) ?? '') : '',
     lastUpdatedDate: r.LastUpdatedDate ?? '',
     summary: (r.SummaryLaw ?? '').trim(),
     knessetUrl: knessetUrl(r.BillID),
@@ -35,9 +35,30 @@ async function mapRows(rows: RawBill[]): Promise<KnessetBillOverviewItem[]> {
 }
 
 const cache = new Map<string, { items: KnessetBillOverviewItem[]; at: number }>()
+let committeeMapCache: { map: Map<number, string>; at: number } | null = null
+const COMMITTEE_MAP_TTL = 5 * 60 * 1000
 
 export function _resetBillsCache() {
   cache.clear()
+}
+
+export function _resetCommitteeMapCache() {
+  committeeMapCache = null
+}
+
+async function getCommitteeNameMap(): Promise<Map<number, string>> {
+  if (committeeMapCache && Date.now() - committeeMapCache.at < COMMITTEE_MAP_TTL) {
+    return committeeMapCache.map
+  }
+  try {
+    const raw = await readFile(path.join(DATA_DIR, 'knesset-committees-cache.json'), 'utf-8')
+    const data = JSON.parse(raw) as { committees: { committeeId: number; name: string }[] }
+    const map = new Map(data.committees.map((c) => [c.committeeId, c.name]))
+    committeeMapCache = { map, at: Date.now() }
+    return map
+  } catch {
+    return new Map()
+  }
 }
 
 async function cachedQuery(key: string, odataPath: string): Promise<KnessetBillOverviewItem[]> {

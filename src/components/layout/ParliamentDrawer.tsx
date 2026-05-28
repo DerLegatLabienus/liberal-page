@@ -59,7 +59,7 @@ export default function ParliamentDrawer({
     <Sheet open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <SheetContent
         side={direction === 'rtl' ? 'right' : 'left'}
-        className="flex w-full flex-col gap-0 bg-white p-0 text-slate-900 sm:max-w-md"
+        className="flex w-full flex-col gap-0 bg-white bg-clip-border p-0 text-slate-900 sm:max-w-md"
       >
         <SheetHeader className="bg-primary px-4 py-3">
           <SheetTitle className="text-white">{t('ui.drawer_title')}</SheetTitle>

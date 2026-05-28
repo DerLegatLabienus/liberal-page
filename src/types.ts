@@ -165,7 +165,7 @@ export interface KnessetBillOverviewItem {
   title: string
   statusId: number
   status: string        // Hebrew label mapped from statusId; '' if unknown
-  committee: string      // reserved; '' in Phase 1 (committee-name resolution is Phase 2)
+  committee: string      // committee name; '' if not assigned or committees cache absent
   lastUpdatedDate: string
   summary: string        // SummaryLaw; may be ''
   knessetUrl: string
