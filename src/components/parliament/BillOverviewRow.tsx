@@ -10,7 +10,7 @@ export default function BillOverviewRow({ bill }: { bill: KnessetBillOverviewIte
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-3 text-right"
+        className="flex w-full items-center justify-between gap-2 text-right"
       >
         <span className="flex-1 min-w-0 truncate font-medium">{bill.title}</span>
         {bill.status && (
