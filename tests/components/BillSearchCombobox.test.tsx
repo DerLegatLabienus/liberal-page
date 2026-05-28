@@ -60,4 +60,14 @@ describe('BillSearchCombobox', () => {
     )
     expect(onAdd).toHaveBeenCalledTimes(1)
   })
+
+  it('applies max-h-[40vh] class to scrollable list container for mobile responsiveness', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(<BillSearchCombobox onAdd={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText(/חפש הצ"ח/i), 'חופש')
+    await act(async () => { await new Promise((r) => setTimeout(r, 350)) })
+    const listContainer = await screen.findByText('הצעת חוק חופש העיסוק')
+    const scrollableDiv = listContainer.closest('div.overflow-y-auto')
+    expect(scrollableDiv).toHaveClass('max-h-[40vh]')
+  })
 })

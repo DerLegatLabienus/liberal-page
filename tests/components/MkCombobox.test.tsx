@@ -69,4 +69,12 @@ describe('MkCombobox', () => {
     render(<MkCombobox onSelect={vi.fn()} selectedSiteId={1116} />)
     expect(screen.getByText('דן אילוז')).toBeInTheDocument()
   })
+
+  it('applies max-h-[40vh] class to scrollable list container for mobile responsiveness', async () => {
+    const user = userEvent.setup()
+    render(<MkCombobox onSelect={vi.fn()} selectedSiteId={null} />)
+    await user.click(screen.getByText('חפש ח"כ...'))
+    const listContainer = screen.getByText('דן אילוז').closest('div.overflow-y-auto')
+    expect(listContainer).toHaveClass('max-h-[40vh]')
+  })
 })

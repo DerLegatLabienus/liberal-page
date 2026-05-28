@@ -65,7 +65,7 @@ export default function BillSearchCombobox({ onAdd }: BillSearchComboboxProps) {
 
       {open && results.length > 0 && (
         <div className="absolute top-full z-50 mt-1 w-full rounded-md border border-border bg-white shadow-lg">
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-[40vh] sm:max-h-60 overflow-y-auto">
             {results.map((r) => (
               <button
                 key={r.billId}

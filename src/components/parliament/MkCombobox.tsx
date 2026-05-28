@@ -63,7 +63,7 @@ export default function MkCombobox({ onSelect, selectedSiteId }: MkComboboxProps
               dir="rtl"
             />
           </div>
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-[40vh] sm:max-h-64 overflow-y-auto">
             {loading && (
               <div className="p-4 text-center text-sm text-muted-foreground">...</div>
             )}

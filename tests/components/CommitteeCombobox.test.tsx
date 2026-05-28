@@ -98,4 +98,13 @@ describe('CommitteeCombobox — edge cases', () => {
     expect(screen.getByText('ועדת הכספים')).toBeInTheDocument()
     expect(screen.queryByText('ועדת החוץ והביטחון')).not.toBeInTheDocument()
   })
+
+  it('applies max-h-[40vh] class to scrollable list container for mobile responsiveness', async () => {
+    mockUseCommitteeList.mockReturnValue({ committees: DEFAULT_COMMITTEES, loading: false, error: null })
+    const user = userEvent.setup()
+    render(<CommitteeCombobox onAdd={vi.fn()} />)
+    await user.click(screen.getByText(/חפש ועדה/i))
+    const listContainer = screen.getByText('ועדת הכספים').closest('div.overflow-y-auto')
+    expect(listContainer).toHaveClass('max-h-[40vh]')
+  })
 })

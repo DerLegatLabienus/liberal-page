@@ -45,7 +45,7 @@ export default function CommitteeCombobox({ onAdd }: CommitteeComboboxProps) {
             <input autoFocus className="w-full text-sm outline-none" placeholder="חפש ועדה..."
               value={query} onChange={(e) => setQuery(e.target.value)} dir="rtl" />
           </div>
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-[40vh] sm:max-h-64 overflow-y-auto">
             {loading && <div className="p-4 text-center text-sm text-muted-foreground">...</div>}
             {filtered.map((c) => (
               <button key={c.committeeId} type="button"
