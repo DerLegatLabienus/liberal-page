@@ -29,4 +29,23 @@ describe('BillOverviewRow', () => {
     await userEvent.click(screen.getByRole('button', { name: /הצעת חוק חופש העיסוק/ }))
     expect(screen.getByText('סיבה ליברלית')).toBeInTheDocument()
   })
+
+  it('title span has min-w-0 class for proper text truncation', () => {
+    const longTitle = 'ה'.repeat(100)
+    render(<BillOverviewRow bill={{ ...BILL, title: longTitle }} />)
+    const titleSpan = screen.getByText(longTitle)
+    expect(titleSpan).toHaveClass('min-w-0')
+    expect(titleSpan).toHaveClass('flex-1')
+    expect(titleSpan).toHaveClass('truncate')
+  })
+
+  it('committee paragraph has max-w-[10rem] and truncate classes in expanded view', async () => {
+    const longCommitteeName = 'ועדת הכספים והתקציב והפרטיות והאבטחה'
+    render(<BillOverviewRow bill={{ ...BILL, committee: longCommitteeName }} />)
+    const button = screen.getByRole('button')
+    await userEvent.click(button)
+    const committeeP = screen.getByText(longCommitteeName)
+    expect(committeeP).toHaveClass('max-w-[10rem]')
+    expect(committeeP).toHaveClass('truncate')
+  })
 })

@@ -12,7 +12,7 @@ export default function BillOverviewRow({ bill }: { bill: KnessetBillOverviewIte
         aria-expanded={expanded}
         className="flex w-full items-center justify-between gap-3 text-right"
       >
-        <span className="flex-1 truncate font-medium">{bill.title}</span>
+        <span className="flex-1 min-w-0 truncate font-medium">{bill.title}</span>
         {bill.status && (
           <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs">{bill.status}</span>
         )}
@@ -20,7 +20,7 @@ export default function BillOverviewRow({ bill }: { bill: KnessetBillOverviewIte
 
       {expanded && (
         <div className="mt-2 space-y-2 text-sm text-muted-foreground">
-          {bill.committee && <p>{bill.committee}</p>}
+          {bill.committee && <p className="max-w-[10rem] truncate">{bill.committee}</p>}
           {bill.summary && <p>{bill.summary}</p>}
           {bill.reason && <p className="font-medium text-foreground">{bill.reason}</p>}
           {bill.lastUpdatedDate && <p className="text-xs">עודכן: {bill.lastUpdatedDate}</p>}

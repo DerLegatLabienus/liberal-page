@@ -40,7 +40,11 @@
       "Bash(kill %1)",
       "Bash(./node_modules/.bin/tsx server/index.ts)",
       "Bash(curl -s http://localhost:3001/api/parliament/bill)",
-      "Bash(pkill -f \"tsx server\")"
+      "Bash(pkill -f \"tsx server\")",
+      "Bash(claude --version)",
+      "Bash(claude-code --version)",
+      "Bash(npm info *)",
+      "Bash(gh run *)"
     ]
   }
 }
