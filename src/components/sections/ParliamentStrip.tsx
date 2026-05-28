@@ -43,7 +43,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={bill.id}
               dir={direction}
-              className={`min-w-[180px] shrink-0 rounded-lg border border-s-4 bg-white px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
+              className={`min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 bg-white px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_active_bill')}</p>
               <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
@@ -54,7 +54,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={c.id}
               dir={direction}
-              className="min-w-[180px] shrink-0 rounded-lg border border-s-4 border-blue-500 bg-white px-4 py-3 text-right shadow-sm"
+              className="min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 border-blue-500 bg-white px-4 py-3 text-right shadow-sm"
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_tracked_committee')}</p>
               <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{c.name}</p>
@@ -67,7 +67,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           ))}
           <button
             onClick={onOpenDrawer}
-            className="flex min-w-[120px] shrink-0 items-center justify-center rounded-lg border border-dashed border-primary/40 bg-white px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
+            className="flex w-full sm:w-auto items-center justify-center rounded-lg border border-dashed border-primary/40 bg-white px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
           >
             {t('ui.strip_more')}
           </button>
