@@ -40,4 +40,14 @@ describe('AddTrackingInput', () => {
 
     await waitFor(() => expect(onAdd).toHaveBeenCalledTimes(1))
   })
+
+  it('stacks input and button vertically on mobile', () => {
+    render(<AddTrackingInput onAdd={vi.fn()} />)
+    const wrapper = screen.getByPlaceholderText(/הדבק קישור/i).closest('div')
+    expect(wrapper).toHaveClass('flex-col')
+    expect(wrapper).toHaveClass('sm:flex-row')
+    const button = screen.getByRole('button', { name: /הוסף/i })
+    expect(button).toHaveClass('w-full')
+    expect(button).toHaveClass('sm:w-auto')
+  })
 })

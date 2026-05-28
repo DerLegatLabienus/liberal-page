@@ -51,7 +51,7 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
   return (
     <div className="space-y-2" dir="rtl">
       <p className="text-right text-xs font-semibold text-primary">{t('tracker.add_new')}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           placeholder={t('tracker.placeholder')}
           value={value}
@@ -60,7 +60,7 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
           className="text-xs"
           dir="ltr"
         />
-        <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || loading}>
+        <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || loading} className="w-full sm:w-auto">
           {loading ? '...' : t('tracker.add_button')}
         </Button>
       </div>
