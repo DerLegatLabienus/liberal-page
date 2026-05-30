@@ -12,29 +12,39 @@ jobs:
   review:
     name: Claude PR Review
     runs-on: ubuntu-latest
+    # Skip cleanly when the API key isn't configured so the check doesn't fail
+    # every PR. Add the ANTHROPIC_API_KEY repo secret to enable the review.
+    env:
+      HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     steps:
       - name: Checkout
+        if: ${{ env.HAS_API_KEY == 'true' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Get diff
+        if: ${{ env.HAS_API_KEY == 'true' }}
         run: git diff origin/master...HEAD > /tmp/diff.txt
 
       - name: Set up Python
+        if: ${{ env.HAS_API_KEY == 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install anthropic SDK
+        if: ${{ env.HAS_API_KEY == 'true' }}
         run: pip install anthropic
 
       - name: Run Claude review
+        if: ${{ env.HAS_API_KEY == 'true' }}
         run: python .github/scripts/pr_review.py > /tmp/review.txt
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Post review comment
+        if: ${{ env.HAS_API_KEY == 'true' }}
         run: |
           REVIEW=$(cat /tmp/review.txt)
           BODY=$(printf '\U0001F916 **Claude PR Review**\n\n%s' "$REVIEW")

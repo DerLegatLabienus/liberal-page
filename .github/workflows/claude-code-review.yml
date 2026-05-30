@@ -24,14 +24,21 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
+    # Skip cleanly when the OAuth token isn't configured (and the Claude GitHub
+    # App isn't installed) so the check doesn't fail every PR. Add the
+    # CLAUDE_CODE_OAUTH_TOKEN secret and install github.com/apps/claude to enable.
+    env:
+      HAS_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
 
     steps:
       - name: Checkout repository
+        if: ${{ env.HAS_OAUTH_TOKEN == 'true' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Run Claude Code Review
+        if: ${{ env.HAS_OAUTH_TOKEN == 'true' }}
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
