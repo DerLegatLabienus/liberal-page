@@ -10,6 +10,6 @@ export async function runMigrations(): Promise<void> {
     await migrate(db as any, { migrationsFolder: MIGRATIONS_DIR })
     return
   }
-  const { migrate } = await import('drizzle-orm/neon-serverless/migrator')
+  const { migrate } = await import('drizzle-orm/node-postgres/migrator')
   await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
 }
