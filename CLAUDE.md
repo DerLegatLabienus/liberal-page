@@ -18,6 +18,8 @@ npm run lint             # ESLint 9
 npx tsc --noEmit         # type check (both app and server tsconfigs)
 npm test                 # Vitest run (no servers needed)
 npm run build            # tsc -b && vite build
+npm run db:generate      # generate a Drizzle migration after schema changes
+npm run db:seed          # one-time JSON → DB seed (requires DATABASE_URL)
 ```
 
 Run a single test file:
@@ -50,9 +52,13 @@ Frontend is accessible from Windows at `http://localhost:5173` (via `host: '0.0.
 
 ### Data model
 
-`src/data/*.json` is both the **frontend static seed** and the **server datastore**. The files are imported directly by the frontend as initial state and read/written by the Express server and poller. Mutations happen on disk; there is no database.
+`src/data/*.json` is the **frontend static seed** and the baseline for `npm run db:seed`. The files are also read/written directly by the Express routes and poller (the live routing through the Postgres repositories is Phase 2).
 
-Key files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.json`, `knesset-members-cache.json`.
+Postgres (Neon, via `DATABASE_URL`) stores entity, cache, and config data through `server/repositories/`. The `server/db/` module handles the driver-selecting client and startup migrations.
+
+Key JSON files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.json`, `knesset-members-cache.json`.
+
+`DATABASE_URL` must be set to a Neon connection string to run the server with Postgres or to seed the database.
 
 The single source of truth for all TypeScript shapes is `src/types.ts` — shared by both frontend and `server/`.
 
