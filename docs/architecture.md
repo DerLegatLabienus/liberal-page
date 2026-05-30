@@ -8,7 +8,7 @@
 | Build/dev server | Vite 5.4 on `http://localhost:5173` |
 | Styling | Tailwind CSS + shadcn-style UI primitives in `src/components/ui/` |
 | Backend | Express 5 + `tsx`, running on `http://localhost:3001` |
-| Data | JSON files in `src/data/`; imported by the frontend and read/written by the server |
+| Data | JSON files in `src/data/` (frontend seed + legacy server store) + Postgres via Neon (entity/cache/config repos) |
 | External data | oknesset.org REST API + Knesset OData API |
 | Summaries | Anthropic SDK, PDF/DOCX text extraction, MD5 cache |
 | Tests | Vitest + Testing Library |
@@ -118,7 +118,7 @@ frontend actions
       └─ server routes update JSON and return typed data
 ```
 
-The JSON files are intentionally the current local datastore. Running the backend, adding/removing tracked items, opening pages that trigger refreshes, or the poller can mutate tracked data files.
+The JSON files are the datastore for the routes and poller in their current form. Running the backend, adding/removing tracked items, opening pages that trigger refreshes, or the poller can mutate tracked data files. Entity and cache repositories write to Postgres; routing the live call-sites through those repositories is Phase 2.
 
 ## Poller
 
@@ -133,6 +133,17 @@ The poller:
 - Writes each JSON file only when tracked content changed, though some route refreshes write timestamps independently.
 
 The header badge is derived from `hasNewData` values. The current implementation does not clear those flags when the drawer opens.
+
+## DB Module (`server/db/`)
+
+Phase 1 of the JSON → Postgres migration lives here.
+
+- **`client.ts`** — driver-selecting factory. Under `NODE_ENV=test` it loads `@electric-sql/pglite` via `createRequire` (so the dev-only dep is never bundled) and returns a `drizzle-orm/pglite` instance. In all other environments it creates a `@neondatabase/serverless` `Pool` from `DATABASE_URL` and returns a `drizzle-orm/neon-serverless` instance.
+- **`migrate.ts`** — runs Drizzle migrations from `server/db/migrations/` on server startup. Idempotent (Drizzle tracks applied migrations in `__drizzle_migrations`). Uses the matching migrator for the active driver (pglite or neon).
+- **`schema/`** — per-domain schema files re-exported from `schema/index.ts`: `config.ts`, `bills.ts`, `committees.ts`, `mks.ts`, `caches.ts`, `annotations.ts`.
+- **`server/repositories/`** — one class per domain. Each repository owns insert, upsert, and read. Reads reassemble normalized rows into typed aggregates (e.g. `MksRepository.getById` joins `mks` + `mk_knesset_terms` + `mk_roles` + `mk_activity` + `mk_votes` and derives `party` and `inactive`).
+
+The migration design spec is in `docs/superpowers/specs/`.
 
 ## Directionality
 

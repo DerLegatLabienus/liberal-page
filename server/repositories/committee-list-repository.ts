@@ -1,26 +1,31 @@
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
+import { db } from '../db/client'
+import { knessetCommitteesCache } from '../db/schema'
 import type { CommitteeListItem } from '../../src/types'
-
-interface CacheFile { cachedAt: string; committees: CommitteeListItem[] }
-const CACHE_PATH = path.join(process.cwd(), 'src/data/knesset-committees-cache.json')
 
 export class CommitteeListRepository {
   private cachedAt = 0
 
   async get(): Promise<CommitteeListItem[] | null> {
-    try {
-      const raw = await readFile(CACHE_PATH, 'utf-8')
-      const data = JSON.parse(raw as string) as CacheFile
-      this.cachedAt = new Date(data.cachedAt).getTime()
-      return data.committees
-    } catch { return null }
+    const rows = await db.select().from(knessetCommitteesCache)
+    if (rows.length === 0) return null
+    this.cachedAt = rows[0].cachedAt.getTime()
+    return rows.map((r) => ({ committeeId: r.committeeId, name: r.name, knessetUrl: r.knessetUrl }))
   }
 
   async set(committees: CommitteeListItem[]): Promise<void> {
-    this.cachedAt = Date.now()
-    await writeFile(CACHE_PATH, JSON.stringify({ cachedAt: new Date().toISOString(), committees }, null, 2), 'utf-8')
+    const cachedAt = new Date()
+    this.cachedAt = cachedAt.getTime()
+    await db.transaction(async (tx) => {
+      await tx.delete(knessetCommitteesCache)
+      if (committees.length) {
+        await tx.insert(knessetCommitteesCache).values(committees.map((c) => ({
+          committeeId: c.committeeId, name: c.name, knessetUrl: c.knessetUrl, cachedAt,
+        })))
+      }
+    })
   }
 
-  getAgeMs(): number { return this.cachedAt ? Date.now() - this.cachedAt : Infinity }
+  getAgeMs(): number {
+    return this.cachedAt ? Date.now() - this.cachedAt : Infinity
+  }
 }

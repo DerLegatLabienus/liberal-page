@@ -8,11 +8,6 @@ const BILL = {
   status: 'בוועדה' as const, position: 'תומכים' as const,
   notes: '', committee: '', sourceUrl: '', documentUrl: null, hasNewData: false,
 }
-const COMMITTEE = {
-  id: 2, oknesset_id: 'c2', name: 'ועדת הכספים', chair: '',
-  lastSessionDate: '2026-05-01', lastSessionSummary: null,
-  lastSessionDocumentUrl: null, sourceUrl: '', hasNewData: false, lastPolledAt: null,
-}
 
 describe('ParliamentStrip', () => {
   it('does not render a constitution link (it lives in the hero CTA)', () => {
