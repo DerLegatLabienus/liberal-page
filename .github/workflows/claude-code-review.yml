@@ -39,6 +39,10 @@ jobs:
 
       - name: Run Claude Code Review
         if: ${{ env.HAS_OAUTH_TOKEN == 'true' }}
+        # Advisory review must not block the PR if the action errors (e.g. the
+        # Claude GitHub App isn't installed — install github.com/apps/claude to
+        # enable). It still posts review comments when configured correctly.
+        continue-on-error: true
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
