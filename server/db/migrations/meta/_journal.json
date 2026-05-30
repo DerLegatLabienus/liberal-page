@@ -15,6 +15,13 @@
       "when": 1780155997063,
       "tag": "0001_burly_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780156156079,
+      "tag": "0002_pink_fenris",
+      "breakpoints": true
     }
   ]
 }
