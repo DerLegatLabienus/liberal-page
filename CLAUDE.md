@@ -20,7 +20,29 @@ npm test                 # Vitest run (no servers needed)
 npm run build            # tsc -b && vite build
 npm run db:generate      # generate a Drizzle migration after schema changes
 npm run db:seed          # one-time JSON → DB seed (requires DATABASE_URL)
+npm run db:up            # start local Postgres (Docker)
+npm run db:down          # stop local Postgres
+npm run db:reset         # wipe volume and start fresh (ephemeral)
 ```
+
+### Local database
+
+The server connects to whatever `DATABASE_URL` points at — a local Docker
+Postgres (default) or Neon. One driver (`node-postgres`) serves both; switching
+is a one-line `.env` edit. Tests use in-memory pglite and need no database.
+
+Setup: copy `.env.example` → `.env`.
+
+- `npm run db:up`     start local Postgres (Docker)
+- `npm run db:down`   stop it
+- `npm run db:reset`  wipe the volume and start fresh (ephemeral)
+- `npm run db:seed`   load the JSON baseline as test data (preloaded; pass DATABASE_URL or set it in your shell)
+
+Ephemeral run:  `npm run db:reset` -> `npm run dev`  (empty DB, schema applied on boot).
+Preloaded run:  `npm run db:up` -> `npm run dev` -> `npm run db:seed`  (test data, persists until reset).
+
+To use Neon instead, set `DATABASE_URL` to the Neon pooled connection string
+(`...-pooler.neon.tech/...?sslmode=require`) in `.env`.
 
 Run a single test file:
 ```bash
@@ -54,11 +76,11 @@ Frontend is accessible from Windows at `http://localhost:5173` (via `host: '0.0.
 
 `src/data/*.json` is the **frontend static seed** and the baseline for `npm run db:seed`. The files are also read/written directly by the Express routes and poller (the live routing through the Postgres repositories is Phase 2).
 
-Postgres (Neon, via `DATABASE_URL`) stores entity, cache, and config data through `server/repositories/`. The `server/db/` module handles the driver-selecting client and startup migrations.
+Postgres (local Docker or Neon, via `DATABASE_URL`) stores entity, cache, and config data through `server/repositories/`. The `server/db/` module uses `node-postgres` as the single driver for both targets and applies startup migrations automatically.
 
 Key JSON files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.json`, `knesset-members-cache.json`.
 
-`DATABASE_URL` must be set to a Neon connection string to run the server with Postgres or to seed the database.
+`DATABASE_URL` must be set to run the server with Postgres or to seed the database (local Docker default: `postgresql://postgres:postgres@localhost:5432/liberal_dev`).
 
 **Deploy ordering (Phase 1):** the backend now requires a provisioned Neon DB. Run in order: (1) `npm run db:generate` is already committed — migrations apply automatically on boot; (2) run `npm run db:seed` once against the target `DATABASE_URL` BEFORE serving traffic. The reworked `MkAnnotationsRepository` reads the `mk_annotations` table live with no runtime repopulation — serving an unseeded DB silently sets every MK's liberal/supporter flag to false. (The list caches self-heal via the poller; annotations do not.)
 

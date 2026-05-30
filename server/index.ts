@@ -56,6 +56,11 @@ runMigrations()
     })
   })
   .catch((err) => {
-    console.error('Migration failed, server not started:', err)
+    console.error(
+      'Database unavailable — migrations failed, server not started.\n' +
+      'Check that DATABASE_URL is set (see .env.example) and the database is running ' +
+      '(`npm run db:up` for local Docker). Original error:',
+      err,
+    )
     process.exit(1)
   })
