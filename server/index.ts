@@ -9,6 +9,7 @@ import { detectKnessetTransition } from './services/knesset-config'
 import billsRouter from './routes/bills'
 import committeesRouter from './routes/committees'
 import { startPoller } from './services/poller'
+import { runMigrations } from './db/migrate'
 
 const app = express()
 const PORT = 3001
@@ -42,12 +43,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
-  startPoller()
-  detectKnessetTransition().then((transitioned) => {
-    if (transitioned) console.log('Knesset transition detected and applied on startup')
-  }).catch((err) => {
-    console.error('Knesset transition detection failed on startup:', err)
+runMigrations()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`)
+      startPoller()
+      detectKnessetTransition().then((transitioned) => {
+        if (transitioned) console.log('Knesset transition detected and applied on startup')
+      }).catch((err) => {
+        console.error('Knesset transition detection failed on startup:', err)
+      })
+    })
   })
-})
+  .catch((err) => {
+    console.error('Migration failed, server not started:', err)
+    process.exit(1)
+  })
