@@ -108,6 +108,28 @@ Phase 1 shipped the three-tab "Knesset Bills Overview" section (Recent = newest 
 
 Spec: `docs/superpowers/specs/2026-05-26-knesset-bills-overview-design.md`. Phase 1 plan: `docs/superpowers/plans/2026-05-26-knesset-bills-overview.md`.
 
+## 11. MK Faction History — Mid-Term Defections (Priority: Low)
+
+The database migration (item 2) models MK party affiliation in `mk_knesset_terms`
+as **one faction per (MK, Knesset)** with a `unique(mk_id, knesset_number)`
+constraint. This captures party migration *between* Knessets but not mid-term
+defections (an MK switching factions *within* a single Knesset).
+
+**When needed:** if the product wants to display an MK's faction *timeline*
+("sat with faction A until March, then faction B").
+
+**Forward-compatible upgrade path (no breaking change):**
+- Relax the `unique(mk_id, knesset_number)` constraint to allow multiple faction
+  stints per term.
+- Add `start_date` / `end_date` to `mk_knesset_terms` (faction periods).
+- Repository derives "current faction" from the open-ended (`end_date IS NULL`)
+  stint of the current Knesset — `Mk.party` keeps its `string` shape, so no
+  consumer changes.
+- Add an optional `Mk.factionHistory?: { faction, startDate, endDate }[]` and a
+  `MkCard` timeline element to surface it.
+
+The migration spec (item 2) stores enough to make this purely additive later.
+
 ---
 
 ## Completed
