@@ -14,3 +14,5 @@ services:
         value: "21600000"
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
