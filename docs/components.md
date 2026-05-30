@@ -53,6 +53,8 @@ Reads headline, subtitle, and tagline from `site.json`. It exposes CTAs for join
 
 Receives bills and committees from `App.tsx`. It shows up to three active bills, one committee, and a button that opens the full drawer.
 
+Cards use `flex-wrap` so they wrap on narrow screens rather than causing horizontal scroll. Bill and committee cards have `min-w-[150px] sm:min-w-[180px]`. The "more" button is `w-full sm:w-auto` — full-width on mobile, auto on larger screens.
+
 ### `AboutSection`
 
 Reads `about.json`. Renders paragraphs, values, and optional leadership items if present.
@@ -91,6 +93,20 @@ Accepts a URL or a raw numeric ID. Raw numeric IDs show an inline type selector 
 Submits to `POST /api/tracking/add` through `api.tracking.add()`. On success, it clears the input and asks the parent to refresh parliament data.
 
 Supported URL parsing is defined in `server/services/url-parser.ts`. Although the helper text mentions `gov.il`, the parser currently supports oknesset URLs, selected Knesset URLs, and raw IDs.
+
+The wrapper uses `flex flex-col gap-2 sm:flex-row` so the input and button stack vertically on mobile and sit side-by-side on wider screens.
+
+### `BillOverviewRow`
+
+Collapsible row inside the bills tab. Shows the bill's title and status chip in collapsed state; expands to show committee, summary, position, notes, and links.
+
+The title span uses `flex-1 min-w-0 truncate` — `min-w-0` is required for `truncate` to work in a flex container. The status chip has `shrink-0`. The committee paragraph uses `max-w-[10rem] truncate` to prevent very long committee names from overflowing on narrow screens.
+
+### `MkCombobox` / `BillSearchCombobox` / `CommitteeCombobox`
+
+Search comboboxes for adding tracked items. Each renders a trigger button and a floating dropdown list.
+
+All three dropdown scroll containers use `max-h-[40vh] sm:max-h-60` (or `sm:max-h-64`) so the list adapts to the visible viewport when the software keyboard is open on mobile. On `sm+` screens the original fixed height is restored.
 
 ### `BillCard`
 
