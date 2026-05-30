@@ -1,32 +1,32 @@
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
+import { db } from '../db/client'
+import { knessetMembersCache } from '../db/schema'
 import type { KnessetMember } from '../../src/types'
-
-interface CacheFile {
-  cachedAt: string
-  members: KnessetMember[]
-}
-
-const CACHE_PATH = path.join(process.cwd(), 'src/data/knesset-members-cache.json')
 
 export class MkListRepository {
   private cachedAt = 0
 
   async get(): Promise<KnessetMember[] | null> {
-    try {
-      const raw = await readFile(CACHE_PATH, 'utf-8')
-      const data = JSON.parse(raw as string) as CacheFile
-      this.cachedAt = new Date(data.cachedAt).getTime()
-      return data.members
-    } catch {
-      return null
-    }
+    const rows = await db.select().from(knessetMembersCache)
+    if (rows.length === 0) return null
+    this.cachedAt = rows[0].cachedAt.getTime()
+    return rows.map((r) => ({
+      siteId: r.siteId, name: r.name, party: r.party,
+      photoUrl: r.photoUrl, isLiberal: r.isLiberal, isSupporter: r.isSupporter,
+    }))
   }
 
   async set(members: KnessetMember[]): Promise<void> {
-    const cachedAt = new Date().toISOString()
-    this.cachedAt = Date.now()
-    await writeFile(CACHE_PATH, JSON.stringify({ cachedAt, members }, null, 2), 'utf-8')
+    const cachedAt = new Date()
+    this.cachedAt = cachedAt.getTime()
+    await db.transaction(async (tx) => {
+      await tx.delete(knessetMembersCache)
+      if (members.length) {
+        await tx.insert(knessetMembersCache).values(members.map((m) => ({
+          siteId: m.siteId, name: m.name, party: m.party,
+          photoUrl: m.photoUrl, isLiberal: m.isLiberal, isSupporter: m.isSupporter, cachedAt,
+        })))
+      }
+    })
   }
 
   getAgeMs(): number {
