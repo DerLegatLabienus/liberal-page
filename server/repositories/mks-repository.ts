@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, asc } from 'drizzle-orm'
 import { db } from '../db/client'
 import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../db/schema'
 import type { Mk, MkRole, MkActivity, MkVote } from '../../src/types'
@@ -75,10 +75,10 @@ export class MksRepository {
     const rows = await db.select().from(mks).where(eq(mks.id, id))
     const row = rows[0]
     if (!row) return null
-    const terms = await db.select().from(mkKnessetTerms).where(eq(mkKnessetTerms.mkId, id))
-    const roles = await db.select().from(mkRoles).where(eq(mkRoles.mkId, id))
-    const activity = await db.select().from(mkActivity).where(eq(mkActivity.mkId, id))
-    const votes = await db.select().from(mkVotes).where(eq(mkVotes.mkId, id))
+    const terms = await db.select().from(mkKnessetTerms).where(eq(mkKnessetTerms.mkId, id)).orderBy(asc(mkKnessetTerms.id))
+    const roles = await db.select().from(mkRoles).where(eq(mkRoles.mkId, id)).orderBy(asc(mkRoles.id))
+    const activity = await db.select().from(mkActivity).where(eq(mkActivity.mkId, id)).orderBy(asc(mkActivity.id))
+    const votes = await db.select().from(mkVotes).where(eq(mkVotes.mkId, id)).orderBy(asc(mkVotes.id))
     const currentTerm = terms.find((t) => t.knessetNumber === currentKnesset)
     return {
       id: row.id,

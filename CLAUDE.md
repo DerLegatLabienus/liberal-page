@@ -60,6 +60,8 @@ Key JSON files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.js
 
 `DATABASE_URL` must be set to a Neon connection string to run the server with Postgres or to seed the database.
 
+**Deploy ordering (Phase 1):** the backend now requires a provisioned Neon DB. Run in order: (1) `npm run db:generate` is already committed — migrations apply automatically on boot; (2) run `npm run db:seed` once against the target `DATABASE_URL` BEFORE serving traffic. The reworked `MkAnnotationsRepository` reads the `mk_annotations` table live with no runtime repopulation — serving an unseeded DB silently sets every MK's liberal/supporter flag to false. (The list caches self-heal via the poller; annotations do not.)
+
 The single source of truth for all TypeScript shapes is `src/types.ts` — shared by both frontend and `server/`.
 
 ### Frontend flow

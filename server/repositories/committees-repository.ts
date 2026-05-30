@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, asc } from 'drizzle-orm'
 import { db } from '../db/client'
 import { committees, committeeSessions } from '../db/schema'
 import type { Committee, CommitteeSession } from '../../src/types'
@@ -60,7 +60,7 @@ export class CommitteesRepository {
     const rows = await db.select().from(committees).where(eq(committees.id, id))
     const row = rows[0]
     if (!row) return null
-    const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, id))
+    const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, id)).orderBy(asc(committeeSessions.sessionId))
     return this.toCommittee(row, sessions)
   }
 
@@ -68,7 +68,7 @@ export class CommitteesRepository {
     const rows = await db.select().from(committees)
     const out: Committee[] = []
     for (const row of rows) {
-      const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, row.id))
+      const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, row.id)).orderBy(asc(committeeSessions.sessionId))
       out.push(this.toCommittee(row, sessions))
     }
     return out

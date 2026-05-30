@@ -1,6 +1,12 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { runMigrations } from '../server/db/migrate'
+import { db } from '../server/db/client'
+import {
+  mkVotes, mkActivity, mkRoles, mkKnessetTerms, mks as mksTable,
+  committeeSessions, committees as committeesTable, bills as billsTable,
+  knessetConfig, featureFlags, mkAnnotations,
+} from '../server/db/schema'
 import { KnessetConfigRepository } from '../server/repositories/knesset-config-repository'
 import { FeatureFlagsRepository } from '../server/repositories/feature-flags-repository'
 import { BillsRepository } from '../server/repositories/bills-repository'
@@ -14,6 +20,19 @@ const readJson = async <T>(f: string): Promise<T> => JSON.parse(await readFile(p
 
 async function main() {
   await runMigrations()
+
+  // Idempotent reseed: clear in FK-safe order (children before parents) so re-running is safe.
+  await db.delete(mkVotes)
+  await db.delete(mkActivity)
+  await db.delete(mkRoles)
+  await db.delete(mkKnessetTerms)
+  await db.delete(mksTable)
+  await db.delete(committeeSessions)
+  await db.delete(committeesTable)
+  await db.delete(billsTable)
+  await db.delete(featureFlags)
+  await db.delete(knessetConfig)
+  await db.delete(mkAnnotations)
 
   const cfgRaw = await readJson<{ currentKnesset: number }>('knesset-config.json')
   const currentKnesset = cfgRaw.currentKnesset
