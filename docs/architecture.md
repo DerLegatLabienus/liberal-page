@@ -92,6 +92,7 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 | `POST` | `/api/tracking/add` | Parses URL or raw ID, fetches metadata, appends item to tracked JSON |
 | `DELETE` | `/api/tracking/:type/:id` | Removes a tracked item by local numeric `id` |
 | `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result in `summaries-cache.json` |
+| `GET` | `/api/feature-flags` | Returns all feature flags as a flat map `Record<string, { enabled, value }>` from the DB |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
