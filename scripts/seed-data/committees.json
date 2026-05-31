@@ -148,5 +148,59 @@
         "attendingSiteIds": []
       }
     ]
+  },
+  {
+    "id": 6,
+    "oknesset_id": "",
+    "name": "הוועדה המיוחדת לזכויות הילד",
+    "chair": "",
+    "lastSessionDate": "2026-05-20T09:00:00",
+    "lastSessionSummary": null,
+    "lastSessionDocumentUrl": null,
+    "sourceUrl": "https://main.knesset.gov.il/apps/committees/2223",
+    "hasNewData": false,
+    "lastPolledAt": null,
+    "recentSessions": [
+      {
+        "sessionId": 2242477,
+        "date": "2026-05-20T09:00:00",
+        "knessetNum": 25,
+        "title": "הבטחת קשר בין-דורי בסכסוכי משפחה",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2242477",
+        "attendingSiteIds": []
+      },
+      {
+        "sessionId": 2243117,
+        "date": "2026-05-19T12:00:00",
+        "knessetNum": 25,
+        "title": "חשיפת רשת הורים פדופילים",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2243117",
+        "attendingSiteIds": []
+      },
+      {
+        "sessionId": 2242862,
+        "date": "2026-05-11T12:00:00",
+        "knessetNum": 25,
+        "title": "אפס סובלנות לאלימות ובריונות בקרב בני נוער  · דיון חירום - התמודדות המערכת הממשלתית עם תופעת האלימות החמורה בקרב בני נוע",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2242862",
+        "attendingSiteIds": []
+      },
+      {
+        "sessionId": 2242575,
+        "date": "2026-05-04T09:00:00",
+        "knessetNum": 25,
+        "title": "דיון חירום - התמודדות המערכת הממשלתית עם תופעת האלימות החמורה בקרב בני נוער ",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2242575",
+        "attendingSiteIds": []
+      },
+      {
+        "sessionId": 2241942,
+        "date": "2026-03-23T12:00:00",
+        "knessetNum": 25,
+        "title": "אתגרי הגיל הרך בזמן חירום: \n1. מתווה למידה בחירום\n2. מתווה פיצויים: הורים, מטפלות, בעלי מסגרות",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2241942",
+        "attendingSiteIds": []
+      }
+    ]
   }
 ]

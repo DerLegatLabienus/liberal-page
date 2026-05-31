@@ -1,0 +1,918 @@
+[
+  {
+    "id": 1,
+    "oknesset_id": "4395",
+    "knesset_site_id": "771",
+    "name": "אבי דיכטר",
+    "party": "הליכוד ",
+    "email": "davraham@knesset.gov.il",
+    "photoUrl": "https://main.knesset.gov.il/mk/members/771/photo",
+    "currentRoles": [
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2006-04-17T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2009-02-24T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2015-03-31T00:00:00"
+      },
+      {
+        "positionId": 39,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2009-02-24T00:00:00"
+      },
+      {
+        "positionId": 39,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2012-08-16T00:00:00"
+      },
+      {
+        "positionId": 39,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2006-05-04T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-04-30T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-10-03T00:00:00"
+      },
+      {
+        "positionId": 40,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-10-28T00:00:00"
+      },
+      {
+        "positionId": 40,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-11-12T00:00:00"
+      },
+      {
+        "positionId": 40,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2020-03-16T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2020-03-16T00:00:00"
+      },
+      {
+        "positionId": 39,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2013-02-05T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2006-04-17T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2009-02-24T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2015-03-31T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-04-30T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-10-03T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2020-03-16T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 39,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-12-29T00:00:00"
+      }
+    ],
+    "activity": [
+      {
+        "type": "vote",
+        "date": "2026-05-27T14:38:00",
+        "title": "הצעת צו הכללת אמצעי זיהוי ביומטריים ונתוני זיהוי ביומטריים במסמכי זיהוי ובמאגר מידע (הוראת שעה) (הארכת תקופת הוראת שעה), התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46001"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק קבלת ילד למעון יום והשתתפות המדינה בעלות שכר הלימוד בו, התשפ\"ה-2024",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46004"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק מחיקת חובות שמקורם בתגמולי מילואים במלחמת חרבות ברזל (תיקוני חקיקה), התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46002"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק חוסן לישראל - הרשות הלאומית לחוסן נפשי ולטראומה, התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46003"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-25T00:00:00",
+        "title": "סמכויות לפי חוק הכללת אמצעי זיהוי ביומטריים ונתוני זיהוי ביומטריים במסמכי זיהוי ובמאגר מידע (תיקון הוראת שעה), התשע\"ז - 2017, לעניין הארכת הוראת שעה",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45992"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2022",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45973"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45974"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ד-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45976"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45979"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45977"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45978"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45983"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45972"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-13T11:42:00",
+        "title": "הצעת חוק דחיית מועדים (תשלומים של בעל עסק המשרת בשירות מילואים פעיל), התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45944"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-13T00:00:00",
+        "title": "הצעת חוק לתיקון פקודת מס הכנסה (נקודות זיכוי להורי חיילים), התשפ\"ה-2024",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45955"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45927"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45928"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45925"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45926"
+      },
+      {
+        "type": "vote",
+        "date": "2026-03-31T00:56:00",
+        "title": "חוק הפצת שידורים באמצעות תחנות שידור ספרתיות (תיקון מס' 8 – הוראת שעה), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45841"
+      }
+    ],
+    "recentVotes": [],
+    "votingSummary": null,
+    "sourceUrl": "https://www.knesset.gov.il/mk/Apps/mk/mk-positions/771",
+    "hasNewData": true,
+    "lastPolledAt": "2026-05-31T21:25:56.222Z",
+    "inactive": false
+  },
+  {
+    "id": 2,
+    "oknesset_id": "30839",
+    "knesset_site_id": "1116",
+    "name": "דן אילוז",
+    "party": "הליכוד ",
+    "email": "hak_diluz@knesset.gov.il",
+    "photoUrl": "https://main.knesset.gov.il/mk/members/1116/photo",
+    "currentRoles": [
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2023-01-06T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2023-01-06T00:00:00"
+      }
+    ],
+    "activity": [
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק קבלת ילד למעון יום והשתתפות המדינה בעלות שכר הלימוד בו, התשפ\"ה-2024",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46004"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק מחיקת חובות שמקורם בתגמולי מילואים במלחמת חרבות ברזל (תיקוני חקיקה), התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46002"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק חוסן לישראל - הרשות הלאומית לחוסן נפשי ולטראומה, התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46003"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2022",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45973"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45974"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ד-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45976"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45979"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45977"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45978"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45972"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-13T11:42:00",
+        "title": "הצעת חוק דחיית מועדים (תשלומים של בעל עסק המשרת בשירות מילואים פעיל), התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45944"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-13T00:00:00",
+        "title": "הצעת חוק לתיקון פקודת מס הכנסה (נקודות זיכוי להורי חיילים), התשפ\"ה-2024",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45955"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45927"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45928"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45925"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45926"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-04T15:32:00",
+        "title": "חוק התוכנית לסיוע כלכלי (הוראת שעה) (סיוע לעסקים ולמוסדות ציבור), התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45917"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-04T15:31:00",
+        "title": "חוק התוכנית לסיוע כלכלי (הוראת שעה) (סיוע לעסקים ולמוסדות ציבור), התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45918"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-04T15:31:00",
+        "title": "חוק התוכנית לסיוע כלכלי (הוראת שעה) (סיוע לעסקים ולמוסדות ציבור), התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45919"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-04T15:30:00",
+        "title": "חוק התוכנית לסיוע כלכלי (הוראת שעה) (סיוע לעסקים ולמוסדות ציבור), התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45920"
+      }
+    ],
+    "recentVotes": [],
+    "votingSummary": null,
+    "sourceUrl": "https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1116",
+    "hasNewData": true,
+    "lastPolledAt": "2026-05-31T21:25:59.024Z",
+    "inactive": false
+  },
+  {
+    "id": 3,
+    "oknesset_id": "30701",
+    "knesset_site_id": "976",
+    "name": "אופיר כץ",
+    "party": "הליכוד ",
+    "email": "okatz@knesset.gov.il",
+    "photoUrl": "https://main.knesset.gov.il/mk/members/976/photo",
+    "currentRoles": [
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-04-30T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-10-03T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2020-03-16T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-04-30T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2019-10-03T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2020-03-16T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 70,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2022-12-07T00:00:00"
+      },
+      {
+        "positionId": 48,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2023-01-02T00:00:00"
+      },
+      {
+        "positionId": 30,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-12-29T00:00:00"
+      }
+    ],
+    "activity": [
+      {
+        "type": "vote",
+        "date": "2026-05-27T14:38:00",
+        "title": "הצעת צו הכללת אמצעי זיהוי ביומטריים ונתוני זיהוי ביומטריים במסמכי זיהוי ובמאגר מידע (הוראת שעה) (הארכת תקופת הוראת שעה), התשפ\"ו-2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46001"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T13:39:00",
+        "title": "הצעה דחופה לסדר היום בנושא: \"קיצוץ תקני ההגנה המרחבית ביהודה ושומרון והכפפת לוחמי המילואים לאישורי שב\"כ\"\n",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46000"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק קבלת ילד למעון יום והשתתפות המדינה בעלות שכר הלימוד בו, התשפ\"ה-2024",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46004"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק מחיקת חובות שמקורם בתגמולי מילואים במלחמת חרבות ברזל (תיקוני חקיקה), התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46002"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק חוסן לישראל - הרשות הלאומית לחוסן נפשי ולטראומה, התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46003"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-25T21:13:00",
+        "title": "הצעת חוק שיקום נרחב לחבל התקומה כאזור מיקוד לאומי וסיוע ליישובים הסמוכים אליו (תיקון) (סכום חד־פעמי למימון הוצאות מיוחדות), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45991"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-25T00:00:00",
+        "title": "סמכויות לפי חוק הכללת אמצעי זיהוי ביומטריים ונתוני זיהוי ביומטריים במסמכי זיהוי ובמאגר מידע (תיקון הוראת שעה), התשע\"ז - 2017, לעניין הארכת הוראת שעה",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45992"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T20:05:00",
+        "title": "הצעת חוק סיוע לבני משפחה של נעדרים, התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45971"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T20:04:00",
+        "title": "הצעת חוק סיוע לבני משפחה של נעדרים, התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45970"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T19:41:00",
+        "title": "הצעה דחופה לסדר היום בנושא: \"ניסיון בולשביקי לסתימת פיות תקשורתית ולפגיעה בחופש הביטוי של ערוץ 14\"",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45968"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2022",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45973"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45974"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ד-2023",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45976"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45979"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45977"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45978"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ה-2025",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45981"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-03-16T00:00:00",
+        "title": "הצעת חוק-יסוד: הממשלה (תיקון - כשירות שר וסגן שר)",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2241157"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-03-16T00:00:00",
+        "title": "הצעת חוק לתיקון פקודת מס הכנסה (יישוב עירוני בעל השפעה מטרופולינית) (הוראת שעה), התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2240045"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-02-23T00:00:00",
+        "title": "הצעת חוק למניעת הפצת תוכן פוגעני ברשת החברתית, התשפ״ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2236954"
+      }
+    ],
+    "recentVotes": [],
+    "votingSummary": null,
+    "sourceUrl": "https://www.knesset.gov.il/mk/Apps/mk/mk-positions/976",
+    "hasNewData": true,
+    "lastPolledAt": "2026-05-31T21:26:00.539Z"
+  },
+  {
+    "id": 4,
+    "oknesset_id": "30814",
+    "knesset_site_id": "1063",
+    "name": "אבי מעוז",
+    "party": "נעם - בראשות אבי מעוז",
+    "email": "amaaoz@knesset.gov.il",
+    "photoUrl": "https://main.knesset.gov.il/mk/members/1063/photo",
+    "currentRoles": [
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2021-04-06T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2022-08-15T00:00:00"
+      },
+      {
+        "positionId": 48,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2022-08-15T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 43,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-15T00:00:00"
+      },
+      {
+        "positionId": 54,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-20T00:00:00"
+      },
+      {
+        "positionId": 48,
+        "description": "חבר כנסת",
+        "isCurrent": true,
+        "startDate": "2022-11-20T00:00:00"
+      },
+      {
+        "positionId": 40,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2023-01-03T00:00:00"
+      },
+      {
+        "positionId": 40,
+        "description": "חבר כנסת",
+        "isCurrent": false,
+        "startDate": "2023-06-05T00:00:00"
+      }
+    ],
+    "activity": [
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק קבלת ילד למעון יום והשתתפות המדינה בעלות שכר הלימוד בו, התשפ\"ה-2024",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46004"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-27T00:00:00",
+        "title": "הצעת חוק מחיקת חובות שמקורם בתגמולי מילואים במלחמת חרבות ברזל (תיקוני חקיקה), התשפ\"ו-2026",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=46002"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-20T00:00:00",
+        "title": "הצעת חוק התפזרות הכנסת העשרים וחמש, התשפ\"ג-2022",
+        "detail": "הצביע נגד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45973"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-05-18T00:00:00",
+        "title": "הצעת חוק מס ערך מוסף (תיקון - הפחתת שיעור המס), התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2241236"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-13T00:00:00",
+        "title": "הצעת חוק לתיקון פקודת מס הכנסה (נקודות זיכוי להורי חיילים), התשפ\"ה-2024",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45955"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45927"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:55:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45928"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45925"
+      },
+      {
+        "type": "vote",
+        "date": "2026-05-11T22:54:00",
+        "title": "חוק העמדה לדין בשל אירועי טבח 7 באוקטובר 2023 (טבח שמיני עצרת), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45926"
+      },
+      {
+        "type": "vote",
+        "date": "2026-03-31T01:41:00",
+        "title": "חוק ביטוח בריאות ממלכתי (תיקון מס' 74), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45848"
+      },
+      {
+        "type": "vote",
+        "date": "2026-03-31T01:41:00",
+        "title": "חוק ביטוח בריאות ממלכתי (תיקון מס' 74), התשפ\"ו–2026",
+        "detail": "הצביע בעד",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/plenum/Pages/VotingRecord.aspx?VoteId=45847"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-02-23T00:00:00",
+        "title": "הצעת חוק למניעת הפצת תוכן פוגעני ברשת החברתית, התשפ״ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2236954"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-02-23T00:00:00",
+        "title": "הצעת חוק הפסקת כהונה של נושאי משרה בכירים בתקופת הכהונה הראשונית של ממשלה חדשה, התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2240916"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-02-09T00:00:00",
+        "title": "הצעת חוק שיקום מתמודדי נפש בקהילה (תיקון - תוכנית השיקום ומימושה), התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2240257"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-01-26T00:00:00",
+        "title": "הצעת חוק מרשם האוכלוסין (תיקון - הגדרת יהודי), התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2239363"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2026-01-12T00:00:00",
+        "title": "הצעת חוק שירות המדינה (מינויים) (תיקון - תואר אקדמי רלוונטי), התשפ\"ו-2026",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2239012"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2025-12-15T00:00:00",
+        "title": "הצעת חוק השבות (תיקון - הוספת המילה כהלכה), התשפ\"ו-2025",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2237643"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2025-11-17T00:00:00",
+        "title": "הצעת חוק משפחות חיילים שנספו במערכה (תגמולים ושיקום) (תיקון - ועדת חריגים להכרה בנספה), התשפ\"ו-2025",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2236436"
+      },
+      {
+        "type": "question",
+        "date": "2025-10-23T14:43:15.371",
+        "title": "החתמת חיילים על הסמכת בני משפחה לקבלת החלטות רפואיות",
+        "detail": "רגילה",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Questions/Pages/QueryDetails.aspx?QueryId=2235771"
+      },
+      {
+        "type": "bill_initiated",
+        "date": "2025-10-20T00:00:00",
+        "title": "הצעת חוק מרשם האוכלוסין (תיקון - קביעת מינו של אדם בתיעוד ממשלתי - אמת), התשפ\"ו-2025",
+        "sourceUrl": "https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=2232290"
+      }
+    ],
+    "recentVotes": [],
+    "votingSummary": null,
+    "sourceUrl": "https://www.knesset.gov.il/mk/Apps/mk/mk-positions/1063",
+    "hasNewData": true,
+    "lastPolledAt": "2026-05-31T21:26:01.600Z"
+  }
+]

@@ -6,6 +6,7 @@ import {
   mkVotes, mkActivity, mkRoles, mkKnessetTerms, mks as mksTable,
   committeeSessions, committees as committeesTable, bills as billsTable,
   knessetConfig, featureFlags, mkAnnotations,
+  trackedBills, trackedCommittees, trackedMks, users,
 } from '../server/db/schema'
 import { KnessetConfigRepository } from '../server/repositories/knesset-config-repository'
 import { FeatureFlagsRepository } from '../server/repositories/feature-flags-repository'
@@ -13,15 +14,24 @@ import { BillsRepository } from '../server/repositories/bills-repository'
 import { CommitteesRepository } from '../server/repositories/committees-repository'
 import { MksRepository } from '../server/repositories/mks-repository'
 import { MkAnnotationsRepository } from '../server/repositories/mk-annotations-repository'
+import { UsersRepository } from '../server/repositories/users-repository'
+import { TrackedBillsRepository } from '../server/repositories/tracked-bills-repository'
+import { TrackedCommitteesRepository } from '../server/repositories/tracked-committees-repository'
+import { TrackedMksRepository } from '../server/repositories/tracked-mks-repository'
 import type { Bill, Committee, Mk } from '../src/types'
 
-const DATA = path.join(process.cwd(), 'src/data')
+const DATA = path.join(process.cwd(), 'scripts/seed-data')
 const readJson = async <T>(f: string): Promise<T> => JSON.parse(await readFile(path.join(DATA, f), 'utf-8'))
 
 async function main() {
   await runMigrations()
 
   // Idempotent reseed: clear in FK-safe order (children before parents) so re-running is safe.
+  // tracking rows first (reference entities + users)
+  await db.delete(trackedBills)
+  await db.delete(trackedCommittees)
+  await db.delete(trackedMks)
+  // entity children
   await db.delete(mkVotes)
   await db.delete(mkActivity)
   await db.delete(mkRoles)
@@ -33,6 +43,8 @@ async function main() {
   await db.delete(featureFlags)
   await db.delete(knessetConfig)
   await db.delete(mkAnnotations)
+  // users last (referenced by tracking rows, now deleted)
+  await db.delete(users)
 
   const cfgRaw = await readJson<{ currentKnesset: number }>('knesset-config.json')
   const currentKnesset = cfgRaw.currentKnesset
@@ -44,10 +56,17 @@ async function main() {
   await ff.setFlag('recentRanking', true, flagsRaw.bills.recentRanking, 'Recent tab ordering')
   await ff.setFlag('policyFilter', flagsRaw.bills.policyFilterEnabled, null, 'Policy-aligned tab toggle')
 
+  // Create the shared user
+  const sharedUserId = await new UsersRepository().getSharedUserId()
+
+  const trackedBillsRepo = new TrackedBillsRepository()
+  const trackedCommitteesRepo = new TrackedCommitteesRepository()
+  const trackedMksRepo = new TrackedMksRepository()
+
   const bills = await readJson<Bill[]>('bills.json')
   const billsRepo = new BillsRepository()
   for (const b of bills) {
-    await billsRepo.upsert({
+    const billId = await billsRepo.upsert({
       oknessetId: b.oknesset_id,
       number: b.number,
       title: b.title,
@@ -60,12 +79,13 @@ async function main() {
       hasNewData: b.hasNewData,
       lastPolledAt: b.lastPolledAt ? new Date(b.lastPolledAt) : null,
     })
+    await trackedBillsRepo.track(sharedUserId, billId, b.position ?? 'עוקבים', b.notes ?? '')
   }
 
   const committees = await readJson<Committee[]>('committees.json')
   const committeesRepo = new CommitteesRepository()
   for (const c of committees) {
-    await committeesRepo.upsert({
+    const committeeId = await committeesRepo.upsert({
       oknesset_id: c.oknesset_id,
       name: c.name,
       chair: c.chair,
@@ -77,12 +97,13 @@ async function main() {
       lastPolledAt: c.lastPolledAt,
       recentSessions: c.recentSessions ?? [],
     })
+    await trackedCommitteesRepo.track(sharedUserId, committeeId)
   }
 
   const mksData = await readJson<Mk[]>('mks.json')
   const mksRepo = new MksRepository()
   for (const m of mksData) {
-    await mksRepo.upsert({
+    const mkId = await mksRepo.upsert({
       oknesset_id: m.oknesset_id,
       knesset_site_id: m.knesset_site_id,
       name: m.name,
@@ -97,6 +118,7 @@ async function main() {
       activity: m.activity ?? [],
       recentVotes: m.recentVotes ?? [],
     })
+    await trackedMksRepo.track(sharedUserId, mkId)
   }
 
   const annotations = await readJson<Record<string, { isLiberal: boolean; isSupporter: boolean }>>('mk-annotations.json')
@@ -105,7 +127,7 @@ async function main() {
     await annRepo.set(siteId, ann)
   }
 
-  console.log(`Seeded: ${bills.length} bills, ${committees.length} committees, ${mksData.length} MKs.`)
+  console.log(`Seeded: ${bills.length} bills, ${committees.length} committees, ${mksData.length} MKs, tracking rows: ${bills.length} tracked_bills, ${committees.length} tracked_committees, ${mksData.length} tracked_mks.`)
   process.exit(0)
 }
 
