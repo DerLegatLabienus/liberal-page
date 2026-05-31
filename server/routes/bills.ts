@@ -1,26 +1,16 @@
 import { Router } from 'express'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
-import type { Bill, BillSearchResult } from '../../src/types'
-
-const router = Router()
-const DATA_PATH = path.join(process.cwd(), 'src/data/bills.json')
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+import type { BillSearchResult } from '../../src/types'
 import { getCurrentKnesset } from '../services/knesset-config'
 import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, getBillsFlags } from '../services/knesset-bills'
+import { UsersRepository } from '../repositories/users-repository'
+import { BillsRepository } from '../repositories/bills-repository'
+import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 
-async function readBills(): Promise<Bill[]> {
-  try {
-    const raw = await readFile(DATA_PATH, 'utf-8')
-    return JSON.parse(raw as string) as Bill[]
-  } catch {
-    return []
-  }
-}
-
-async function writeBills(bills: Bill[]): Promise<void> {
-  await writeFile(DATA_PATH, JSON.stringify(bills, null, 2), 'utf-8')
-}
+const router = Router()
+const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+const users = new UsersRepository()
+const billsRepo = new BillsRepository()
+const trackedBills = new TrackedBillsRepository()
 
 router.get('/search', async (req, res) => {
   const q = (req.query.q as string | undefined)?.trim() ?? ''
@@ -47,32 +37,24 @@ router.get('/search', async (req, res) => {
 router.post('/track', async (req, res) => {
   const { billId, name, knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
   if (!billId || !name) return res.status(400).json({ error: 'billId and name required' })
-
-  const bills = await readBills()
-  // Deduplicate by bill number AND title
-  const alreadyTracked = bills.some(
-    (b) => b.number === String(billId) || b.title.trim() === name.trim()
+  const userId = await users.getSharedUserId()
+  const k = getCurrentKnesset()
+  const existing = (await billsRepo.getAll(k)).find(
+    (b) => b.number === String(billId) || b.title?.trim() === name.trim()
   )
-  if (alreadyTracked) return res.json({ ok: true, duplicate: true })
-
-  const nextId = Math.max(0, ...bills.map((b) => b.id)) + 1
-  const newBill: Bill = {
-    id: nextId,
-    oknesset_id: '',
-    number: String(billId),
-    title: name.trim(),
-    status: 'בוועדה',
-    position: 'עוקבים',
-    notes: '',
-    committee: '',
-    sourceUrl: knessetUrl ?? '',
-    documentUrl: null,
-    hasNewData: false,
-    lastPolledAt: null,
+  let id: number
+  if (existing?.id) {
+    id = existing.id
+  } else {
+    id = await billsRepo.upsert({
+      oknessetId: '', number: String(billId), title: name.trim(), status: 'בוועדה',
+      committee: '', sourceUrl: knessetUrl ?? '', documentUrl: null, knessetUrl: knessetUrl ?? null,
+      knessetNumber: k, hasNewData: false, lastPolledAt: null,
+    })
   }
-  bills.push(newBill)
-  await writeBills(bills)
-  res.json({ ok: true, item: newBill })
+  if (await trackedBills.isTracked(userId, id)) return res.json({ ok: true, duplicate: true })
+  await trackedBills.track(userId, id, 'עוקבים', '')
+  res.json({ ok: true })
 })
 
 function parseLimit(q: unknown): number {

@@ -1,9 +1,13 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { readFile, writeFile } from 'fs/promises'
+import { setupTestDb } from './db-harness'
+import { db } from '../../server/db/client'
+import { trackedBills, bills } from '../../server/db/schema'
 
-vi.mock('fs/promises')
+vi.mock('../../server/services/knesset-config', () => ({
+  getCurrentKnesset: vi.fn().mockReturnValue(25),
+}))
 vi.stubGlobal('fetch', vi.fn())
 
 import billsRouter from '../../server/routes/bills'
@@ -24,8 +28,6 @@ function mockOdata(value: unknown[]) {
 describe('GET /api/bills/search', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
-    vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
-    vi.mocked(writeFile).mockResolvedValue()
   })
 
   it('returns 400 when q is missing', async () => {
@@ -50,17 +52,25 @@ describe('GET /api/bills/search', () => {
 })
 
 describe('POST /api/bills/track', () => {
-  beforeEach(() => {
-    vi.mocked(readFile).mockResolvedValue('[]' as never)
-    vi.mocked(writeFile).mockResolvedValue()
+  beforeAll(async () => { await setupTestDb() })
+
+  beforeEach(async () => {
+    // Delete in FK-dependency order; keep users row to avoid stale cache in module-level singleton
+    await db.delete(trackedBills)
+    await db.delete(bills)
   })
 
-  it('returns 400 when billId or name is missing', async () => {
+  it('returns 400 when billId is missing', async () => {
     const res = await request(app).post('/api/bills/track').send({ name: 'test' })
     expect(res.status).toBe(400)
   })
 
-  it('returns 200 and writes bill to data file', async () => {
+  it('returns 400 when name is missing', async () => {
+    const res = await request(app).post('/api/bills/track').send({ billId: 1038990 })
+    expect(res.status).toBe(400)
+  })
+
+  it('creates a bills entity and tracked_bills row on first track', async () => {
     const res = await request(app).post('/api/bills/track').send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
@@ -68,24 +78,31 @@ describe('POST /api/bills/track', () => {
     })
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
-    expect(writeFile).toHaveBeenCalledOnce()
-    const [, content] = vi.mocked(writeFile).mock.calls[0]
-    const written = JSON.parse(content as string)
-    expect(written[0].title).toBe('הצעת חוק חופש העיסוק')
-    expect(written[0].knessetUrl).toBeUndefined()
+    expect(res.body.duplicate).toBeUndefined()
+
+    const allBills = await db.select().from(bills)
+    expect(allBills).toHaveLength(1)
+    expect(allBills[0].title).toBe('הצעת חוק חופש העיסוק')
+
+    const tracked = await db.select().from(trackedBills)
+    expect(tracked).toHaveLength(1)
+    expect(tracked[0].position).toBe('עוקבים')
   })
 
-  it('skips duplicate billId', async () => {
-    vi.mocked(readFile).mockResolvedValue(JSON.stringify([
-      { id: 1, oknesset_id: '', title: 'existing', number: '1038990', status: 'בוועדה', position: 'עוקבים', notes: '', committee: '', sourceUrl: '', documentUrl: null, hasNewData: false, lastPolledAt: null }
-    ]) as never)
+  it('returns duplicate:true and does not create a second tracked_bills row', async () => {
+    await request(app).post('/api/bills/track').send({
+      billId: 1038990,
+      name: 'הצעת חוק חופש העיסוק',
+    })
+
     const res = await request(app).post('/api/bills/track').send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
-      knessetUrl: 'https://www.knesset.gov.il/privatelaw/hql_knesset_det.aspx?knesset=25&hql_id=1038990',
     })
     expect(res.status).toBe(200)
     expect(res.body.duplicate).toBe(true)
-    expect(writeFile).not.toHaveBeenCalled()
+
+    expect(await db.select().from(bills)).toHaveLength(1)
+    expect(await db.select().from(trackedBills)).toHaveLength(1)
   })
 })
