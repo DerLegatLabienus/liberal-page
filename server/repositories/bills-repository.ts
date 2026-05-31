@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '../db/client'
 import { bills } from '../db/schema'
 import type { Bill } from '../../src/types'
@@ -20,6 +20,12 @@ export class BillsRepository {
 
   async getAll(currentKnesset: number): Promise<Partial<Bill>[]> {
     const rows = await db.select().from(bills)
+    return rows.map((r) => this.toBill(r, currentKnesset))
+  }
+
+  async getByIds(ids: number[], currentKnesset: number): Promise<Partial<Bill>[]> {
+    if (ids.length === 0) return []
+    const rows = await db.select().from(bills).where(inArray(bills.id, ids))
     return rows.map((r) => this.toBill(r, currentKnesset))
   }
 
