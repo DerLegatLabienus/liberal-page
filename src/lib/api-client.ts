@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags } from '@/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
@@ -56,5 +56,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ committeeId, name, knessetUrl }),
       }),
+  },
+  featureFlags: {
+    get: () => apiFetch<FeatureFlags>('/feature-flags'),
   },
 }

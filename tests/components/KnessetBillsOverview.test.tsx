@@ -16,10 +16,8 @@ vi.mock('@/lib/api-client', () => ({
       trending: vi.fn().mockResolvedValue([{ ...ITEM, billId: 3, title: 'בולטת', reason: 'r' }]),
       policyAligned: vi.fn().mockResolvedValue([POLICY]),
     },
+    featureFlags: { get: vi.fn().mockResolvedValue({ policyFilter: { enabled: true, value: null } }) },
   },
-}))
-vi.mock('@/data/feature-flags.json', () => ({
-  default: { bills: { trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: true } },
 }))
 
 import KnessetBillsOverview from '@/components/sections/KnessetBillsOverview'
@@ -34,6 +32,7 @@ describe('KnessetBillsOverview', () => {
 
   it('switches to the policy tab on click', async () => {
     render(<KnessetBillsOverview />)
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'ליברליות' })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('tab', { name: 'ליברליות' }))
     await waitFor(() => expect(screen.getByText('הצעת חוק ליברלית')).toBeInTheDocument())
   })

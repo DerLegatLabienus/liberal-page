@@ -2,10 +2,10 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.mock('@/lib/api-client', () => ({
-  api: { bills: { recent: vi.fn(), trending: vi.fn(), policyAligned: vi.fn() } },
-}))
-vi.mock('@/data/feature-flags.json', () => ({
-  default: { bills: { trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: true } },
+  api: {
+    bills: { recent: vi.fn(), trending: vi.fn(), policyAligned: vi.fn() },
+    featureFlags: { get: vi.fn().mockResolvedValue({ policyFilter: { enabled: true, value: null } }) },
+  },
 }))
 
 import { useBillsOverview } from '@/hooks/useBillsOverview'
@@ -25,7 +25,7 @@ describe('useBillsOverview', () => {
     await waitFor(() => expect(result.current.recent.loading).toBe(false))
     expect(result.current.recent.items).toHaveLength(1)
     expect(result.current.trending.items[0].reason).toBe('r')
-    expect(result.current.policyAligned.items).toHaveLength(1)
+    await waitFor(() => expect(result.current.policyAligned.items).toHaveLength(1))
   })
 
   it('captures a per-tab error without affecting others', async () => {

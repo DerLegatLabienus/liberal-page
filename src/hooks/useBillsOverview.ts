@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api-client'
 import type { KnessetBillOverviewItem } from '@/types'
-import flagsConfig from '@/data/feature-flags.json'
+import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 
 export interface TabState {
   items: KnessetBillOverviewItem[]
@@ -9,8 +9,6 @@ export interface TabState {
   error: string | null
   retry: () => Promise<void>
 }
-
-const policyEnabled = flagsConfig.bills.policyFilterEnabled
 
 function useTab(fetcher: () => Promise<KnessetBillOverviewItem[]>, enabled = true): TabState {
   const [items, setItems] = useState<KnessetBillOverviewItem[]>([])
@@ -38,6 +36,8 @@ function useTab(fetcher: () => Promise<KnessetBillOverviewItem[]>, enabled = tru
 }
 
 export function useBillsOverview() {
+  const flags = useFeatureFlags()
+  const policyEnabled = flags['policyFilter']?.enabled ?? false
   const recent = useTab(() => api.bills.recent(10))
   const trending = useTab(() => api.bills.trending())
   const policyAligned = useTab(() => api.bills.policyAligned(10), policyEnabled)
