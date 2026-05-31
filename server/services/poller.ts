@@ -1,10 +1,12 @@
-import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { OknessetClient } from './oknesset'
 import { Summarizer } from './summarizer'
 import { fetchMkActivity } from './knesset-scraper'
-import { enrichCommitteeSessions as _enrichCommitteeSessions } from './committee-session-enricher'
-import type { Bill, Committee, Mk } from '../../src/types'
+import { BillsRepository } from '../repositories/bills-repository'
+import { CommitteesRepository } from '../repositories/committees-repository'
+import { MksRepository } from '../repositories/mks-repository'
+import { getCurrentKnesset } from './knesset-config'
+import type { Bill, CommitteeSession } from '../../src/types'
 
 const DATA_DIR = path.join(process.cwd(), 'src/data')
 const CACHE_PATH = path.join(DATA_DIR, 'summaries-cache.json')
@@ -16,91 +18,103 @@ let currentDelayMs = INTERVAL_MS
 
 const oknesset = new OknessetClient()
 const summarizer = new Summarizer(CACHE_PATH)
-
-async function readJson<T>(filename: string): Promise<T[]> {
-  const raw = await readFile(path.join(DATA_DIR, filename), 'utf-8')
-  return JSON.parse(raw) as T[]
-}
-
-async function writeJson<T>(filename: string, data: T[]): Promise<void> {
-  await writeFile(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf-8')
-}
+const billsRepo = new BillsRepository()
+const committeesRepo = new CommitteesRepository()
+const mksRepo = new MksRepository()
 
 async function pollBills(): Promise<boolean> {
-  const bills = await readJson<Bill>('bills.json')
+  const bills = await billsRepo.getAll(getCurrentKnesset())
   if (bills.filter((b) => b.oknesset_id).length === 0) return true
 
-  let changed = false
   let anySuccess = false
 
   for (const bill of bills) {
-    if (!bill.oknesset_id) continue
+    if (!bill.oknesset_id || !bill.id) continue
     try {
       const fresh = await oknesset.getBill(bill.oknesset_id)
       const newStatus = mapBillStatus(String(fresh.status ?? ''))
-      if (newStatus && newStatus !== bill.status) {
-        bill.status = newStatus
-        bill.hasNewData = true
-        changed = true
-      }
+      const changed = newStatus !== null && newStatus !== bill.status
       if (bill.documentUrl) {
         await summarizer.summarizeUrl(bill.documentUrl)
       }
+      // Targeted update: only mutate status/hasNewData/lastPolledAt — leaves knessetNumber intact
+      await billsRepo.update(bill.id, {
+        status: changed ? newStatus : (bill.status ?? null),
+        hasNewData: changed ? true : (bill.hasNewData ?? false),
+        lastPolledAt: new Date(),
+      })
       anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling bill ${bill.oknesset_id}:`, err)
     }
-    bill.lastPolledAt = new Date().toISOString()
   }
 
-  if (changed) await writeJson('bills.json', bills)
   return anySuccess
 }
 
 async function pollCommittees(): Promise<boolean> {
-  const committees = await readJson<Committee>('committees.json')
+  const committees = await committeesRepo.getAll()
   if (committees.filter((c) => c.oknesset_id).length === 0) return true
 
-  let changed = false
   let anySuccess = false
 
   for (const committee of committees) {
-    if (!committee.oknesset_id) continue
+    if (!committee.oknesset_id || !committee.id) continue
     try {
       const sessions = await oknesset.getCommitteeSessions(committee.oknesset_id, 1)
+      let lastSessionDate = committee.lastSessionDate
+      let lastSessionDocumentUrl = committee.lastSessionDocumentUrl
+      let lastSessionSummary = committee.lastSessionSummary
+      let changed = false
+
       if (sessions.length > 0) {
         const latest = sessions[0] as Record<string, unknown>
         const sessionDate = String(latest.date ?? '')
         if (sessionDate && sessionDate !== committee.lastSessionDate) {
-          committee.lastSessionDate = sessionDate
-          committee.hasNewData = true
+          lastSessionDate = sessionDate
           changed = true
           if (typeof latest.protocol_file === 'string') {
-            committee.lastSessionDocumentUrl = latest.protocol_file
-            committee.lastSessionSummary = await summarizer.summarizeUrl(latest.protocol_file)
+            lastSessionDocumentUrl = latest.protocol_file
+            lastSessionSummary = await summarizer.summarizeUrl(latest.protocol_file)
           }
         }
       }
+
+      await committeesRepo.upsert(
+        {
+          oknesset_id: committee.oknesset_id,
+          name: committee.name,
+          chair: committee.chair,
+          lastSessionDate,
+          lastSessionSummary: lastSessionSummary ?? null,
+          lastSessionDocumentUrl: lastSessionDocumentUrl ?? null,
+          sourceUrl: committee.sourceUrl,
+          hasNewData: changed ? true : committee.hasNewData,
+          lastPolledAt: new Date().toISOString(),
+          recentSessions: (committee.recentSessions ?? []) as CommitteeSession[],
+        },
+        committee.id,
+      )
       anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling committee ${committee.oknesset_id}:`, err)
     }
-    committee.lastPolledAt = new Date().toISOString()
   }
 
-  if (changed) await writeJson('committees.json', committees)
   return anySuccess
 }
 
 async function pollMks(): Promise<boolean> {
-  const mks = await readJson<Mk>('mks.json')
-  if (mks.filter((m) => !m.inactive && m.knesset_site_id).length === 0) return true
+  const currentKnesset = getCurrentKnesset()
+  const allMks = await mksRepo.getAll(currentKnesset)
+  // Only poll MKs that are active in the current Knesset and have a site ID
+  const activeMks = allMks.filter((m) => !m.inactive && m.knesset_site_id)
+  if (activeMks.length === 0) return true
 
-  let changed = false
   let anySuccess = false
 
-  for (const mk of mks) {
-    if (mk.inactive) continue
+  for (const mk of activeMks) {
+    if (!mk.id) continue
     const siteId = mk.knesset_site_id ? parseInt(mk.knesset_site_id, 10) : 0
     if (!siteId) continue
 
@@ -109,22 +123,23 @@ async function pollMks(): Promise<boolean> {
       const existingUrls = new Set((mk.activity ?? []).map((a) => a.sourceUrl))
       const newItems = fresh.filter((a) => a.sourceUrl && !existingUrls.has(a.sourceUrl))
 
-      if (newItems.length > 0) {
-        mk.activity = [...newItems, ...(mk.activity ?? [])]
-          .sort((a, b) => b.date.localeCompare(a.date))
-          .slice(0, 20)
-        mk.hasNewData = true
-        changed = true
-      }
+      const mergedActivity = [...newItems, ...(mk.activity ?? [])]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 20)
+
+      // Targeted update: only replaces activity rows + flags — preserves terms/roles/votes
+      await mksRepo.updateActivity(
+        mk.id,
+        mergedActivity,
+        newItems.length > 0 ? true : mk.hasNewData ?? false,
+        new Date(),
+      )
       anySuccess = true
     } catch (err) {
       console.error(`Poller: error polling MK ${mk.oknesset_id}:`, err)
     }
-
-    mk.lastPolledAt = new Date().toISOString()
   }
 
-  if (changed) await writeJson('mks.json', mks)
   return anySuccess
 }
 

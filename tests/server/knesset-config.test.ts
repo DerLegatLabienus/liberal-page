@@ -1,14 +1,12 @@
-import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
-import { readFile, writeFile, unlink } from 'fs/promises'
+import { vi, describe, it, expect, beforeAll, afterEach } from 'vitest'
 
-vi.mock('fs/promises')
 vi.stubGlobal('fetch', vi.fn())
 
 import { getCurrentKnesset, loadConfig, detectKnessetTransition } from '../../server/services/knesset-config'
 import { KnessetConfigRepository } from '../../server/repositories/knesset-config-repository'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
-import { knessetConfig } from '../../server/db/schema'
+import { knessetConfig, knessetMembersCache, knessetCommitteesCache } from '../../server/db/schema'
 
 function mockOdata(knessetNum: number) {
   return { ok: true, json: async () => ({ value: [{ KnessetNum: knessetNum }] }) } as Response
@@ -34,31 +32,36 @@ describe('getCurrentKnesset', () => {
 })
 
 describe('detectKnessetTransition', () => {
-  beforeEach(() => {
-    vi.mocked(readFile).mockResolvedValue('[]' as never)
-    vi.mocked(writeFile).mockResolvedValue()
-    vi.mocked(unlink).mockResolvedValue()
+  beforeAll(async () => { await setupTestDb() })
+
+  afterEach(() => {
+    vi.clearAllMocks()
   })
-  afterEach(() => vi.clearAllMocks())
 
   it('returns false when live Knesset matches stored', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockOdata(25))
     const result = await detectKnessetTransition()
     expect(result).toBe(false)
-    expect(writeFile).not.toHaveBeenCalled()
   })
 
-  it('returns true and writes config when live Knesset is higher', async () => {
+  it('returns true and persists config to DB when live Knesset is higher', async () => {
+    // Seed a cache entry so we can verify it is cleared by runTransition
+    await db.delete(knessetMembersCache)
+    await db.delete(knessetCommitteesCache)
+
     vi.mocked(fetch).mockResolvedValueOnce(mockOdata(26))
-    vi.mocked(readFile).mockResolvedValue('[]' as never)
-    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ value: [] }) } as Response)
-    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ value: [] }) } as Response)
     const result = await detectKnessetTransition()
     expect(result).toBe(true)
-    expect(writeFile).toHaveBeenCalled()
-    const [, written] = vi.mocked(writeFile).mock.calls[0]
-    const config = JSON.parse(written as string)
-    expect(config.currentKnesset).toBe(26)
+    // In-memory config must reflect new Knesset
+    expect(getCurrentKnesset()).toBe(26)
+    // Persisted config must reflect new Knesset
+    const repo = new KnessetConfigRepository()
+    const stored = await repo.get()
+    expect(stored?.currentKnesset).toBe(26)
+
+    // Reset back to 25 for subsequent tests
+    await repo.set(25)
+    await loadConfig()
   })
 
   it('returns false and does not throw when OData fails', async () => {

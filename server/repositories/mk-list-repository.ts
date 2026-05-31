@@ -29,6 +29,11 @@ export class MkListRepository {
     })
   }
 
+  async clear(): Promise<void> {
+    await db.delete(knessetMembersCache)
+    this.cachedAt = 0
+  }
+
   getAgeMs(): number {
     return this.cachedAt ? Date.now() - this.cachedAt : Infinity
   }

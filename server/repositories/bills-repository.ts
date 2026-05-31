@@ -5,10 +5,24 @@ import type { Bill } from '../../src/types'
 
 export type BillEntity = typeof bills.$inferInsert
 
+export interface BillPollUpdate {
+  status: string | null
+  hasNewData: boolean
+  lastPolledAt: Date | null
+}
+
 export class BillsRepository {
   async upsert(entity: BillEntity): Promise<number> {
     const [row] = await db.insert(bills).values(entity).returning({ id: bills.id })
     return row.id
+  }
+
+  /**
+   * Targeted update for the poller: only updates the mutable poll fields.
+   * Leaves knessetNumber, title, sourceUrl, etc. untouched.
+   */
+  async update(id: number, patch: BillPollUpdate): Promise<void> {
+    await db.update(bills).set(patch).where(eq(bills.id, id))
   }
 
   async getById(id: number, currentKnesset: number): Promise<Partial<Bill> | null> {

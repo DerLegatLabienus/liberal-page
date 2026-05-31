@@ -105,4 +105,35 @@ export class MksRepository {
       inactive: !currentTerm,
     }
   }
+
+  async getAll(currentKnesset: number): Promise<Mk[]> {
+    const allMks = await db.select().from(mks)
+    const result: Mk[] = []
+    for (const row of allMks) {
+      const mk = await this.getById(row.id, currentKnesset)
+      if (mk) result.push(mk)
+    }
+    return result
+  }
+
+  /**
+   * Targeted update for the poller: replaces only the activity rows and
+   * updates hasNewData / lastPolledAt. Leaves terms, roles, and votes untouched.
+   */
+  async updateActivity(id: number, newActivity: MkActivity[], hasNewData: boolean, lastPolledAt: Date | null): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.update(mks).set({ hasNewData, lastPolledAt }).where(eq(mks.id, id))
+      await tx.delete(mkActivity).where(eq(mkActivity.mkId, id))
+      if (newActivity.length > 0) {
+        await tx.insert(mkActivity).values(newActivity.map((a) => ({
+          mkId: id,
+          type: a.type,
+          date: new Date(a.date),
+          title: a.title,
+          detail: a.detail ?? null,
+          sourceUrl: a.sourceUrl ?? null,
+        })))
+      }
+    })
+  }
 }

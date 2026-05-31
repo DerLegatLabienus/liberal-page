@@ -25,6 +25,11 @@ export class CommitteeListRepository {
     })
   }
 
+  async clear(): Promise<void> {
+    await db.delete(knessetCommitteesCache)
+    this.cachedAt = 0
+  }
+
   getAgeMs(): number {
     return this.cachedAt ? Date.now() - this.cachedAt : Infinity
   }
