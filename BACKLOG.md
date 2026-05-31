@@ -130,6 +130,33 @@ defections (an MK switching factions *within* a single Knesset).
 
 The migration spec (item 2) stores enough to make this purely additive later.
 
+## 12. Database Credential Secret Management (Priority: Low)
+
+Today the Render service receives `DATABASE_URL` as a `sync: false` env var (Render's
+encrypted secret store, injected at runtime — the standard 12-factor approach).
+
+**Original idea:** assemble `DATABASE_URL` in code from `DB_USER`/`DB_PASS` secrets
+rather than storing the whole URL.
+
+**Decision / nuance (discussed 2026-05-31):** splitting the URL into user/pass env
+vars gives **no security gain** — the components live in the same place with the
+same exposure as the full URL, and the assembled string still exists in process
+memory at runtime. Do **not** implement URL-from-env-components for its own sake.
+
+**What would actually improve the posture** (the real concern is long-lived
+plaintext credentials, which is legitimate):
+- **Runtime secrets manager** (Vault / AWS Secrets Manager / Doppler / Infisical /
+  GCP Secret Manager): central rotation, audit logs, least privilege, short TTLs.
+  Caveat: still needs a bootstrap credential in the env to authenticate to it.
+- **Short-lived / rotating DB credentials** (IAM-style DB auth, or Neon role
+  rotation) — the win is a password valid for minutes, not "no env var."
+- **Render secret files** (mount secret as a file) — marginally different exposure.
+
+**Scope when picked up:** brainstorm/spec which approach fits a free-tier Render +
+Neon setup (likely Neon credential rotation + a small fetch-at-startup helper in
+`server/db/client.ts`), measured against the bootstrap-credential and complexity
+cost. Not worth doing as plain URL-assembly.
+
 ---
 
 ## Completed
