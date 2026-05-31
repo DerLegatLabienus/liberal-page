@@ -11,6 +11,5 @@ export async function runMigrations(): Promise<void> {
     return
   }
   const { migrate } = await import('drizzle-orm/node-postgres/migrator')
-  console.log(process.env.DATABASE_URL)
   await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
 }
