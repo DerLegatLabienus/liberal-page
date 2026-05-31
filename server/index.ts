@@ -5,7 +5,7 @@ import parliamentRouter from './routes/parliament'
 import summarizeRouter from './routes/summarize'
 import mksRouter from './routes/mks'
 import knessetRouter from './routes/knesset'
-import { detectKnessetTransition } from './services/knesset-config'
+import { detectKnessetTransition, loadConfig } from './services/knesset-config'
 import billsRouter from './routes/bills'
 import committeesRouter from './routes/committees'
 import { startPoller } from './services/poller'
@@ -44,6 +44,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 runMigrations()
+  .then(() => loadConfig())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`)

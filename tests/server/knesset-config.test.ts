@@ -1,18 +1,35 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 import { readFile, writeFile, unlink } from 'fs/promises'
 
 vi.mock('fs/promises')
 vi.stubGlobal('fetch', vi.fn())
 
-import { getCurrentKnesset, detectKnessetTransition } from '../../server/services/knesset-config'
+import { getCurrentKnesset, loadConfig, detectKnessetTransition } from '../../server/services/knesset-config'
+import { KnessetConfigRepository } from '../../server/repositories/knesset-config-repository'
+import { setupTestDb } from './db-harness'
+import { db } from '../../server/db/client'
+import { knessetConfig } from '../../server/db/schema'
 
 function mockOdata(knessetNum: number) {
   return { ok: true, json: async () => ({ value: [{ KnessetNum: knessetNum }] }) } as Response
 }
 
 describe('getCurrentKnesset', () => {
-  it('returns 25 from the config file', () => {
+  beforeAll(async () => { await setupTestDb() })
+
+  it('returns 25 by default (before loadConfig)', () => {
     expect(getCurrentKnesset()).toBe(25)
+  })
+
+  it('returns value loaded from DB after loadConfig()', async () => {
+    const repo = new KnessetConfigRepository()
+    await db.delete(knessetConfig)
+    await repo.set(26)
+    await loadConfig()
+    expect(getCurrentKnesset()).toBe(26)
+    // Reset back to 25 so subsequent tests are unaffected
+    await repo.set(25)
+    await loadConfig()
   })
 })
 

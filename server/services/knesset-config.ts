@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs'
 import { readFile, writeFile, unlink } from 'fs/promises'
 import path from 'path'
+import { KnessetConfigRepository } from '../repositories/knesset-config-repository'
 
 const CONFIG_PATH = path.join(process.cwd(), 'src/data/knesset-config.json')
 const MKS_PATH = path.join(process.cwd(), 'src/data/mks.json')
@@ -11,15 +11,13 @@ interface KnessetConfig {
   detectedAt: string
 }
 
-function loadConfig(): KnessetConfig {
-  try {
-    return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as KnessetConfig
-  } catch {
-    return { currentKnesset: 25, detectedAt: new Date().toISOString() }
-  }
-}
+const configRepo = new KnessetConfigRepository()
+let config: KnessetConfig = { currentKnesset: 25, detectedAt: new Date().toISOString() }
 
-let config = loadConfig()
+export async function loadConfig(): Promise<void> {
+  const stored = await configRepo.get()
+  if (stored) config = stored
+}
 
 export function getCurrentKnesset(): number {
   return config.currentKnesset
