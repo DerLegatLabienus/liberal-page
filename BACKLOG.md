@@ -157,6 +157,42 @@ Neon setup (likely Neon credential rotation + a small fetch-at-startup helper in
 `server/db/client.ts`), measured against the bootstrap-credential and complexity
 cost. Not worth doing as plain URL-assembly.
 
+## 13. Knesset Transition — Re-stamp MK Terms on Transition (Priority: Medium)
+
+Found in the Phase 2 final review. `server/services/knesset-config.ts` `runTransition`
+bumps `current_knesset` and clears the list caches, but the DB-migration **spec §4
+called for re-stamping `mk_knesset_terms` for the new Knesset** — and that step was
+not implemented.
+
+**Consequence:** after a real Knesset transition, no tracked MK has a term matching
+the new `current_knesset`, so `MksRepository.getById` derives `inactive: true` and
+falls back to the last historical faction for **every** MK. Worse, `pollMks` filters
+`!m.inactive`, so those MKs are then **permanently excluded from polling** (no
+self-healing) — a catch-22.
+
+**Fix:** in `runTransition`, after `configRepo.set(newKnesset)`, re-fetch each tracked
+MK's identity and add an `mk_knesset_terms` row for `newKnesset` (a targeted
+`MksRepository.addTerm(mkId, knessetNumber, faction)` is cleaner than a full re-poll,
+which the inactive-filter would skip). Rare event (manual trigger), so non-urgent, but
+it silently breaks MK currency when it does fire.
+
+## 14. Entity Dedup on Tracking Add (Priority: Low)
+
+Found in the Phase 2 final review (pre-existing behavior, carried through the cutover —
+**not** a Phase-2 regression). `server/routes/tracking.ts` `POST /add` upserts the
+entity unconditionally, and the entity-repo `upsert`s are plain `INSERT`s (no unique
+constraint on `oknesset_id`). Re-adding the same URL inserts a duplicate entity row +
+tracking row → a visible duplicate in `GET /:type`. (`bills.ts`/`committees.ts /track`
+already dedup by scanning `getAll()`; `tracking.ts /add` does not, and MKs have no
+dedup path at all.)
+
+**Fix:** add a unique constraint on each entity's natural key (`bills.oknesset_id`,
+`committees.oknesset_id`, `mks.oknesset_id` / `knesset_site_id`) and make the repo
+`upsert`s real (`onConflictDoUpdate`), so `tracking/add` becomes idempotent for all
+three types. **Minor cleanup also noted:** `CommitteeCard`'s `trackedMks` prop is
+currently unused (the attending-MK-name lookup depended on `attendingSiteIds`, which
+the enricher always returns empty) — remove the dead prop or wire the feature.
+
 ---
 
 ## Completed
