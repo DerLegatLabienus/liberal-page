@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api-client'
 import type { Bill, Committee, Mk } from '@/types'
-import billsStatic from '@/data/bills.json'
-import committeesStatic from '@/data/committees.json'
-import mksStatic from '@/data/mks.json'
 
 interface ParliamentState {
   bills: Bill[]
@@ -16,9 +13,9 @@ interface ParliamentState {
 }
 
 export function useParliament(): ParliamentState {
-  const [bills, setBills] = useState<Bill[]>(billsStatic as Bill[])
-  const [committees, setCommittees] = useState<Committee[]>(committeesStatic as Committee[])
-  const [mks, setMks] = useState<Mk[]>(mksStatic as Mk[])
+  const [bills, setBills] = useState<Bill[]>([])
+  const [committees, setCommittees] = useState<Committee[]>([])
+  const [mks, setMks] = useState<Mk[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)

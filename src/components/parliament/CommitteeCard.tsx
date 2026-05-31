@@ -1,25 +1,25 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import annotationsData from '@/data/mk-annotations.json'
-import trackedMksData from '@/data/mks.json'
 import type { Committee } from '@/types'
 
 const annotations = annotationsData as Record<string, { isLiberal: boolean; isSupporter: boolean }>
 
-const nameByMkSiteId: Record<string, string> = Object.fromEntries(
-  (trackedMksData as { knesset_site_id?: string; name: string }[])
-    .filter(m => m.knesset_site_id)
-    .map(m => [m.knesset_site_id, m.name])
-)
-
 interface CommitteeCardProps {
   committee: Committee
   onRemove?: (id: number) => void
+  trackedMks: { knesset_site_id?: string; name: string }[]
 }
 
-export default function CommitteeCard({ committee, onRemove }: CommitteeCardProps) {
+export default function CommitteeCard({ committee, onRemove, trackedMks }: CommitteeCardProps) {
   const { t } = useTranslation()
   const direction = useDirection()
+
+  const nameByMkSiteId: Record<string, string> = Object.fromEntries(
+    trackedMks
+      .filter(m => m.knesset_site_id)
+      .map(m => [m.knesset_site_id, m.name])
+  )
   const sessions = committee.recentSessions ?? []
   const [extended, ...compactSessions] = sessions
 

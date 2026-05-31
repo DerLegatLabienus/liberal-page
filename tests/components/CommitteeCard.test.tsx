@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest'
 import CommitteeCard from '@/components/parliament/CommitteeCard'
 import type { Committee, CommitteeSession } from '@/types'
 
+const MK_FIXTURES = [
+  { knesset_site_id: '1116', name: 'דן אילוז' },
+]
+
 function committeeFixture(overrides: Partial<Committee> = {}): Committee {
   return {
     id: 1,
@@ -40,38 +44,38 @@ const SESSION_COMPACT: CommitteeSession = {
 
 describe('CommitteeCard', () => {
   it('renders committee name', () => {
-    render(<CommitteeCard committee={committeeFixture()} />)
+    render(<CommitteeCard committee={committeeFixture()} trackedMks={[]} />)
     expect(screen.getByText('ועדת הכספים')).toBeInTheDocument()
   })
 
   it('renders most recent session title', () => {
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED, SESSION_COMPACT] })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED, SESSION_COMPACT] })} trackedMks={[]} />)
     expect(screen.getByText('הצעת חוק לתיקון פקודת מס הכנסה')).toBeInTheDocument()
   })
 
   it('renders AI summary when present', () => {
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} trackedMks={[]} />)
     expect(screen.getByText('דיון בהצעת חוק תיקון מס הכנסה')).toBeInTheDocument()
   })
 
   it('renders compact second session title', () => {
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED, SESSION_COMPACT] })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED, SESSION_COMPACT] })} trackedMks={[]} />)
     expect(screen.getByText('הצעת חוק אחרת')).toBeInTheDocument()
   })
 
   it('does not render badge row when attendingSiteIds is empty', () => {
     const session = { ...SESSION_EXTENDED, attendingSiteIds: [] }
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: [session] })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [session] })} trackedMks={[]} />)
     expect(screen.queryByText('💙')).not.toBeInTheDocument()
   })
 
   it('renders nothing for sessions when recentSessions is undefined', () => {
-    render(<CommitteeCard committee={committeeFixture()} />)
+    render(<CommitteeCard committee={committeeFixture()} trackedMks={[]} />)
     expect(screen.queryByText(/הצעת חוק/)).not.toBeInTheDocument()
   })
 
   it('renders MK name in attendance badge instead of raw siteId', () => {
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} trackedMks={MK_FIXTURES} />)
     expect(screen.getByText(/דן אילוז/)).toBeInTheDocument()
     expect(screen.queryByText(/\b1116\b/)).not.toBeInTheDocument()
   })
@@ -83,7 +87,7 @@ describe('CommitteeCard', () => {
       { ...SESSION_COMPACT, sessionId: 2241002, title: 'ישיבה שלישית' },
       { ...SESSION_COMPACT, sessionId: 2241003, title: 'ישיבה רביעית' },
     ]
-    render(<CommitteeCard committee={committeeFixture({ recentSessions: sessions })} />)
+    render(<CommitteeCard committee={committeeFixture({ recentSessions: sessions })} trackedMks={[]} />)
     expect(screen.getByText('הצעת חוק לתיקון פקודת מס הכנסה')).toBeInTheDocument()
     expect(screen.getByText('ישיבה שנייה')).toBeInTheDocument()
     expect(screen.getByText('ישיבה שלישית')).toBeInTheDocument()
