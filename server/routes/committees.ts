@@ -1,9 +1,10 @@
 import { Router } from 'express'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
-import type { Committee, CommitteeListItem } from '../../src/types'
+import type { CommitteeListItem } from '../../src/types'
 import { readFileSync } from 'fs'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+import { CommitteesRepository } from '../repositories/committees-repository'
+import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
+import { UsersRepository } from '../repositories/users-repository'
 import { enrichCommitteeSessions } from '../services/committee-session-enricher'
 import { getCurrentKnesset } from '../services/knesset-config'
 
@@ -16,10 +17,12 @@ try {
 } catch { /* mapping unavailable, use empty */ }
 
 const router = Router()
-const DATA_PATH = path.join(process.cwd(), 'src/data/committees.json')
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour - ensures mapping changes propagate quickly
 const repo = new CommitteeListRepository()
+const users = new UsersRepository()
+const committeesRepo = new CommitteesRepository()
+const trackedCommittees = new TrackedCommitteesRepository()
 
 async function odataFetchAll<T>(startPath: string): Promise<T[]> {
   const results: T[] = []
@@ -32,13 +35,6 @@ async function odataFetchAll<T>(startPath: string): Promise<T[]> {
     nextPath = data['odata.nextLink'] ?? null
   }
   return results
-}
-
-async function readCommittees(): Promise<Committee[]> {
-  try {
-    const raw = await readFile(DATA_PATH, 'utf-8')
-    return JSON.parse(raw as string) as Committee[]
-  } catch { return [] }
 }
 
 router.get('/list', async (_req, res) => {
@@ -72,48 +68,50 @@ router.get('/list', async (_req, res) => {
 router.post('/track', async (req, res) => {
   const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
-  const committees = await readCommittees()
-  // Deduplicate by name AND by committeeId stored in oknesset_id
-  const existingIdx = committees.findIndex(
-    (c) => c.oknesset_id === String(committeeId) || c.name.trim() === name.trim()
-  )
-  if (existingIdx !== -1) {
-    // Update sourceUrl if the URL has changed (e.g. after mapping fix)
-    const existing = committees[existingIdx]
-    const newUrl = knessetUrl ?? ''
-    if (newUrl && newUrl !== existing.sourceUrl) {
-      committees[existingIdx] = { ...existing, sourceUrl: newUrl }
-      await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
-      return res.json({ ok: true, updated: true, item: committees[existingIdx] })
-    }
-    return res.json({ ok: true, duplicate: true })
-  }
+  const userId = await users.getSharedUserId()
+  const all = await committeesRepo.getAll()
+  const entity = all.find((c) => c.oknesset_id === String(committeeId) || c.name.trim() === name.trim())
+  let id: number
   const sourceUrl = knessetUrl ?? ''
-  const nextId = Math.max(0, ...committees.map((c) => c.id)) + 1
-  const newCommittee: Committee = {
-    id: nextId, oknesset_id: '', name: name.trim(),
-    chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
-    sourceUrl, hasNewData: false, lastPolledAt: null,
+  if (entity?.id) {
+    id = entity.id
+    // Update sourceUrl if the URL has changed (e.g. after mapping fix)
+    if (sourceUrl && sourceUrl !== entity.sourceUrl) {
+      await committeesRepo.upsert({
+        oknesset_id: entity.oknesset_id, name: entity.name, chair: entity.chair,
+        lastSessionDate: entity.lastSessionDate, lastSessionSummary: entity.lastSessionSummary,
+        lastSessionDocumentUrl: entity.lastSessionDocumentUrl, sourceUrl,
+        hasNewData: entity.hasNewData, lastPolledAt: entity.lastPolledAt,
+        recentSessions: entity.recentSessions ?? [],
+      }, id)
+    }
+  } else {
+    id = await committeesRepo.upsert({
+      oknesset_id: String(committeeId), name: name.trim(), chair: '',
+      lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null,
+      sourceUrl, hasNewData: false, lastPolledAt: null, recentSessions: [],
+    })
   }
-  committees.push(newCommittee)
-  await writeFile(DATA_PATH, JSON.stringify(committees, null, 2), 'utf-8')
+  const already = await trackedCommittees.isTracked(userId, id)
+  await trackedCommittees.track(userId, id)
 
   // Enrich immediately in background — don't block the response
   const aiEnabled = process.env.COMMITTEE_AI === 'true'
   enrichCommitteeSessions(name.trim(), [], aiEnabled)
     .then(async (sessions) => {
       if (!sessions.length) return
-      const updated = JSON.parse(await readFile(DATA_PATH, 'utf-8') as string) as Committee[]
-      const idx = updated.findIndex((c) => c.id === nextId)
-      if (idx !== -1) {
-        updated[idx].recentSessions = sessions
-        updated[idx].lastSessionDate = sessions[0].date
-        await writeFile(DATA_PATH, JSON.stringify(updated, null, 2), 'utf-8')
-      }
+      const c = await committeesRepo.getById(id)
+      if (!c) return
+      await committeesRepo.upsert({
+        oknesset_id: c.oknesset_id, name: c.name, chair: c.chair,
+        lastSessionDate: sessions[0].date, lastSessionSummary: c.lastSessionSummary,
+        lastSessionDocumentUrl: c.lastSessionDocumentUrl, sourceUrl: c.sourceUrl,
+        hasNewData: c.hasNewData, lastPolledAt: c.lastPolledAt, recentSessions: sessions,
+      }, id)
     })
-    .catch(() => { /* enrichment failure is non-critical */ })
+    .catch(() => { /* non-critical */ })
 
-  res.json({ ok: true, item: newCommittee })
+  res.json({ ok: true, duplicate: already })
 })
 
 export default router

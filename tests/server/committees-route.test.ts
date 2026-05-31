@@ -1,9 +1,14 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { readFile, writeFile } from 'fs/promises'
+import { setupTestDb } from './db-harness'
+import { db } from '../../server/db/client'
+import { trackedCommittees, committees } from '../../server/db/schema'
 
-vi.mock('fs/promises')
+vi.mock('../../server/services/committee-session-enricher', () => ({
+  enrichCommitteeSessions: vi.fn().mockResolvedValue([]),
+}))
+
 vi.stubGlobal('fetch', vi.fn())
 vi.mock('../../server/repositories/committee-list-repository', () => ({
   CommitteeListRepository: vi.fn().mockImplementation(() => ({
@@ -55,33 +60,53 @@ describe('GET /api/committees/list', () => {
 })
 
 describe('POST /api/committees/track', () => {
-  beforeEach(() => {
-    vi.mocked(readFile).mockResolvedValue('[]' as never)
-    vi.mocked(writeFile).mockResolvedValue()
+  beforeAll(async () => { await setupTestDb() })
+
+  beforeEach(async () => {
+    // Delete in FK-dependency order; keep users row to avoid stale cache in module-level singleton
+    await db.delete(trackedCommittees)
+    await db.delete(committees)
   })
+
   it('returns 400 when committeeId or name is missing', async () => {
     const res = await request(app).post('/api/committees/track').send({ name: 'test' })
     expect(res.status).toBe(400)
   })
-  it('returns 200 and writes committee to data file', async () => {
+
+  it('creates a committees entity and tracked_committees row on first track', async () => {
     const res = await request(app).post('/api/committees/track').send({
       committeeId: 2, name: 'ועדת הכספים',
-      knessetUrl: 'https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=2',
+      knessetUrl: 'https://main.knesset.gov.il/apps/committees/1234',
     })
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
-    expect(writeFile).toHaveBeenCalledOnce()
+    expect(res.body.duplicate).toBe(false)
+
+    const allCommittees = await db.select().from(committees)
+    expect(allCommittees).toHaveLength(1)
+    expect(allCommittees[0].name).toBe('ועדת הכספים')
+    expect(allCommittees[0].oknessetId).toBe('2')
+
+    const tracked = await db.select().from(trackedCommittees)
+    expect(tracked).toHaveLength(1)
   })
-  it('skips duplicate committeeId', async () => {
-    vi.mocked(readFile).mockResolvedValue(JSON.stringify([
-      { id: 1, oknesset_id: '2', name: 'existing', chair: '', lastSessionDate: null, lastSessionSummary: null, lastSessionDocumentUrl: null, sourceUrl: '', hasNewData: false, lastPolledAt: null }
-    ]) as never)
+
+  it('returns duplicate:true and does not create a second tracked_committees row', async () => {
+    await request(app).post('/api/committees/track').send({
+      committeeId: 2, name: 'ועדת הכספים',
+    })
+
     const res = await request(app).post('/api/committees/track').send({
       committeeId: 2, name: 'ועדת הכספים',
-      knessetUrl: 'https://www.knesset.gov.il/committees/heb/committee_det.aspx?commmid=2',
     })
     expect(res.status).toBe(200)
-    // When existing committee has empty sourceUrl and new knessetUrl provided, it updates
-    expect(res.body.duplicate ?? res.body.updated).toBe(true)
+    expect(res.body.ok).toBe(true)
+    expect(res.body.duplicate).toBe(true)
+
+    const allCommittees = await db.select().from(committees)
+    expect(allCommittees).toHaveLength(1)
+
+    const tracked = await db.select().from(trackedCommittees)
+    expect(tracked).toHaveLength(1)
   })
 })
