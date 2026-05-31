@@ -1,28 +1,27 @@
 import { Router } from 'express'
-import { readFile } from 'fs/promises'
-import path from 'path'
-import type { Bill, Committee, Mk, TrackingType } from '../../src/types'
+import type { TrackingType } from '../../src/types'
+import { UsersRepository } from '../repositories/users-repository'
+import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
+import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
+import { TrackedMksRepository } from '../repositories/tracked-mks-repository'
+import { getCurrentKnesset } from '../services/knesset-config'
 
 const router = Router()
-const DATA_DIR = path.join(process.cwd(), 'src/data')
-
-const FILE_MAP: Record<TrackingType, string> = {
-  bill: 'bills.json',
-  committee: 'committees.json',
-  mk: 'mks.json',
-}
+const users = new UsersRepository()
+const trackedBills = new TrackedBillsRepository()
+const trackedCommittees = new TrackedCommitteesRepository()
+const trackedMks = new TrackedMksRepository()
 
 router.get('/:type', async (req, res) => {
   const type = req.params.type as TrackingType
-  if (!FILE_MAP[type]) return res.status(400).json({ error: 'סוג לא ידוע' })
-
   try {
-    const raw = await readFile(path.join(DATA_DIR, FILE_MAP[type]), 'utf-8')
-    const items = JSON.parse(raw) as (Bill | Committee | Mk)[]
-    // Serve directly from file — oknesset.org is defunct.
-    // All enrichment happens via the background poller (Knesset OData + scraper).
-    res.json(items)
-  } catch {
+    const userId = await users.getSharedUserId()
+    if (type === 'bill') return res.json(await trackedBills.getAll(userId, getCurrentKnesset()))
+    if (type === 'committee') return res.json(await trackedCommittees.getAll(userId))
+    if (type === 'mk') return res.json(await trackedMks.getAll(userId, getCurrentKnesset()))
+    return res.status(400).json({ error: 'סוג לא ידוע' })
+  } catch (err) {
+    console.error('parliament read error:', err)
     res.status(500).json({ error: 'שגיאה בקריאת נתונים' })
   }
 })
