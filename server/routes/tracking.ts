@@ -1,30 +1,27 @@
 import { Router } from 'express'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
 import { parseKnessetUrl, isKnessetSiteUrl } from '../services/url-parser'
 import { OknessetClient } from '../services/oknesset'
 import { getMkBySiteId } from '../services/knesset-api'
 import { fetchMkActivity } from '../services/knesset-scraper'
-import type { Bill, Committee, Mk, TrackingType } from '../../src/types'
+import { UsersRepository } from '../repositories/users-repository'
+import { BillsRepository } from '../repositories/bills-repository'
+import { CommitteesRepository } from '../repositories/committees-repository'
+import { MksRepository } from '../repositories/mks-repository'
+import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
+import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
+import { TrackedMksRepository } from '../repositories/tracked-mks-repository'
+import { getCurrentKnesset } from '../services/knesset-config'
+import type { TrackingType } from '../../src/types'
 
 const router = Router()
-const DATA_DIR = path.join(process.cwd(), 'src/data')
 const oknesset = new OknessetClient()
-
-const FILE_MAP: Record<TrackingType, string> = {
-  bill: 'bills.json',
-  committee: 'committees.json',
-  mk: 'mks.json',
-}
-
-async function readItems<T>(type: TrackingType): Promise<T[]> {
-  const raw = await readFile(path.join(DATA_DIR, FILE_MAP[type]), 'utf-8')
-  return JSON.parse(raw) as T[]
-}
-
-async function writeItems<T>(type: TrackingType, items: T[]): Promise<void> {
-  await writeFile(path.join(DATA_DIR, FILE_MAP[type]), JSON.stringify(items, null, 2), 'utf-8')
-}
+const users = new UsersRepository()
+const billsRepo = new BillsRepository()
+const committeesRepo = new CommitteesRepository()
+const mksRepo = new MksRepository()
+const trackedBills = new TrackedBillsRepository()
+const trackedCommittees = new TrackedCommitteesRepository()
+const trackedMks = new TrackedMksRepository()
 
 router.post('/add', async (req, res) => {
   try {
@@ -42,33 +39,28 @@ router.post('/add', async (req, res) => {
 
     if (type === 'bill') {
       const data = await oknesset.getBill(id)
-      const items = await readItems<Bill>('bill')
-      const nextId = Math.max(0, ...items.map((i) => i.id)) + 1
-      const newItem: Bill = {
-        id: nextId,
-        oknesset_id: id,
+      const userId = await users.getSharedUserId()
+      const billId = await billsRepo.upsert({
+        oknessetId: id,
         number: String(data.law_id ?? ''),
         title: data.title,
         status: 'בוועדה',
-        position: 'עוקבים',
-        notes: '',
         committee: data.committee ?? '',
         sourceUrl: url ?? '',
         documentUrl: null,
+        knessetUrl: null,
+        knessetNumber: getCurrentKnesset(),
         hasNewData: false,
         lastPolledAt: null,
-      }
-      items.push(newItem)
-      await writeItems('bill', items)
-      return res.json({ ok: true, item: newItem })
+      })
+      await trackedBills.track(userId, billId, 'עוקבים', '')
+      return res.json({ ok: true })
     }
 
     if (type === 'committee') {
       const data = await oknesset.getCommittee(id)
-      const items = await readItems<Committee>('committee')
-      const nextId = Math.max(0, ...items.map((i) => i.id)) + 1
-      const newItem: Committee = {
-        id: nextId,
+      const userId = await users.getSharedUserId()
+      const committeeId = await committeesRepo.upsert({
         oknesset_id: id,
         name: data.name,
         chair: data.chairperson ?? '',
@@ -78,29 +70,30 @@ router.post('/add', async (req, res) => {
         sourceUrl: url ?? '',
         hasNewData: false,
         lastPolledAt: null,
-      }
-      items.push(newItem)
-      await writeItems('committee', items)
-      return res.json({ ok: true, item: newItem })
+        recentSessions: [],
+      })
+      await trackedCommittees.track(userId, committeeId)
+      return res.json({ ok: true })
     }
 
     if (type === 'mk') {
-      const items = await readItems<Mk>('mk')
-      const nextId = Math.max(0, ...items.map((i) => i.id)) + 1
-      let newItem: Mk
+      let mkInput
 
       if (url && isKnessetSiteUrl(url)) {
         const siteId = parseInt(id, 10)
         const identity = await getMkBySiteId(siteId)
         const activity = await fetchMkActivity(siteId, 10).catch(() => [])
-        newItem = {
-          id: nextId,
+        mkInput = {
           oknesset_id: String(identity.knsId),
           knesset_site_id: id,
           name: identity.name,
-          party: identity.faction ?? '',
           email: identity.email ?? null,
           photoUrl: `https://main.knesset.gov.il/mk/members/${id}/photo`,
+          votingSummary: null as string | null,
+          sourceUrl: url,
+          hasNewData: false,
+          lastPolledAt: new Date().toISOString(),
+          terms: [{ knessetNumber: getCurrentKnesset(), faction: identity.faction ?? '' }],
           currentRoles: identity.positions.map((p) => ({
             positionId: p.positionId,
             description: 'חבר כנסת',
@@ -108,31 +101,31 @@ router.post('/add', async (req, res) => {
             startDate: p.startDate,
           })),
           activity,
-          recentVotes: [],
-          votingSummary: null,
-          sourceUrl: url,
-          hasNewData: false,
-          lastPolledAt: new Date().toISOString(),
+          recentVotes: [] as [],
         }
       } else {
         const data = await oknesset.getMk(id)
-        newItem = {
-          id: nextId,
+        mkInput = {
           oknesset_id: id,
+          knesset_site_id: undefined as string | undefined,
           name: data.name,
-          party: data.party ?? '',
-          activity: [],
-          recentVotes: [],
-          votingSummary: null,
+          email: null as string | null,
+          photoUrl: null as string | null,
+          votingSummary: null as string | null,
           sourceUrl: url ?? '',
           hasNewData: false,
-          lastPolledAt: null,
+          lastPolledAt: null as string | null,
+          terms: [{ knessetNumber: getCurrentKnesset(), faction: data.party ?? '' }],
+          currentRoles: [] as [],
+          activity: [] as [],
+          recentVotes: [] as [],
         }
       }
 
-      items.push(newItem)
-      await writeItems('mk', items)
-      return res.json({ ok: true, item: newItem })
+      const userId = await users.getSharedUserId()
+      const mkId = await mksRepo.upsert(mkInput)
+      await trackedMks.track(userId, mkId)
+      return res.json({ ok: true })
     }
 
     return res.status(400).json({ error: 'סוג לא ידוע' })
@@ -145,11 +138,12 @@ router.post('/add', async (req, res) => {
 router.delete('/:type/:id', async (req, res) => {
   try {
     const type = req.params.type as TrackingType
-    if (!FILE_MAP[type]) return res.status(400).json({ error: 'סוג לא ידוע' })
-    const id = Number(req.params.id)
-    const items = await readItems<{ id: number }>(type)
-    const filtered = items.filter((i) => i.id !== id)
-    await writeItems(type, filtered)
+    const userId = await users.getSharedUserId()
+    const entityId = Number(req.params.id)
+    if (type === 'bill') await trackedBills.untrack(userId, entityId)
+    else if (type === 'committee') await trackedCommittees.untrack(userId, entityId)
+    else if (type === 'mk') await trackedMks.untrack(userId, entityId)
+    else return res.status(400).json({ error: 'סוג לא ידוע' })
     res.json({ ok: true })
   } catch (err) {
     console.error('tracking/delete error:', err)
