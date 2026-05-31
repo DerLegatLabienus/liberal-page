@@ -74,21 +74,21 @@ Frontend is accessible from Windows at `http://localhost:5173` (via `host: '0.0.
 
 ### Data model
 
-`src/data/*.json` is the **frontend static seed** and the baseline for `npm run db:seed`. The files are also read/written directly by the Express routes and poller (the live routing through the Postgres repositories is Phase 2).
+`src/data/*.json` is **static content + read-only config only** (about, faq, gallery, site, primaries, protocols, representatives, updates, committee-url-mapping, trending-bills). No tracked parliament data lives here.
 
-Postgres (local Docker or Neon, via `DATABASE_URL`) stores entity, cache, and config data through `server/repositories/`. The `server/db/` module uses `node-postgres` as the single driver for both targets and applies startup migrations automatically.
+The curated parliament baseline (bills, committees, MKs, feature flags, annotations) lives in `scripts/seed-data/` and is loaded via `npm run db:seed`.
 
-Key JSON files: `bills.json`, `committees.json`, `mks.json`, `summaries-cache.json`, `knesset-members-cache.json`.
+All tracking (bills, committees, MKs) is per-user against a single shared account (`users.id = 1`). Routes and the poller read/write Postgres exclusively via `server/repositories/`. The `server/db/` module uses `node-postgres` as the single driver for local Docker and Neon targets, and applies startup migrations automatically.
 
 `DATABASE_URL` must be set to run the server with Postgres or to seed the database (local Docker default: `postgresql://postgres:postgres@localhost:5432/liberal_dev`).
 
-**Deploy ordering (Phase 1):** the backend now requires a provisioned Neon DB. Run in order: (1) `npm run db:generate` is already committed — migrations apply automatically on boot; (2) run `npm run db:seed` once against the target `DATABASE_URL` BEFORE serving traffic. The reworked `MkAnnotationsRepository` reads the `mk_annotations` table live with no runtime repopulation — serving an unseeded DB silently sets every MK's liberal/supporter flag to false. (The list caches self-heal via the poller; annotations do not.)
+**Deploy ordering:** the backend requires a provisioned Postgres DB. Migrations apply automatically on boot. Run `npm run db:seed` once against the target `DATABASE_URL` BEFORE serving traffic. Serving an unseeded DB results in empty tracked data and all MK liberal/supporter flags defaulting to false.
 
 The single source of truth for all TypeScript shapes is `src/types.ts` — shared by both frontend and `server/`.
 
 ### Frontend flow
 
-`App.tsx` owns `useParliament()` state and passes it down. `useParliament` initialises from static JSON imports, then immediately refreshes from the API on mount.
+`App.tsx` owns `useParliament()` state and passes it down. `useParliament` initialises with empty state, then immediately refreshes from the API on mount (no static JSON imports for tracked data).
 
 The site is **Hebrew-first**. Language is detected via `?lang=` query param or `localStorage`, then stored in `document.documentElement.lang/dir`. The parliamentary tracker and several sections only render when `i18n.language === 'he'`. Direction-sensitive components use `useDirection()`, which reads `document.documentElement.dir`.
 
@@ -97,10 +97,10 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | Method   | Path                          | Notes |
 |----------|-------------------------------|-------|
 | `GET`    | `/api/health`                 | health check |
-| `GET`    | `/api/parliament/:type`       | reads JSON, may enrich, returns data |
-| `POST`   | `/api/tracking/add`           | parse URL → fetch metadata → append to JSON |
-| `DELETE` | `/api/tracking/:type/:id`     | remove by local `id` |
-| `POST`   | `/api/summarize`              | download PDF/DOCX → Claude → cache |
+| `GET`    | `/api/parliament/:type`       | reads tracked entities from DB, returns data |
+| `POST`   | `/api/tracking/add`           | parse URL → fetch metadata → upsert entity + tracking row in DB |
+| `DELETE` | `/api/tracking/:type/:id`     | remove tracking row from DB by entity `id` |
+| `POST`   | `/api/summarize`              | download PDF/DOCX → Claude → cache in DB (summaries_cache) |
 | `GET`    | `/api/bills/search`           | search Knesset OData API |
 | `POST`   | `/api/bills/track`            | add bill by Knesset bill ID |
 | `GET`    | `/api/committees/list`        | list committees from Knesset API |
@@ -121,14 +121,20 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 
 Started by `server/index.ts` on listen. Default interval: 6 hours (`POLL_INTERVAL_MS`). On total failure, backs off exponentially from 1 min up to 10 min.
 
-Each cycle: polls bills via oknesset, fetches committee sessions and runs `committee-session-enricher`, fetches MK activity via `knesset-scraper`. Sets `hasNewData: true` when new content is detected. Writes the JSON file only when content changed.
+Each cycle: polls bills via oknesset, fetches committee sessions and runs `committee-session-enricher`, fetches MK activity via `knesset-scraper`. Sets `hasNewData: true` when new content is detected. All writes go through `BillsRepository`, `CommitteesRepository`, and `MksRepository` — no JSON file writing.
 
 ### Repositories and caches
 
-`server/repositories/` wraps the on-disk caches with TTL logic:
-- `MkListRepository` — `knesset-members-cache.json`, refreshed on stale reads
-- `CommitteeListRepository` — `knesset-committees-cache.json`
-- `MkAnnotationsRepository` — `mk-annotations.json` (liberal/supporter flags)
+`server/repositories/` covers all data access (all Postgres, no JSON files):
+- `BillsRepository`, `CommitteesRepository`, `MksRepository` — entity tables; reads reassemble normalized rows into typed aggregates
+- `TrackedBillsRepository`, `TrackedCommitteesRepository`, `TrackedMksRepository` — per-user tracking join tables
+- `UsersRepository` — shared account (id=1)
+- `MkListRepository` — `knesset_members_cache` table, refreshed on stale reads
+- `CommitteeListRepository` — `knesset_committees_cache` table
+- `MkAnnotationsRepository` — `mk_annotations` table (liberal/supporter flags)
+- `SummariesRepository` — `summaries_cache` table (document summaries keyed by MD5)
+- `FeatureFlagsRepository` — `feature_flags` table (flat global flag registry)
+- `KnessetConfigRepository` — `knesset_config` table (current Knesset number)
 
 ### Tests
 

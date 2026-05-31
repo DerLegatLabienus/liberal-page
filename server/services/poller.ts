@@ -1,4 +1,3 @@
-import path from 'path'
 import { OknessetClient } from './oknesset'
 import { Summarizer } from './summarizer'
 import { fetchMkActivity } from './knesset-scraper'
@@ -8,8 +7,6 @@ import { MksRepository } from '../repositories/mks-repository'
 import { getCurrentKnesset } from './knesset-config'
 import type { Bill, CommitteeSession } from '../../src/types'
 
-const DATA_DIR = path.join(process.cwd(), 'src/data')
-const CACHE_PATH = path.join(DATA_DIR, 'summaries-cache.json')
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
 const BACKOFF_INITIAL_MS = 60_000   // 1 minute minimum on failure
 const BACKOFF_MAX_MS = 600_000      // 10 minutes maximum on failure
@@ -17,7 +14,7 @@ const BACKOFF_MAX_MS = 600_000      // 10 minutes maximum on failure
 let currentDelayMs = INTERVAL_MS
 
 const oknesset = new OknessetClient()
-const summarizer = new Summarizer(CACHE_PATH)
+const summarizer = new Summarizer()
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()
 const mksRepo = new MksRepository()

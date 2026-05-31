@@ -74,10 +74,10 @@ describe('CommitteeCard', () => {
     expect(screen.queryByText(/הצעת חוק/)).not.toBeInTheDocument()
   })
 
-  it('renders MK name in attendance badge instead of raw siteId', () => {
+  it('does not render MK attendance badge (attendingSiteIds feature not active)', () => {
     render(<CommitteeCard committee={committeeFixture({ recentSessions: [SESSION_EXTENDED] })} trackedMks={MK_FIXTURES} />)
-    expect(screen.getByText(/דן אילוז/)).toBeInTheDocument()
-    expect(screen.queryByText(/\b1116\b/)).not.toBeInTheDocument()
+    // Annotation badges removed — attendingSiteIds is always [] from the enricher
+    expect(screen.queryByText('💙')).not.toBeInTheDocument()
   })
 
   it('renders all 4 sessions when recentSessions has 4 entries', () => {

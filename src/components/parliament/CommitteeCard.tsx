@@ -1,9 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
-import annotationsData from '@/data/mk-annotations.json'
 import type { Committee } from '@/types'
-
-const annotations = annotationsData as Record<string, { isLiberal: boolean; isSupporter: boolean }>
 
 interface CommitteeCardProps {
   committee: Committee
@@ -11,15 +8,10 @@ interface CommitteeCardProps {
   trackedMks: { knesset_site_id?: string; name: string }[]
 }
 
-export default function CommitteeCard({ committee, onRemove, trackedMks }: CommitteeCardProps) {
+export default function CommitteeCard({ committee, onRemove, trackedMks: _trackedMks }: CommitteeCardProps) {
   const { t } = useTranslation()
   const direction = useDirection()
 
-  const nameByMkSiteId: Record<string, string> = Object.fromEntries(
-    trackedMks
-      .filter(m => m.knesset_site_id)
-      .map(m => [m.knesset_site_id, m.name])
-  )
   const sessions = committee.recentSessions ?? []
   const [extended, ...compactSessions] = sessions
 
@@ -42,23 +34,6 @@ export default function CommitteeCard({ committee, onRemove, trackedMks }: Commi
             <p className="mb-1 text-right text-xs text-muted-foreground">
               {new Date(extended.date).toLocaleDateString('he-IL')}
             </p>
-
-            {extended.attendingSiteIds.length > 0 && (
-              <div className="mb-1 flex flex-wrap gap-1 justify-end">
-                {extended.attendingSiteIds.map((siteId) => {
-                  const ann = annotations[siteId]
-                  if (!ann) return null
-                  return (
-                    <span key={siteId}
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        ann.isLiberal ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                      {ann.isLiberal ? '💙' : '⭐'} {nameByMkSiteId[siteId] ?? siteId}
-                    </span>
-                  )
-                })}
-              </div>
-            )}
 
             {extended.aiSummary && (
               <div className="rounded-md bg-blue-50 px-2 py-1">

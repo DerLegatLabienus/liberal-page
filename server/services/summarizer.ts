@@ -1,28 +1,13 @@
 import { createHash } from 'crypto'
-import { readFile, writeFile } from 'fs/promises'
 import Anthropic from '@anthropic-ai/sdk'
 import mammoth from 'mammoth'
-import type { SummaryCache } from '../../src/types'
+import { SummariesRepository } from '../repositories/summaries-repository'
 
 const MODEL = process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6'
 
 export class Summarizer {
   private client = new Anthropic()
-
-  constructor(private cachePath: string) {}
-
-  private async readCache(): Promise<SummaryCache> {
-    try {
-      const raw = await readFile(this.cachePath, 'utf-8')
-      return JSON.parse(raw) as SummaryCache
-    } catch {
-      return {}
-    }
-  }
-
-  private async writeCache(cache: SummaryCache): Promise<void> {
-    await writeFile(this.cachePath, JSON.stringify(cache, null, 2), 'utf-8')
-  }
+  private repo = new SummariesRepository()
 
   private async extractText(buffer: Buffer, format: 'pdf' | 'docx'): Promise<string> {
     if (format === 'pdf') {
@@ -56,15 +41,13 @@ export class Summarizer {
     format: 'pdf' | 'docx'
   ): Promise<string> {
     const md5 = createHash('md5').update(buffer).digest('hex')
-    const cache = await this.readCache()
-
-    if (cache[md5]) return cache[md5].summary
+    const cached = await this.repo.get(md5)
+    if (cached) return cached.summary
 
     const text = await this.extractText(buffer, format)
     const summary = await this.callClaude(text)
 
-    cache[md5] = { summary, createdAt: new Date().toISOString(), sourceUrl }
-    await this.writeCache(cache)
+    await this.repo.set(md5, { summary, createdAt: new Date().toISOString(), sourceUrl })
     return summary
   }
 
@@ -92,15 +75,13 @@ export class Summarizer {
       const format = docUrl.toLowerCase().includes('.doc') ? 'docx' : 'pdf'
       const md5 = createHash('md5').update(buffer).digest('hex')
 
-      const cache = await this.readCache()
-      const entry = cache[md5]
-
       // Return from cache if already processed with attendees
-      if (entry && entry.attendees !== undefined) {
+      const cached = await this.repo.get(md5)
+      if (cached && cached.attendees !== undefined) {
         return {
-          derivedTitle: entry.derivedTitle,
-          aiSummary: entry.summary,
-          attendees: entry.attendees,
+          derivedTitle: cached.derivedTitle,
+          aiSummary: cached.summary,
+          attendees: cached.attendees,
         }
       }
 
@@ -133,15 +114,13 @@ ${text.slice(0, 8000)}`,
         }
       }
 
-      // Write to cache
-      cache[md5] = {
+      await this.repo.set(md5, {
         summary: parsed.summary ?? '',
         createdAt: new Date().toISOString(),
         sourceUrl: docUrl,
         attendees: parsed.attendees ?? [],
         derivedTitle: parsed.title,
-      }
-      await this.writeCache(cache)
+      })
 
       return {
         derivedTitle: parsed.title,

@@ -1,8 +1,12 @@
 # Data Schema
 
-All shared interfaces live in `src/types.ts`. JSON data files live in `src/data/`.
+All shared interfaces live in `src/types.ts`.
 
-The current app uses `site`, `about`, `gallery`, `faq`, `bills`, `committees`, `mks`, and `summaries-cache`. Older static files such as `representatives`, `updates`, `protocols`, and `primaries` still exist but are not part of the current mounted homepage flow.
+**Phase 2 cutover complete.** The runtime JSON datastore is gone. `src/data/*.json` now contains only static content (about, faq, gallery, site, primaries, protocols, representatives, updates) and read-only config (committee-url-mapping, trending-bills). All tracked parliament data (bills, committees, MKs), feature flags, knesset config, and summaries cache live in Postgres.
+
+The curated parliament baseline lives in `scripts/seed-data/` and is loaded via `npm run db:seed`.
+
+The current app uses `site`, `about`, `gallery`, and `faq` as static JSON. Older static files such as `representatives`, `updates`, `protocols`, and `primaries` still exist but are not part of the current mounted homepage flow.
 
 ## SiteConfig — `site.json`
 
@@ -20,7 +24,7 @@ interface SiteConfig {
 
 Join URLs are not stored in `site.json`. `JoinSelector` owns the effective-soft URL mapping because those links are fixed integration targets, not editable site content.
 
-## Bill — `bills.json`
+## Bill (TypeScript shape — stored in DB)
 
 ```typescript
 interface Bill {
@@ -39,9 +43,9 @@ interface Bill {
 }
 ```
 
-`id` is a local numeric ID used for drawer rendering and delete routes. `oknesset_id` is the external ID used for refreshes.
+`id` is the DB serial PK. `oknesset_id` is the external ID used for refreshes.
 
-## Committee — `committees.json`
+## Committee (TypeScript shape — stored in DB)
 
 ```typescript
 interface Committee {
@@ -60,7 +64,7 @@ interface Committee {
 
 Committee polling can update latest session fields and cache a summary when a protocol document is available.
 
-## MK — `mks.json`
+## MK (TypeScript shape — stored in DB)
 
 ```typescript
 interface Mk {
@@ -143,19 +147,9 @@ interface AboutData {
 }
 ```
 
-## Summary Cache — `summaries-cache.json`
+## Summary Cache (stored in DB — `summaries_cache` table)
 
-```typescript
-interface SummaryCache {
-  [md5: string]: {
-    summary: string
-    createdAt: string
-    sourceUrl: string
-  }
-}
-```
-
-Summaries are keyed by MD5 of the downloaded document buffer.
+Document summaries are keyed by MD5 of the downloaded document buffer and stored in the `summaries_cache` Postgres table. The `Summarizer` service reads and writes via `SummariesRepository`.
 
 ## Tracking Types and URL Parsing
 
@@ -172,15 +166,17 @@ interface ParsedUrl {
 
 ---
 
-## Postgres Schema (Phase 1 — entity tables)
+## Postgres Schema (Phase 2 complete)
 
-Phase 1 of the JSON → Postgres migration added `server/db/` with a Drizzle ORM schema, nine repositories, a pglite test harness, startup migration wiring, and a `scripts/seed-db.ts` seed script. The JSON files in `src/data/` remain as the frontend's static seed and as the seed-script input baseline; the routes and poller still read/write them (migration of those call-sites is Phase 2).
+Phases 1 and 2 of the JSON → Postgres migration are complete. `server/db/` contains a Drizzle ORM schema, repositories, a pglite test harness, startup migration wiring, and a `scripts/seed-db.ts` seed script. The curated parliament baseline lives in `scripts/seed-data/` and is loaded via `npm run db:seed`. The runtime JSON datastore (`src/data/bills.json`, `mks.json`, etc.) has been removed.
 
-### Design principle: entity tables vs. tracking (Phase 2)
+### Design principles
 
 **Entity tables** hold objective Knesset facts: the bill as published, the committee as constituted, the MK as elected. They are never hard-deleted. All foreign-key constraints use `ON DELETE RESTRICT`.
 
-**Tracking tables** (which tracker is following which entity, per-tracker `position`, `notes`, etc.) are **Phase 2 — not yet implemented**.
+**Tracking tables** record which entities the shared "house account" (`users.id = 1`) is following, with per-entry `position` and `notes`.
+
+**Feature flags** are a flat global registry in the `feature_flags` table (one row per flag, no scoping). Queried via `GET /api/feature-flags` which returns `Record<string, { enabled, value }>`.
 
 ### `knesset_config`
 
@@ -358,3 +354,48 @@ Stores liberal/supporter flags keyed by Knesset site ID.
 | `knesset_site_id` | text PK |
 | `is_liberal` | boolean |
 | `is_supporter` | boolean |
+
+### `users`
+
+One row exists: the shared "house account" (`id = 1`). All tracking is per-user against this account.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | serial PK | always 1 for the shared account |
+| `email` | text | unique |
+| `created_at` | timestamptz | |
+
+### `tracked_bills`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | serial PK | |
+| `user_id` | integer FK → `users.id` RESTRICT | |
+| `bill_id` | integer FK → `bills.id` RESTRICT | |
+| `position` | text | `תומכים` / `מתנגדים` / `עוקבים` |
+| `notes` | text | |
+| `created_at` | timestamptz | |
+
+Unique constraint on `(user_id, bill_id)`.
+
+### `tracked_committees`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | serial PK | |
+| `user_id` | integer FK → `users.id` RESTRICT | |
+| `committee_id` | integer FK → `committees.id` RESTRICT | |
+| `created_at` | timestamptz | |
+
+Unique constraint on `(user_id, committee_id)`.
+
+### `tracked_mks`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | serial PK | |
+| `user_id` | integer FK → `users.id` RESTRICT | |
+| `mk_id` | integer FK → `mks.id` RESTRICT | |
+| `created_at` | timestamptz | |
+
+Unique constraint on `(user_id, mk_id)`.

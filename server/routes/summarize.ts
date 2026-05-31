@@ -1,10 +1,8 @@
 import { Router } from 'express'
-import path from 'path'
 import { Summarizer } from '../services/summarizer'
 
 const router = Router()
-const CACHE_PATH = path.join(process.cwd(), 'src/data/summaries-cache.json')
-const summarizer = new Summarizer(CACHE_PATH)
+const summarizer = new Summarizer()
 
 router.post('/', async (req, res) => {
   const { url } = req.body as { url?: string }

@@ -8,6 +8,16 @@ vi.mock('../../server/services/bill-status-map', () => ({
 }))
 vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
+const { mockCommitteeListGet } = vi.hoisted(() => ({
+  mockCommitteeListGet: vi.fn(),
+}))
+
+vi.mock('../../server/repositories/committee-list-repository', () => ({
+  CommitteeListRepository: vi.fn().mockImplementation(() => ({
+    get: mockCommitteeListGet,
+  })),
+}))
+
 import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
@@ -22,6 +32,9 @@ const RAW = [
 describe('fetchRecentBills', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
+    vi.mocked(readFile).mockReset()
+    mockCommitteeListGet.mockReset()
+    mockCommitteeListGet.mockResolvedValue(null)
     _resetBillsCache()
     _resetCommitteeMapCache()
   })
@@ -37,10 +50,10 @@ describe('fetchRecentBills', () => {
     expect(items[0].committee).toBe('') // cache absent → graceful empty string
   })
 
-  it('resolves committee name from cache when CommitteeID is present', async () => {
-    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({
-      committees: [{ committeeId: 5, name: 'ועדת הכספים' }],
-    }) as never)
+  it('resolves committee name from DB cache when CommitteeID is present', async () => {
+    mockCommitteeListGet.mockResolvedValueOnce([
+      { committeeId: 5, name: 'ועדת הכספים', knessetUrl: '' },
+    ])
     vi.mocked(fetch).mockResolvedValueOnce(mockOdata(RAW))
     const items = await fetchRecentBills(10)
     expect(items[0].committee).toBe('ועדת הכספים') // CommitteeID=5 → resolved
@@ -74,6 +87,8 @@ describe('fetchRecentBills', () => {
 describe('fetchPolicyAlignedBills', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
+    mockCommitteeListGet.mockReset()
+    mockCommitteeListGet.mockResolvedValue(null)
     _resetBillsCache()
     _resetCommitteeMapCache()
   })
@@ -111,6 +126,9 @@ describe('fetchPolicyAlignedBills', () => {
 describe('getTrendingBills (manual)', () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset()
+    vi.mocked(readFile).mockReset()
+    mockCommitteeListGet.mockReset()
+    mockCommitteeListGet.mockResolvedValue(null)
     _resetBillsCache()
     _resetCommitteeMapCache()
   })
@@ -128,4 +146,3 @@ describe('getTrendingBills (manual)', () => {
     expect(items[0].status).toBe('הכנה לקריאה ראשונה')
   })
 })
-

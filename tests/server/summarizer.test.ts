@@ -19,21 +19,26 @@ vi.mock('mammoth', () => ({
   extractRawText: vi.fn().mockResolvedValue({ value: 'DOCX content here' }),
 }))
 
-vi.mock('fs/promises', () => ({
-  readFile: vi.fn().mockResolvedValue('{}'),
-  writeFile: vi.fn().mockResolvedValue(undefined),
+const mockRepoGet = vi.fn()
+const mockRepoSet = vi.fn()
+
+vi.mock('../../server/repositories/summaries-repository', () => ({
+  SummariesRepository: vi.fn().mockImplementation(() => ({
+    get: mockRepoGet,
+    set: mockRepoSet,
+  })),
 }))
 
 import { Summarizer } from '../../server/services/summarizer'
-
-const CACHE_PATH = 'src/data/summaries-cache.json'
 
 describe('Summarizer', () => {
   let summarizer: Summarizer
 
   beforeEach(() => {
-    summarizer = new Summarizer(CACHE_PATH)
+    summarizer = new Summarizer()
     vi.clearAllMocks()
+    mockRepoGet.mockResolvedValue(null)
+    mockRepoSet.mockResolvedValue(undefined)
   })
 
   it('returns cached summary when MD5 matches', async () => {
@@ -41,18 +46,19 @@ describe('Summarizer', () => {
     const md5 = createHash('md5').update(content).digest('hex')
     const cachedSummary = 'סיכום שמור'
 
-    const { readFile } = await import('fs/promises')
-    vi.mocked(readFile).mockResolvedValueOnce(
-      JSON.stringify({ [md5]: { summary: cachedSummary, createdAt: '2024-01-01', sourceUrl: 'http://test.com' } })
-    )
+    mockRepoGet.mockResolvedValueOnce({
+      summary: cachedSummary,
+      createdAt: '2024-01-01',
+      sourceUrl: 'http://test.com',
+    })
 
     const result = await summarizer.summarizeBuffer(content, 'http://test.com', 'pdf')
     expect(result).toBe(cachedSummary)
+    expect(mockRepoGet).toHaveBeenCalledWith(md5)
   })
 
   it('calls Claude API on cache miss and caches result', async () => {
-    const { readFile, writeFile } = await import('fs/promises')
-    vi.mocked(readFile).mockResolvedValueOnce('{}')
+    mockRepoGet.mockResolvedValueOnce(null)
 
     const result = await summarizer.summarizeBuffer(
       Buffer.from('new content'),
@@ -61,6 +67,6 @@ describe('Summarizer', () => {
     )
 
     expect(result).toBe('סיכום בדיקה')
-    expect(writeFile).toHaveBeenCalled()
+    expect(mockRepoSet).toHaveBeenCalled()
   })
 })

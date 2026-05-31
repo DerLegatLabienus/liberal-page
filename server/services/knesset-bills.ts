@@ -3,6 +3,7 @@ import path from 'path'
 import type { KnessetBillOverviewItem, TrendingBillEntry } from '../../src/types'
 import { getBillStatusMap } from './bill-status-map'
 import { getCurrentKnesset } from './knesset-config'
+import { CommitteeListRepository } from '../repositories/committee-list-repository'
 
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const TTL_MS = 5 * 60 * 1000
@@ -46,14 +47,16 @@ export function _resetCommitteeMapCache() {
   committeeMapCache = null
 }
 
+const committeeListRepo = new CommitteeListRepository()
+
 async function getCommitteeNameMap(): Promise<Map<number, string>> {
   if (committeeMapCache && Date.now() - committeeMapCache.at < COMMITTEE_MAP_TTL) {
     return committeeMapCache.map
   }
   try {
-    const raw = await readFile(path.join(DATA_DIR, 'knesset-committees-cache.json'), 'utf-8')
-    const data = JSON.parse(raw) as { committees: { committeeId: number; name: string }[] }
-    const map = new Map(data.committees.map((c) => [c.committeeId, c.name]))
+    const committees = await committeeListRepo.get()
+    if (!committees) return new Map()
+    const map = new Map(committees.map((c) => [c.committeeId, c.name]))
     committeeMapCache = { map, at: Date.now() }
     return map
   } catch {

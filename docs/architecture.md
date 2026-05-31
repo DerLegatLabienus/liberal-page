@@ -8,7 +8,7 @@
 | Build/dev server | Vite 5.4 on `http://localhost:5173` |
 | Styling | Tailwind CSS + shadcn-style UI primitives in `src/components/ui/` |
 | Backend | Express 5 + `tsx`, running on `http://localhost:3001` |
-| Data | JSON files in `src/data/` (frontend seed + legacy server store) + Postgres via Neon (entity/cache/config repos) |
+| Data | Postgres via Neon/Docker (entity, tracking, cache, config, feature flags) + `src/data/*.json` for static content only |
 | External data | oknesset.org REST API + Knesset OData API |
 | Summaries | Anthropic SDK, PDF/DOCX text extraction, MD5 cache |
 | Tests | Vitest + Testing Library |
@@ -31,7 +31,7 @@ npm run dev:frontend
 npm run dev:server
 ```
 
-Starting the backend also starts the poller. The poller can update tracked JSON files under `src/data/`.
+Starting the backend also starts the poller. The poller updates Postgres via repositories.
 
 ## Folder Structure
 
@@ -81,17 +81,17 @@ Footer
 ParliamentDrawer
 ```
 
-The parliamentary drawer opens from the header and parliament strip. It has three tabs: bills, committees, and MKs. The drawer is populated by `useParliament()`, which starts from static JSON imports and then refreshes from the Express API.
+The parliamentary drawer opens from the header and parliament strip. It has three tabs: bills, committees, and MKs. The drawer is populated by `useParliament()`, which initialises with empty state and immediately refreshes from the Express API on mount (no static JSON imports for tracked data).
 
 ## Backend API
 
 | Method | Path | Behavior |
 |--------|------|----------|
 | `GET` | `/api/health` | Returns server health and timestamp |
-| `GET` | `/api/parliament/:type` | Reads tracked JSON, attempts fresh external metadata, writes refreshed JSON, returns data |
-| `POST` | `/api/tracking/add` | Parses URL or raw ID, fetches metadata, appends item to tracked JSON |
-| `DELETE` | `/api/tracking/:type/:id` | Removes a tracked item by local numeric `id` |
-| `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result in `summaries-cache.json` |
+| `GET` | `/api/parliament/:type` | Reads tracked entities from DB via `TrackedBills/Committees/MksRepository`, returns data |
+| `POST` | `/api/tracking/add` | Parses URL or raw ID, fetches metadata, upserts entity + tracking row in DB |
+| `DELETE` | `/api/tracking/:type/:id` | Removes a tracking row from DB by entity `id` |
+| `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result via `SummariesRepository` (DB) |
 | `GET` | `/api/feature-flags` | Returns all feature flags as a flat map `Record<string, { enabled, value }>` from the DB |
 
 `type` is one of `bill`, `committee`, or `mk`.
@@ -111,15 +111,18 @@ The UI mentions `gov.il`, but general `gov.il` parsing is not implemented in the
 
 ```text
 src/data/*.json
-  ├─ imported directly by frontend as initial state/static content
-  └─ read and written by Express routes and poller
+  └─ static content only (about, faq, gallery, site, committee-url-mapping, trending-bills)
+     — NOT imported for tracked parliament data
+
+scripts/seed-data/*.json
+  └─ curated baseline loaded via `npm run db:seed` (one-time setup)
 
 frontend actions
   └─ /api/* through Vite proxy
-      └─ server routes update JSON and return typed data
+      └─ server routes read/write Postgres via repositories and return typed data
 ```
 
-The JSON files are the datastore for the routes and poller in their current form. Running the backend, adding/removing tracked items, opening pages that trigger refreshes, or the poller can mutate tracked data files. Entity and cache repositories write to Postgres; routing the live call-sites through those repositories is Phase 2.
+All tracked parliament data, feature flags, knesset config, and summaries cache live in Postgres. The poller updates Postgres directly via repositories. There is no runtime JSON datastore.
 
 ## Poller
 
@@ -131,13 +134,13 @@ The poller:
 - Checks committee sessions and summarizes protocol files when available.
 - Checks MK activity through the Knesset website API (`GetParlamentayActivity`), which returns private bills, plenary votes, and parliamentary questions in the same order the Knesset website displays them. Uses `knesset_site_id` (e.g. 1116) as the MK identifier.
 - Updates `lastPolledAt`.
-- Writes each JSON file only when tracked content changed, though some route refreshes write timestamps independently.
+- All writes go through `BillsRepository`, `CommitteesRepository`, and `MksRepository` (Postgres). There is no JSON file writing.
 
 The header badge is derived from `hasNewData` values. The current implementation does not clear those flags when the drawer opens.
 
 ## DB Module (`server/db/`)
 
-Phase 1 of the JSON → Postgres migration lives here.
+Phase 2 of the JSON → Postgres migration is complete. All routes, poller, and services read/write Postgres.
 
 - **`client.ts`** — driver-selecting factory. Under `NODE_ENV=test` it loads `@electric-sql/pglite` via `createRequire` (so the dev-only dep is never bundled) and returns a `drizzle-orm/pglite` instance. In all other environments it creates a `@neondatabase/serverless` `Pool` from `DATABASE_URL` and returns a `drizzle-orm/neon-serverless` instance.
 - **`migrate.ts`** — runs Drizzle migrations from `server/db/migrations/` on server startup. Idempotent (Drizzle tracks applied migrations in `__drizzle_migrations`). Uses the matching migrator for the active driver (pglite or neon).
