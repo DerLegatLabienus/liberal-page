@@ -8,7 +8,7 @@ vi.mock('../../server/services/bill-status-map', () => ({
 }))
 vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
-import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills, getBillsFlags } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -129,13 +129,3 @@ describe('getTrendingBills (manual)', () => {
   })
 })
 
-describe('getBillsFlags', () => {
-  it('reads flags from feature-flags.json', async () => {
-    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({
-      bills: { trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: false },
-    }) as never)
-    const flags = await getBillsFlags()
-    expect(flags.policyFilterEnabled).toBe(false)
-    expect(flags.trendingAlgorithm).toBe('manual')
-  })
-})

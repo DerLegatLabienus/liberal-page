@@ -9,14 +9,39 @@ describe('FeatureFlagsRepository', () => {
   beforeAll(async () => { await setupTestDb() })
   beforeEach(async () => { await db.delete(featureFlags) })
 
-  it('getBillsFlags() returns defaults when empty', async () => {
-    const flags = await repo.getBillsFlags()
-    expect(flags).toEqual({ trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: false })
+  it('getAll() returns empty map when table is empty', async () => {
+    const flags = await repo.getAll()
+    expect(flags).toEqual({})
   })
 
-  it('round-trips a full flag set', async () => {
-    await repo.setBillsFlags({ trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: true })
-    const flags = await repo.getBillsFlags()
-    expect(flags).toEqual({ trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: true })
+  it('setFlag + getAll round-trips a boolean flag', async () => {
+    await repo.setFlag('policyFilter', true, null)
+    const flags = await repo.getAll()
+    expect(flags).toEqual({ policyFilter: { enabled: true, value: null } })
+  })
+
+  it('setFlag + getAll round-trips a value flag', async () => {
+    await repo.setFlag('trendingAlgorithm', true, 'manual')
+    const flags = await repo.getAll()
+    expect(flags).toEqual({ trendingAlgorithm: { enabled: true, value: 'manual' } })
+  })
+
+  it('setFlag upserts — second call on same name overwrites', async () => {
+    await repo.setFlag('trendingAlgorithm', true, 'manual')
+    await repo.setFlag('trendingAlgorithm', true, 'amendments')
+    const flags = await repo.getAll()
+    expect(flags['trendingAlgorithm']).toEqual({ enabled: true, value: 'amendments' })
+  })
+
+  it('getAll returns multiple flags', async () => {
+    await repo.setFlag('policyFilter', false, null)
+    await repo.setFlag('trendingAlgorithm', true, 'manual')
+    await repo.setFlag('recentRanking', true, 'newest')
+    const flags = await repo.getAll()
+    expect(flags).toEqual({
+      policyFilter: { enabled: false, value: null },
+      trendingAlgorithm: { enabled: true, value: 'manual' },
+      recentRanking: { enabled: true, value: 'newest' },
+    })
   })
 })

@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
-import type { BillsFeatureFlags, KnessetBillOverviewItem, TrendingBillEntry } from '../../src/types'
+import type { KnessetBillOverviewItem, TrendingBillEntry } from '../../src/types'
 import { getBillStatusMap } from './bill-status-map'
 import { getCurrentKnesset } from './knesset-config'
 
@@ -110,11 +110,6 @@ export async function fetchPolicyAlignedBills(limit: number): Promise<KnessetBil
 }
 
 const DATA_DIR = path.join(process.cwd(), 'src/data')
-
-export async function getBillsFlags(): Promise<BillsFeatureFlags> {
-  const raw = await readFile(path.join(DATA_DIR, 'feature-flags.json'), 'utf-8')
-  return (JSON.parse(raw) as { bills: BillsFeatureFlags }).bills
-}
 
 async function fetchBillsByIds(ids: number[]): Promise<Map<number, KnessetBillOverviewItem>> {
   if (ids.length === 0) return new Map()

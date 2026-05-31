@@ -178,8 +178,5 @@ export interface TrendingBillEntry {
   reason: string
 }
 
-export interface BillsFeatureFlags {
-  trendingAlgorithm: 'manual' | 'amendments' | 'sponsorship'
-  recentRanking: 'newest' | 'progress'
-  policyFilterEnabled: boolean
-}
+export interface FeatureFlag { enabled: boolean; value: string | null }
+export type FeatureFlags = Record<string, FeatureFlag>

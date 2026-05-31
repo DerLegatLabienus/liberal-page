@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import type { BillSearchResult } from '../../src/types'
 import { getCurrentKnesset } from '../services/knesset-config'
-import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, getBillsFlags } from '../services/knesset-bills'
+import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills } from '../services/knesset-bills'
+import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { UsersRepository } from '../repositories/users-repository'
 import { BillsRepository } from '../repositories/bills-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
@@ -80,8 +81,8 @@ router.get('/trending', async (_req, res) => {
 
 router.get('/policy-aligned', async (req, res) => {
   try {
-    const flags = await getBillsFlags()
-    if (!flags.policyFilterEnabled) return res.status(404).json({ error: 'Policy filter disabled' })
+    const flags = await new FeatureFlagsRepository().getAll()
+    if (!(flags['policyFilter']?.enabled)) return res.status(404).json({ error: 'Policy filter disabled' })
     res.json(await fetchPolicyAlignedBills(parseLimit(req.query.limit)))
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })

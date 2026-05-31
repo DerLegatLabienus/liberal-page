@@ -13,7 +13,7 @@ import { BillsRepository } from '../server/repositories/bills-repository'
 import { CommitteesRepository } from '../server/repositories/committees-repository'
 import { MksRepository } from '../server/repositories/mks-repository'
 import { MkAnnotationsRepository } from '../server/repositories/mk-annotations-repository'
-import type { Bill, BillsFeatureFlags, Committee, Mk } from '../src/types'
+import type { Bill, Committee, Mk } from '../src/types'
 
 const DATA = path.join(process.cwd(), 'src/data')
 const readJson = async <T>(f: string): Promise<T> => JSON.parse(await readFile(path.join(DATA, f), 'utf-8'))
@@ -38,8 +38,11 @@ async function main() {
   const currentKnesset = cfgRaw.currentKnesset
   await new KnessetConfigRepository().set(currentKnesset)
 
-  const flagsRaw = await readJson<{ bills: BillsFeatureFlags }>('feature-flags.json')
-  await new FeatureFlagsRepository().setBillsFlags(flagsRaw.bills)
+  const flagsRaw = await readJson<{ bills: { trendingAlgorithm: string; recentRanking: string; policyFilterEnabled: boolean } }>('feature-flags.json')
+  const ff = new FeatureFlagsRepository()
+  await ff.setFlag('trendingAlgorithm', true, flagsRaw.bills.trendingAlgorithm, 'Trending tab ranking source')
+  await ff.setFlag('recentRanking', true, flagsRaw.bills.recentRanking, 'Recent tab ordering')
+  await ff.setFlag('policyFilter', flagsRaw.bills.policyFilterEnabled, null, 'Policy-aligned tab toggle')
 
   const bills = await readJson<Bill[]>('bills.json')
   const billsRepo = new BillsRepository()

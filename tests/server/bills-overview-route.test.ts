@@ -2,16 +2,23 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 
+const mockGetAll = vi.fn().mockResolvedValue({})
+
 vi.mock('../../server/services/knesset-bills', () => ({
   fetchRecentBills: vi.fn(),
   fetchPolicyAlignedBills: vi.fn(),
   getTrendingBills: vi.fn(),
-  getBillsFlags: vi.fn(),
+}))
+
+vi.mock('../../server/repositories/feature-flags-repository', () => ({
+  FeatureFlagsRepository: vi.fn().mockImplementation(() => ({
+    getAll: mockGetAll,
+  })),
 }))
 
 import billsRouter from '../../server/routes/bills'
 import {
-  fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, getBillsFlags,
+  fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills,
 } from '../../server/services/knesset-bills'
 
 const app = express()
@@ -52,15 +59,17 @@ describe('GET /api/bills/trending', () => {
 
 describe('GET /api/bills/policy-aligned', () => {
   beforeEach(() => vi.clearAllMocks())
+
   it('returns policy-aligned bills when enabled', async () => {
-    vi.mocked(getBillsFlags).mockResolvedValue({ trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: true })
+    mockGetAll.mockResolvedValueOnce({ policyFilter: { enabled: true, value: null } })
     vi.mocked(fetchPolicyAlignedBills).mockResolvedValue([ITEM])
     const res = await request(app).get('/api/bills/policy-aligned')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
   })
-  it('returns 404 when policyFilterEnabled is false', async () => {
-    vi.mocked(getBillsFlags).mockResolvedValue({ trendingAlgorithm: 'manual', recentRanking: 'newest', policyFilterEnabled: false })
+
+  it('returns 404 when policyFilter is disabled', async () => {
+    mockGetAll.mockResolvedValueOnce({ policyFilter: { enabled: false, value: null } })
     const res = await request(app).get('/api/bills/policy-aligned')
     expect(res.status).toBe(404)
   })
