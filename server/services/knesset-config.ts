@@ -1,6 +1,8 @@
 import { KnessetConfigRepository } from '../repositories/knesset-config-repository'
 import { MkListRepository } from '../repositories/mk-list-repository'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+import { MksRepository } from '../repositories/mks-repository'
+import { getMkBySiteId } from './knesset-api'
 
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 
@@ -32,6 +34,17 @@ export async function runTransition(newKnesset: number): Promise<void> {
   // Invalidate the member/committee list caches so they are re-fetched
   await new MkListRepository().clear()
   await new CommitteeListRepository().clear()
+
+  // Re-stamp mk_knesset_terms for MKs still sitting in the new Knesset, so they
+  // stay current (otherwise every MK derives inactive and is dropped from polling).
+  const mksRepo = new MksRepository()
+  for (const mk of await mksRepo.getAllBasic()) {
+    if (!mk.knessetSiteId) continue
+    try {
+      const identity = await getMkBySiteId(parseInt(mk.knessetSiteId, 10))
+      if (identity.isCurrent) await mksRepo.addTerm(mk.id, newKnesset, identity.faction ?? '')
+    } catch { /* per-MK fetch failure is non-critical */ }
+  }
 }
 
 export async function detectKnessetTransition(): Promise<boolean> {

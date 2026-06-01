@@ -116,6 +116,17 @@ export class MksRepository {
     return result
   }
 
+  async getAllBasic(): Promise<{ id: number; knessetSiteId: string | null }[]> {
+    return db.select({ id: mks.id, knessetSiteId: mks.knessetSiteId }).from(mks)
+  }
+
+  async addTerm(mkId: number, knessetNumber: number, faction: string): Promise<void> {
+    await db
+      .insert(mkKnessetTerms)
+      .values({ mkId, knessetNumber, faction })
+      .onConflictDoNothing({ target: [mkKnessetTerms.mkId, mkKnessetTerms.knessetNumber] })
+  }
+
   /**
    * Targeted update for the poller: replaces only the activity rows and
    * updates hasNewData / lastPolledAt. Leaves terms, roles, and votes untouched.
