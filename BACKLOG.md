@@ -182,6 +182,10 @@ it silently breaks MK currency when it does fire.
 
 ## 14. Entity Dedup on Tracking Add (Priority: Low)
 
+✅ resolved (commit 94bdf0f) — app-level dedup via `getAll().find()` on natural key in
+`tracking.ts /add` for all three types; `bills.ts /track` now stores `oknessetId:
+String(billId)` instead of empty string. 3 new dedup tests + 1 oknesset_id assertion.
+
 Found in the Phase 2 final review (pre-existing behavior, carried through the cutover —
 **not** a Phase-2 regression). `server/routes/tracking.ts` `POST /add` upserts the
 entity unconditionally, and the entity-repo `upsert`s are plain `INSERT`s (no unique
