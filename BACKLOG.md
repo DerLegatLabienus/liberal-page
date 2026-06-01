@@ -176,6 +176,10 @@ MK's identity and add an `mk_knesset_terms` row for `newKnesset` (a targeted
 which the inactive-filter would skip). Rare event (manual trigger), so non-urgent, but
 it silently breaks MK currency when it does fire.
 
+### ✅ Re-stamp MK Terms on Transition — 2026-06-01
+
+`MksRepository.addTerm(mkId, knessetNumber, faction)` and `getAllBasic()` added. `runTransition` now iterates all tracked MKs, calls `getMkBySiteId` for each, and inserts a term for the new Knesset if `isCurrent`. Per-MK fetch failures are swallowed so a single lookup error can't abort the whole transition. Covered by `tests/server/mks-repository-addterm.test.ts` (2 tests) and a new describe block in `tests/server/knesset-config.test.ts`.
+
 ## 14. Entity Dedup on Tracking Add (Priority: Low)
 
 Found in the Phase 2 final review (pre-existing behavior, carried through the cutover —
