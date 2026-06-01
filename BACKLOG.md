@@ -193,6 +193,50 @@ three types. **Minor cleanup also noted:** `CommitteeCard`'s `trackedMks` prop i
 currently unused (the attending-MK-name lookup depended on `attendingSiteIds`, which
 the enricher always returns empty) — remove the dead prop or wire the feature.
 
+## 15. "Meet Us" — Scheduled Meetings with Cell Members (Priority: Low)
+
+A **"Meet Us"** section on the home page that lets a **registered** user book an
+automatic meeting with people from the political cell. Meetings are conducted
+externally — an auto-generated **Zoom** link (via Calendly) or an **in-person**
+location — the app never hosts them.
+
+**Requirements (as described):**
+- New home-page section (Hebrew-first, rendered alongside the other home sections).
+- Scheduling via **Calendly**: Calendly's group/round-robin "teams" define how the
+  cell members (hosts) are selected; the booking link is **brokered through the
+  backend** (the backend issues/guards the scheduling link rather than linking to
+  Calendly directly).
+- **Registered users only** — depends on **item 3 (User Accounts & Alerts)**, which
+  provides login + per-user identity.
+- **One active booking per user** — a user cannot book again until their current
+  meeting is over or cancelled.
+- **No meeting data stored** in our backend; meetings happen on Zoom / in person.
+
+**Open tensions to resolve at design time (do NOT skip these):**
+1. **"No data stored" vs. "one active booking per user" — these conflict.**
+   Enforcing one active booking requires *some* per-user state. Reconcile by storing
+   only a **minimal, opaque lock** (e.g. `user_id` → an active-booking reference +
+   the meeting's scheduled end time), explicitly **not** meeting content (no
+   attendees, topic, notes, location). Decide precisely what "no data" excludes.
+   Alternative: hold no state and query the Calendly API for the user's existing
+   scheduled events at booking time.
+2. **Calendly data residency.** Calendly itself stores the booking (name, email,
+   time) on its side. Confirm "no data stored" means *our* backend only.
+3. **Booking lifecycle / releasing the lock.** Calendly does not emit a "completed"
+   event, so the backend needs Calendly **webhooks** (`invitee.created` to set the
+   lock, `invitee.canceled` to clear it) plus an **expiry by the scheduled end time**
+   to release the lock after the meeting passes.
+4. **Host selection.** Define the host pool and rotation (Calendly round-robin /
+   collective / managed-event team).
+5. **Backend brokering flow.** Likely: logged-in user clicks "Meet Us" → backend
+   checks no active lock → backend creates a single-use Calendly scheduling link
+   (Calendly API) → embed/redirect → on `invitee.created` webhook set the lock with
+   the end time → on `invitee.canceled`/expiry clear it. No meeting content persisted.
+
+**Depends on:** item 3 (User Accounts) for the auth gate and user identity. The
+DB + per-user model (item 2, shipped) already provides a place for the minimal lock
+(a new `meeting_locks`-style table keyed by `user_id`).
+
 ---
 
 ## Completed
