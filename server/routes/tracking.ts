@@ -40,7 +40,9 @@ router.post('/add', async (req, res) => {
     if (type === 'bill') {
       const data = await oknesset.getBill(id)
       const userId = await users.getSharedUserId()
-      const billId = await billsRepo.upsert({
+      const k = getCurrentKnesset()
+      const existingBill = (await billsRepo.getAll(k)).find((b) => b.oknesset_id === id)
+      const billId = existingBill?.id ?? await billsRepo.upsert({
         oknessetId: id,
         number: String(data.law_id ?? ''),
         title: data.title,
@@ -49,7 +51,7 @@ router.post('/add', async (req, res) => {
         sourceUrl: url ?? '',
         documentUrl: null,
         knessetUrl: null,
-        knessetNumber: getCurrentKnesset(),
+        knessetNumber: k,
         hasNewData: false,
         lastPolledAt: null,
       })
@@ -60,7 +62,8 @@ router.post('/add', async (req, res) => {
     if (type === 'committee') {
       const data = await oknesset.getCommittee(id)
       const userId = await users.getSharedUserId()
-      const committeeId = await committeesRepo.upsert({
+      const existingCommittee = (await committeesRepo.getAll()).find((c) => c.oknesset_id === id)
+      const committeeId = existingCommittee?.id ?? await committeesRepo.upsert({
         oknesset_id: id,
         name: data.name,
         chair: data.chairperson ?? '',
@@ -123,7 +126,12 @@ router.post('/add', async (req, res) => {
       }
 
       const userId = await users.getSharedUserId()
-      const mkId = await mksRepo.upsert(mkInput)
+      const allMks = await mksRepo.getAll(getCurrentKnesset())
+      const existingMk = allMks.find((m) =>
+        (mkInput.knesset_site_id && m.knesset_site_id === mkInput.knesset_site_id) ||
+        m.oknesset_id === mkInput.oknesset_id
+      )
+      const mkId = existingMk?.id ?? await mksRepo.upsert(mkInput)
       await trackedMks.track(userId, mkId)
       return res.json({ ok: true })
     }

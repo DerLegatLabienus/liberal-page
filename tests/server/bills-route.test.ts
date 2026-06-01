@@ -89,6 +89,16 @@ describe('POST /api/bills/track', () => {
     expect(tracked[0].position).toBe('עוקבים')
   })
 
+  it('stores a non-empty oknesset_id equal to String(billId) when tracking via /track', async () => {
+    await request(app).post('/api/bills/track').send({
+      billId: 1038990,
+      name: 'הצעת חוק חופש העיסוק',
+    })
+    const allBills = await db.select().from(bills)
+    expect(allBills).toHaveLength(1)
+    expect(allBills[0].oknessetId).toBe('1038990')
+  })
+
   it('returns duplicate:true and does not create a second tracked_bills row', async () => {
     await request(app).post('/api/bills/track').send({
       billId: 1038990,

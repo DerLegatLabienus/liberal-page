@@ -204,6 +204,47 @@ describe('POST /api/tracking/add + DELETE /api/tracking/:type/:id', () => {
     })
   })
 
+  describe('dedup: re-adding the same URL twice yields exactly one entity + one tracking row', () => {
+    it('bill: two POST /add calls with same id → 1 bills row, 1 tracked row', async () => {
+      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/bill/12345' })
+      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/bill/12345' })
+      expect(res.status).toBe(200)
+      expect(res.body.ok).toBe(true)
+
+      const billRows = await db.select().from(bills)
+      expect(billRows).toHaveLength(1)
+
+      const trackedRows = await db.select().from(trackedBills)
+      expect(trackedRows).toHaveLength(1)
+    })
+
+    it('committee: two POST /add calls with same id → 1 committees row, 1 tracked row', async () => {
+      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/committee/67890' })
+      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/committee/67890' })
+      expect(res.status).toBe(200)
+      expect(res.body.ok).toBe(true)
+
+      const committeeRows = await db.select().from(committees)
+      expect(committeeRows).toHaveLength(1)
+
+      const trackedRows = await db.select().from(trackedCommittees)
+      expect(trackedRows).toHaveLength(1)
+    })
+
+    it('mk: two POST /add calls with same id → 1 mks row, 1 tracked row', async () => {
+      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/mk/1116' })
+      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/mk/1116' })
+      expect(res.status).toBe(200)
+      expect(res.body.ok).toBe(true)
+
+      const mkRows = await db.select().from(mks)
+      expect(mkRows).toHaveLength(1)
+
+      const trackedRows = await db.select().from(trackedMks)
+      expect(trackedRows).toHaveLength(1)
+    })
+  })
+
   describe('error cases', () => {
     it('POST /add returns 400 for unsupported URL with no rawId', async () => {
       const res = await request(app)

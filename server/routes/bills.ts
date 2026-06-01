@@ -48,7 +48,7 @@ router.post('/track', async (req, res) => {
     id = existing.id
   } else {
     id = await billsRepo.upsert({
-      oknessetId: '', number: String(billId), title: name.trim(), status: 'בוועדה',
+      oknessetId: String(billId), number: String(billId), title: name.trim(), status: 'בוועדה',
       committee: '', sourceUrl: knessetUrl ?? '', documentUrl: null, knessetUrl: knessetUrl ?? null,
       knessetNumber: k, hasNewData: false, lastPolledAt: null,
     })
