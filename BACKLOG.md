@@ -24,15 +24,18 @@ in each route file — swap those functions for repository calls.
 Member login, personalized tracking lists, email alerts on bill status changes.
 Requires database (item 2 above) and an email service.
 
-## 4. API Layer — Centralize All API Calls per Module (Priority: Medium)
+### ✅ API Layer — Centralized API Access (frontend + backend) — 2026-06-02
 
-All API calls should go through a dedicated API layer inside each module.
+**Frontend:** all calls go through `src/lib/api-client.ts` (single base URL, headers, error
+handling); no raw `fetch`/`axios` in components or hooks. (Implemented as one shared
+client rather than per-module `api.ts` files — same goal.)
 
-**Requirements:**
-- Each feature module has its own `api.ts` file that owns all fetch calls for that domain
-- Components and hooks import from the API layer only — no raw `fetch`/`axios` calls in components
-- The API layer is the single place to set base URLs, headers, error handling, and response shaping
-- Backend route files follow the same pattern: routes call services only, no direct Knesset API calls in handlers
+**Backend:** `server/services/odata.ts` (`odataGet` / `odataGetAllPages`) is the single
+owner of the Knesset OData base URL, headers, error handling, and parsing. Route handlers
+no longer call external APIs directly — bill search → `knesset-bills.searchBills`,
+committee `/info` → `knesset-committees.fetchCommitteeDetail`; all 8 former `ODATA_BASE`
+sites route through the helper. Spec/plan:
+`docs/superpowers/specs/2026-06-02-backend-odata-centralization-design.md`.
 
 ### ✅ Closed Committees — Auto-Detect and Mark as Historical — 2026-06-02
 

@@ -108,6 +108,15 @@ Supported URL parsing currently includes:
 
 The UI mentions `gov.il`, but general `gov.il` parsing is not implemented in the current parser.
 
+## OData Access
+
+All Knesset OData calls go through `server/services/odata.ts` — `odataGet` (single page)
+and `odataGetAllPages` (follows `odata.nextLink`). It is the single owner of the OData
+base URL, default headers, error handling, and response parsing; no other module
+references the base URL. Route handlers never call OData directly — they delegate to
+services (e.g. `knesset-bills.searchBills`, `knesset-committees.fetchCommitteeDetail`),
+keeping handlers to validation + presentation.
+
 ## Data Flow
 
 ```text
