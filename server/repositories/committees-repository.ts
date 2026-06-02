@@ -1,7 +1,8 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, inArray } from 'drizzle-orm'
 import { db } from '../db/client'
 import { committees, committeeSessions } from '../db/schema'
 import type { Committee, CommitteeSession } from '../../src/types'
+import { computeStatusChanges, MIN_ACTIVE_COMMITTEES } from '../services/committee-status'
 
 export interface CommitteeInput {
   oknesset_id: string
@@ -74,6 +75,36 @@ export class CommitteesRepository {
     return out
   }
 
+  /** Targeted update of the `inactive` flag for the given oknesset_ids. No-op on empty input. */
+  async setInactiveByIds(oknessetIds: string[], inactive: boolean): Promise<number> {
+    if (oknessetIds.length === 0) return 0
+    const updated = await db
+      .update(committees)
+      .set({ inactive })
+      .where(inArray(committees.oknessetId, oknessetIds))
+      .returning({ id: committees.id })
+    return updated.length
+  }
+
+  /**
+   * Reconcile tracked committees' inactive flags against the fresh active id list.
+   * Closure/reactivation decisions are made by `computeStatusChanges`, which applies
+   * the safety floor (skips everything if the active list is implausibly short).
+   */
+  async reconcileActiveStatus(activeIds: number[]): Promise<{ deactivated: number; reactivated: number }> {
+    const rows = await db
+      .select({ oknessetId: committees.oknessetId, inactive: committees.inactive })
+      .from(committees)
+    const { deactivate, reactivate } = computeStatusChanges(
+      rows,
+      new Set(activeIds),
+      MIN_ACTIVE_COMMITTEES,
+    )
+    const deactivated = await this.setInactiveByIds(deactivate, true)
+    const reactivated = await this.setInactiveByIds(reactivate, false)
+    return { deactivated, reactivated }
+  }
+
   private toCommittee(
     row: typeof committees.$inferSelect,
     sessions: (typeof committeeSessions.$inferSelect)[],
@@ -89,6 +120,7 @@ export class CommitteesRepository {
       sourceUrl: row.sourceUrl,
       hasNewData: row.hasNewData,
       lastPolledAt: row.lastPolledAt ? row.lastPolledAt.toISOString() : null,
+      inactive: row.inactive,
       recentSessions: sessions.map((s) => ({
         sessionId: s.sessionId,
         date: s.date.toISOString(),

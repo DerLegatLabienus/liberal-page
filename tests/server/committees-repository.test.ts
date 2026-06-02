@@ -33,4 +33,47 @@ describe('CommitteesRepository', () => {
     const c = await repo.getById(id)
     expect(c?.recentSessions).toHaveLength(0)
   })
+
+  it('new committees default to active (inactive=false)', async () => {
+    const id = await repo.upsert({ ...COMMITTEE, oknesset_id: '500' })
+    const c = await repo.getById(id)
+    expect(c?.inactive).toBe(false)
+  })
+
+  it('upsert does not reset an already-inactive flag', async () => {
+    const id = await repo.upsert({ ...COMMITTEE, oknesset_id: '500' })
+    await repo.setInactiveByIds(['500'], true)
+    // A poller-style re-upsert of session data must not revive a closed committee.
+    await repo.upsert({ ...COMMITTEE, oknesset_id: '500', hasNewData: true }, id)
+    const c = await repo.getById(id)
+    expect(c?.inactive).toBe(true)
+  })
+
+  // A trustworthy active list: padded above the safety floor (MIN_ACTIVE_COMMITTEES).
+  const activeFloor = Array.from({ length: 10 }, (_, i) => 9000 + i)
+
+  it('reconcileActiveStatus marks an absent committee inactive', async () => {
+    await repo.upsert({ ...COMMITTEE, oknesset_id: '500' })
+    const res = await repo.reconcileActiveStatus(activeFloor) // 500 not in active list
+    expect(res.deactivated).toBe(1)
+    const all = await repo.getAll()
+    expect(all.find((c) => c.oknesset_id === '500')?.inactive).toBe(true)
+  })
+
+  it('reconcileActiveStatus reactivates a committee whose id reappears', async () => {
+    await repo.upsert({ ...COMMITTEE, oknesset_id: '500' })
+    await repo.setInactiveByIds(['500'], true)
+    const res = await repo.reconcileActiveStatus([...activeFloor, 500])
+    expect(res.reactivated).toBe(1)
+    const all = await repo.getAll()
+    expect(all.find((c) => c.oknesset_id === '500')?.inactive).toBe(false)
+  })
+
+  it('reconcileActiveStatus changes nothing when the active list is below the safety floor', async () => {
+    await repo.upsert({ ...COMMITTEE, oknesset_id: '500' })
+    const res = await repo.reconcileActiveStatus([1, 2, 3]) // far below floor
+    expect(res).toEqual({ deactivated: 0, reactivated: 0 })
+    const all = await repo.getAll()
+    expect(all.find((c) => c.oknesset_id === '500')?.inactive).toBe(false)
+  })
 })

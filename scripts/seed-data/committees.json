@@ -202,5 +202,36 @@
         "attendingSiteIds": []
       }
     ]
+  },
+  {
+    "id": 7,
+    "oknesset_id": "5001",
+    "name": "הוועדה המיוחדת לדיון בנושא יוקר המחיה (פורקה)",
+    "chair": "",
+    "lastSessionDate": "2025-11-12T10:00:00",
+    "lastSessionSummary": null,
+    "lastSessionDocumentUrl": null,
+    "sourceUrl": "https://main.knesset.gov.il/apps/committees/2299",
+    "hasNewData": false,
+    "lastPolledAt": null,
+    "inactive": true,
+    "recentSessions": [
+      {
+        "sessionId": 2240001,
+        "date": "2025-11-12T10:00:00",
+        "knessetNum": 25,
+        "title": "סיכום פעילות הוועדה טרם פירוקה",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2240001",
+        "attendingSiteIds": []
+      },
+      {
+        "sessionId": 2239500,
+        "date": "2025-10-28T09:30:00",
+        "knessetNum": 25,
+        "title": "דיון בהשלכות יוקר המחיה על משקי הבית",
+        "sessionUrl": "https://main.knesset.gov.il/Activity/committees/Pages/AllCommitteesAgenda.aspx?Tab=3&ItemID=2239500",
+        "attendingSiteIds": []
+      }
+    ]
   }
 ]

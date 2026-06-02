@@ -36,6 +36,9 @@ function mockOdata(value: unknown[], nextLink?: string) {
 }
 
 describe('GET /api/committees/list', () => {
+  // The route refreshes the cache and reconciles committee closure status against
+  // the DB, so the schema must exist even though these tests focus on the list output.
+  beforeAll(async () => { await setupTestDb() })
   beforeEach(() => vi.mocked(fetch).mockReset())
   it('returns 200 with committee list using local mapping for apps URL', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockOdata(ODATA_COMMITTEES))

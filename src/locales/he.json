@@ -114,7 +114,8 @@
     "remove": "הסר",
     "mk_unknown": "ח\"כ לא מוגדר",
     "chair_prefix": "יו\"ר:",
-    "last_session_prefix": "ישיבה אחרונה:"
+    "last_session_prefix": "ישיבה אחרונה:",
+    "closed": "סגורה"
   },
   "showcase": {
     "heading": "ח\"כים ליברלים בליכוד",

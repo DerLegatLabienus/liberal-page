@@ -11,6 +11,7 @@ export const committees = pgTable('committees', {
   sourceUrl: text('source_url').notNull(),
   hasNewData: boolean('has_new_data').notNull().default(false),
   lastPolledAt: timestamp('last_polled_at', { withTimezone: true }),
+  inactive: boolean('inactive').notNull().default(false),
 })
 
 export const committeeSessions = pgTable('committee_sessions', {
