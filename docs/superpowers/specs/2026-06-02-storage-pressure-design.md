@@ -142,6 +142,27 @@ Not counted toward cycle success/backoff (consistent with the committee-list ref
 **Route (supertest):** existing `tracking` add/remove tests stay green (untrack still just
 removes the tracking row; the entity is reclaimed later by the poller sweep).
 
+## Operational caveat — verify before activating
+
+The feature is **off by default** (no-op unless `STORAGE_LIMIT_MB` is set), so shipping it
+changes nothing until that env var is set in the deploy environment — activation is a
+deliberate deploy step.
+
+**Before setting `STORAGE_LIMIT_MB` in production, confirm `pg_database_size` actually drops
+after deletes on the target DB.** Plain `DELETE` creates dead tuples; ordinary
+(auto)VACUUM marks them reusable but does **not** shrink the on-disk size that
+`pg_database_size` reports — only `VACUUM FULL`/repack does. If the metric is effectively
+monotonic between full vacuums (verify on Neon, whose storage architecture is non-standard),
+then while over budget every cycle will shed another batch until **all** orphans are gone —
+degrading "shed the minimum" into a gradual full orphan-GC. This is still safe (only
+untracked garbage is ever deleted; tracked data is never touched), but if that behavior is
+undesirable, switch the size signal to one that reflects deletes immediately (row count or a
+content-byte estimate) — accepting it is an estimate rather than real bytes.
+
+**Known minor leak:** `deleteBySourceUrl(lastSessionDocumentUrl)` reclaims only the orphan
+committee's *latest* session summary; summaries from older sessions of the same committee
+are left in `summaries_cache`.
+
 ## Out of scope (revisit only if orphan purging proves insufficient)
 
 - Evicting genuinely-tracked items (LRU, discarded placeholders, error toast).
