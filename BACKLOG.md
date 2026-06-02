@@ -298,6 +298,43 @@ location — the app never hosts them.
 DB + per-user model (item 2, shipped) already provides a place for the minimal lock
 (a new `meeting_locks`-style table keyed by `user_id`).
 
+## 16. Expose Join Analytics — Admin-Panel Read View (Priority: Low)
+
+The Join-section click-through analytics (see ✅ Join Analytics) are collected and
+stored in the `join_analytics` table but **deliberately not exposed** by any endpoint.
+When an admin panel exists, surface this data behind it.
+
+**Requirements:**
+- A read endpoint (e.g. `GET /api/analytics/join`) returning the lifetime row plus the
+  ≤365-day daily series with per-combination breakdowns — gated behind admin auth.
+- An admin-panel view rendering the daily trend and the all-time total/breakdown.
+- Until the admin panel and its auth gate exist, the data stays DB-only (query
+  `join_analytics` directly via SQL).
+
+**Depends on:** an admin panel + auth (related to item 3, User Accounts).
+
+## 17. Site-Wide Product Analytics (Priority: Low — Advanced)
+
+A general analytics layer covering **every** feature on the site (section views,
+combobox usage, tracking add/remove, drawer opens, language toggles, gallery
+interactions, etc.), not just the Join click-through.
+
+This is a large, cross-cutting subsystem and should only be taken on when the product
+genuinely needs per-feature engagement data. Considerations to brainstorm at that time:
+
+- **Event model:** a generic `events` table (or time-bucketed aggregates like the
+  join-analytics design) vs. a third-party analytics SaaS (Plausible / PostHog /
+  Umami — privacy-friendly, self-hostable options exist).
+- **Budget:** raw per-event storage grows fast; favor daily/weekly roll-ups or a
+  hosted free tier. Reuse the bucketed single-table pattern from Join Analytics where
+  possible.
+- **Privacy:** no PII; aggregate/anonymous only, consistent with the site's stance.
+- **Separation:** keep all analytics in dedicated repos/tables, isolated from business
+  logic (as established by the Join Analytics design).
+
+**Notes:** Treat as a someday/maybe until there's a concrete need to measure specific
+features. Not a near-term item.
+
 ---
 
 ## Completed
