@@ -9,6 +9,7 @@ import { detectKnessetTransition, loadConfig } from './services/knesset-config'
 import billsRouter from './routes/bills'
 import committeesRouter from './routes/committees'
 import featureFlagsRouter from './routes/feature-flags'
+import analyticsRouter from './routes/analytics'
 import { startPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
 
@@ -39,6 +40,7 @@ app.use('/api/knesset', knessetRouter)
 app.use('/api/bills', billsRouter)
 app.use('/api/committees', committeesRouter)
 app.use('/api/feature-flags', featureFlagsRouter)
+app.use('/api/analytics', analyticsRouter)
 app.use('/api/summarize', summarizeRouter)
 
 app.get('/api/health', (_req, res) => {

@@ -4,6 +4,7 @@ import { ExternalLink, MessageCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/api-client'
 
 type MembershipStatus = 'new' | 'renewal' | 'existing'
 type JoinMode = 'individual' | 'couple'
@@ -115,6 +116,10 @@ export default function JoinSelector() {
               href={selectedUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {
+                // Fire-and-forget click-through analytics; never block opening the form.
+                if (status && mode) void api.analytics.joinClick(status, mode).catch(() => {})
+              }}
               className={cn(
                 buttonVariants({ size: 'lg' }),
                 'h-11 flex-1 gap-2 bg-blue-700 text-white hover:bg-blue-800'

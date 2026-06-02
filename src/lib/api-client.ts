@@ -60,4 +60,12 @@ export const api = {
   featureFlags: {
     get: () => apiFetch<FeatureFlags>('/feature-flags'),
   },
+  analytics: {
+    // Fire-and-forget Join click-through. Callers should not await/block on this.
+    joinClick: (status: string, mode: string) =>
+      apiFetch<{ ok: boolean }>('/analytics/join', {
+        method: 'POST',
+        body: JSON.stringify({ status, mode }),
+      }),
+  },
 }

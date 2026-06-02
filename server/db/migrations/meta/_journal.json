@@ -50,6 +50,13 @@
       "when": 1780376659865,
       "tag": "0006_fast_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780381354987,
+      "tag": "0007_uneven_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
