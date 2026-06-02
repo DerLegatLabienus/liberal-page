@@ -90,73 +90,19 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 - The cache is persisted between server restarts
 - Depends on: item 2 (database) for long-term cache storage
 
-## 10. Storage Pressure — Graceful Eviction of Stale Tracked Items (Priority: Medium)
+### ✅ Storage Pressure — Purge Orphaned (Untracked) Entities — 2026-06-03
 
-When the Postgres database (Render free tier or equivalent) approaches its storage limit,
-adding new tracked items should evict the least-valuable existing rows rather than silently
-failing or crashing. Users whose items are evicted should see a clear placeholder, not a
-broken UI.
-
-**Design — usage-stats columns:**
-Add lightweight staleness signals to each tracked entity table (bills, committees, MKs):
-- `last_accessed_at` — updated on every read
-- `access_count` — incremented on every read
-- `tracked_by_count` — number of distinct users tracking this item
-- `created_at` — already present
-
-A staleness score (e.g. time-decay-weighted access count) ranks candidates for eviction.
-Lowest-scoring rows are removed first.
-
-**Eviction rules:**
-- Never remove a row that has referential dependents (e.g. a bill referenced by a cached
-  protocol summary in `summaries_cache`)
-- Remove the minimum number of rows needed to restore the configured slack
-- Evicted rows are written to an `eviction_log` table (ring buffer, capped at 50 entries by
-  default, configurable via `EVICTION_LOG_SIZE`) preserving name/title, type, and original ID
-
-**Slack budget:** `STORAGE_SLACK_MB` env var (default `2`). `storageManager.ensureSlack()` is
-called by repositories before every insert that could grow the DB.
-
-**UX — discarded placeholder:**
-If a tracked item's ID is in `eviction_log` but missing from its entity table, the frontend
-renders a "Discarded" card showing:
-- Item name/title (from eviction log)
-- Type (bill / committee / MK) and original Knesset ID
-- "Re-add" button that re-fetches and re-tracks the item
-- Muted label: "Removed due to storage limits"
-
-**Graceful failure path:**
-If eviction itself fails or the insert still fails afterward, the backend returns a structured
-error. The frontend shows an error toast: "Could not save — storage is full. Try removing an
-item you no longer need."
-
-**Requirements:**
-- `STORAGE_SLACK_MB` and `EVICTION_LOG_SIZE` env vars in `.env.example`
-- Usage-stat columns added to entity tables via a new Drizzle migration
-- `server/services/storage-manager.ts` — measures current DB size, scores rows, runs eviction
-- Repositories call `storageManager.ensureSlack()` before entity inserts
-- `eviction_log` Drizzle schema + `EvictionLogRepository`
-- "Discarded" card variant for BillCard, CommitteeCard, MkCard
-- Error toast via existing notification system
-
-**Notes:**
-- Revisit eviction policy and budget when migrating to a paid DB tier
-
-### ✅ CommitteeCard — Recent Sessions with Links — 2026-05-25
-
-CommitteeCard shows up to 5 recent sessions from Knesset OData. Most recent is extended (title, date, AI summary, liberal MK badges with names). Up to 3 additional compact rows. Links use canonical OData SessionUrl.
-
-### ✅ Poller — Backoff on Failure — 2026-05-25
-
-Exponential backoff on total poll failure: starts at 1 min, doubles each cycle, caps at 10 min. Successful cycle resets to normal interval (POLL_INTERVAL_MS, default 6 h).
-
-### ✅ Shareable Language Links — `?lang=en` URL param — 2026-05-25
-
-`detectInitialLanguage()` reads `?lang=` on init and persists to localStorage. Language toggle updates URL via `history.replaceState`. Tested in `tests/unit/detectInitialLanguage.test.ts` and `tests/components/Header.test.tsx`.
-
-### ✅ MK Card — Submitted Bills and Parliamentary Queries — 2026-05-18
-
-Activity feed in `MkCard` displays `bill_initiated` (📋) and `question` (❓) items with dates and direct links to the official Knesset record. Data is fetched via the Knesset scraper service on the backend and stored in `mks.json`.
+`untrack` only removes the tracking row, leaving the entity + children as orphans. On each
+poll cycle, when `pg_database_size` exceeds `STORAGE_LIMIT_MB − STORAGE_SLACK_MB` (opt-in;
+no-op if `STORAGE_LIMIT_MB` unset), the poller deletes up to `ORPHAN_PURGE_BATCH` (default 5)
+of the **stalest orphan entities** — bills/committees/MKs tracked by no user (anti-join on
+the tracking tables, multi-user safe) — plus their children and an orphaned committee's
+session summary, **stalest first** (oldest `lastPolledAt`). Sheds the minimum per cycle so
+already-extracted data is preserved; converges across cycles. API list caches are never
+touched; each deletion is logged to the server console. No schema change. Scoped down from
+the original LRU/eviction-log/discarded-card/toast sketch — if orphan purging proves
+insufficient we will revisit. `server/services/storage-manager.ts`,
+`server/db/size.ts`; spec `docs/superpowers/specs/2026-06-02-storage-pressure-design.md`.
 
 ## 10. Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms) (Priority: Medium)
 

@@ -1,6 +1,6 @@
-import { eq, asc, inArray } from 'drizzle-orm'
+import { eq, asc, inArray, notExists } from 'drizzle-orm'
 import { db } from '../db/client'
-import { committees, committeeSessions } from '../db/schema'
+import { committees, committeeSessions, trackedCommittees } from '../db/schema'
 import type { Committee, CommitteeSession } from '../../src/types'
 import { computeStatusChanges, MIN_ACTIVE_COMMITTEES } from '../services/committee-status'
 
@@ -131,5 +131,22 @@ export class CommitteesRepository {
         aiSummary: s.aiSummary ?? undefined,
       })),
     }
+  }
+
+  /** Committees tracked by no user (orphans), with staleness + summary-match info. */
+  async findUntracked(): Promise<{ id: number; lastPolledAt: Date | null; documentUrl: string | null }[]> {
+    return db
+      .select({ id: committees.id, lastPolledAt: committees.lastPolledAt, documentUrl: committees.lastSessionDocumentUrl })
+      .from(committees)
+      .where(notExists(db.select().from(trackedCommittees).where(eq(trackedCommittees.committeeId, committees.id))))
+  }
+
+  /** Deletes a committee, its sessions, and any tracking rows (FK-safe). */
+  async deleteCascade(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(committeeSessions).where(eq(committeeSessions.committeeId, id))
+      await tx.delete(trackedCommittees).where(eq(trackedCommittees.committeeId, id))
+      await tx.delete(committees).where(eq(committees.id, id))
+    })
   }
 }

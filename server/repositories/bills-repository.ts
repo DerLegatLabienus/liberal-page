@@ -1,6 +1,6 @@
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, notExists } from 'drizzle-orm'
 import { db } from '../db/client'
-import { bills } from '../db/schema'
+import { bills, trackedBills } from '../db/schema'
 import type { Bill } from '../../src/types'
 
 export type BillEntity = typeof bills.$inferInsert
@@ -58,5 +58,21 @@ export class BillsRepository {
       lastPolledAt: row.lastPolledAt ? row.lastPolledAt.toISOString() : null,
       inactive: row.knessetNumber !== currentKnesset,
     }
+  }
+
+  /** Bills tracked by no user (orphans), with staleness ordering info. */
+  async findUntracked(): Promise<{ id: number; lastPolledAt: Date | null }[]> {
+    return db
+      .select({ id: bills.id, lastPolledAt: bills.lastPolledAt })
+      .from(bills)
+      .where(notExists(db.select().from(trackedBills).where(eq(trackedBills.billId, bills.id))))
+  }
+
+  /** Deletes a bill and any tracking rows (FK-safe). */
+  async deleteCascade(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(trackedBills).where(eq(trackedBills.billId, id))
+      await tx.delete(bills).where(eq(bills.id, id))
+    })
   }
 }
