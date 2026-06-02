@@ -1,4 +1,4 @@
-# Storage Pressure — Graceful Eviction of Stale Tracked Items
+# Storage Pressure — Purge Orphaned (Untracked) Entities
 
 **Status:** Approved design
 **Date:** 2026-06-02
@@ -6,195 +6,129 @@
 
 ## Context
 
-The app runs on a small Postgres (Neon free tier). All tracked bills/committees/MKs and
-their child rows (activity, votes, sessions) plus `summaries_cache` accumulate without
-bound. When storage nears the plan cap, adding a new tracked item must not fail silently
-or crash. Instead the system evicts the least-recently-used tracked items to keep a
-configurable free slack, presents evicted items as re-addable "Discarded" placeholders,
-and — if it still cannot make room — surfaces a clear error toast.
+The app runs on a small Postgres. `untrack` (`DELETE /api/tracking/:type/:id`) deletes only
+the `tracked_*` row — the entity (`bills`/`committees`/`mks`) and all its child rows
+(activity, votes, roles, terms, sessions) are left behind as **orphans**. Over time these
+accumulate and waste storage with data no one is using.
 
-There is a **single shared user account** (`users.id = 1`), so "staleness" is recency, not
-per-user popularity. Evicting a tracked item removes user-curated data, so the bar is high
-and the user is shown what vanished. Regenerating an AI summary costs money, so
-`summaries_cache` is preserved until tracked items are exhausted, and the Knesset list
-caches (`knesset_*_cache`) are never evicted.
+This feature reclaims that space: **when the database is near its limit, delete entities
+that no user tracks** (plus their children, and — for committees — their cached session
+summaries). It is deliberately minimal. If purging orphans is not enough (the DB fills with
+genuinely-tracked data), that is out of scope for now — we will revisit with a different
+strategy.
 
 ## Decisions (locked during brainstorming)
 
-- **Measure real size via Neon**, not an estimate.
-- **Evict LRU tracked items first**, in pure recency order, **regardless of item size**.
-- **Re-poll Neon per batch** to decide when enough is freed, with a **circuit breaker**.
-- **Last resort:** discard `summaries_cache` oldest-first (only after all tracked items are
-  gone). **Never** touch `knesset_members_cache` / `knesset_committees_cache`.
-- A **minimal toast** system (none exists today) for the hard-full error.
+- **Trigger only under storage pressure**, measured by `pg_database_size(current_database())`
+  vs `STORAGE_LIMIT_MB`. Runs **on each poll cycle**.
+- **Delete only entities tracked by no one** — determined from the tracking tables, so it is
+  correct for any number of users. Genuinely-tracked items are never touched (no LRU).
+- **Also delete `summaries_cache` rows for orphaned committees** (matched by the committee's
+  session document URL). API list caches (`knesset_members_cache`,
+  `knesset_committees_cache`) are never touched.
+- **Log every deletion to the server log** (console). No DB log table, no discarded-card UI,
+  no toast.
+- Once pressure is detected, **purge all orphans in one pass** — they are pure garbage, so
+  there is no batching, re-poll loop, or size-lag concern.
 
 ## Configuration (env)
 
 | Var | Default | Meaning |
 |---|---|---|
-| `STORAGE_LIMIT_MB` | (required for eviction) | Plan cap to stay under. If unset, eviction is disabled (no-op) and adds behave as today. |
-| `STORAGE_SLACK_MB` | `2` | Free headroom to maintain: target `usedMB ≤ LIMIT − SLACK`. |
-| `EVICTION_BATCH` | `3` | Items discarded per batch before re-polling Neon. |
-| `EVICTION_MAX_PER_PASS` | `25` | Circuit breaker: hard cap on evictions in a single `ensureSlack()` call. |
-| `EVICTION_LOG_SIZE` | `50` | `eviction_log` ring-buffer size. |
-| `NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_BRANCH_ID` | — | Credentials for the Neon size meter (production). |
+| `STORAGE_LIMIT_MB` | unset | DB size cap. **If unset, the feature is a no-op** (opt-in). |
+| `STORAGE_SLACK_MB` | `2` | Headroom: purge when `usedMB > LIMIT − SLACK`. |
 
-## Size measurement — `StorageMeter`
+No new schema. No new columns. No new tables.
 
-```ts
-export interface StorageMeter { usedBytes(): Promise<number | null> }
-```
+## Size measurement
 
-- **`NeonApiMeter`** (production): `GET https://console.neon.tech/api/v2/projects/{projectId}/branches/{branchId}`
-  with `Authorization: Bearer ${NEON_API_KEY}`, reads `branch.logical_size` (bytes).
-  Returns `null` on any failure (network/auth/parse).
-- **Test / local stub:** an injectable meter returning a controlled number, so the
-  eviction logic is testable in pglite (which has no Neon API).
-- **`null` means "unknown"** → `ensureSlack` skips eviction and lets the add proceed. A
-  metrics outage must never block tracking.
+A small helper `getDatabaseSizeBytes(): Promise<number | null>` runs
+`SELECT pg_database_size(current_database())`. Returns `null` on error or when the function
+is unavailable (e.g. pglite in tests). The orphan purge takes the size source as an injected
+function so tests can stub it; production passes `getDatabaseSizeBytes`.
 
-**Known limitation:** Neon's `logical_size` lags (computed on the pageserver) and does not
-drop instantly after deletes. The circuit breaker below makes a lagging reading safe.
+`pg_database_size` lags after deletes (MVCC), but that is irrelevant here: we measure once
+per poll cycle, and when over budget we purge *all* orphans in a single pass rather than
+looping on the figure. The next cycle re-measures (by then VACUUM has typically run).
 
-## Eviction service — `server/services/storage-manager.ts`
+## Orphan detection (multi-user safe)
 
-```ts
-export async function ensureSlack(meter: StorageMeter): Promise<{ evicted: number; freedCacheRows: number }>
-```
+An entity is an **orphan** when no row in its tracking table references it — i.e. tracked by
+zero users. Computed directly with a `NOT EXISTS` / anti-join query against `tracked_bills` /
+`tracked_committees` / `tracked_mks`, so it is exact regardless of user count; no
+denormalized counter to maintain or drift.
 
-Algorithm (real Neon size only — no local byte estimate):
-```
-limit = STORAGE_LIMIT_MB; if unset → return {0,0}            // eviction disabled
-target = (limit - STORAGE_SLACK_MB) * 1MB
-used = await meter.usedBytes(); if used === null → return     // unknown → skip
-evicted = 0
+New repository methods:
+- `BillsRepository.findUntrackedIds(): Promise<number[]>`
+- `CommitteesRepository.findUntracked(): Promise<{ id: number; documentUrl: string | null }[]>`
+  (returns `lastSessionDocumentUrl` so summaries can be matched)
+- `MksRepository.findUntrackedIds(): Promise<number[]>`
 
-while used > target AND evicted < EVICTION_MAX_PER_PASS:
-  batch = next EVICTION_BATCH LRU tracked items (oldest last_accessed_at, all types merged)
-  if batch empty: break
-  for item in batch: deleteCascadeAndLog(item); evicted++   // FK-ordered delete + eviction_log
-  used = await meter.usedBytes() ?? used                    // re-poll Neon (authoritative)
+## Safe cascade delete (respects `onDelete:'restrict'` FKs)
 
-// Last resort: only if no tracked items remain and still over budget
-while used > target AND evicted < EVICTION_MAX_PER_PASS:
-  rows = next EVICTION_BATCH oldest summaries_cache rows (by created_at)
-  if rows empty: break
-  deleteSummaries(rows)
-  used = await meter.usedBytes() ?? used
-```
-
-**Circuit breaker (the safeguard for "re-poll each batch"):** because Neon's reading lags
-within a single request, the loop is bounded by `EVICTION_MAX_PER_PASS` (a count cap, no
-size estimate involved) in addition to "Neon reports under target." A lagging reading can
-therefore never run away and wipe everything in one add — once the cap is hit the pass
-stops, the next add re-polls a (by then updated) Neon size, and the budget converges across
-successive adds. `knesset_*_cache` is never a candidate.
-
-### LRU candidate selection
-
-A single query merges the three tracking tables ordered by `last_accessed_at ASC`:
-`{ type, entityId, lastAccessedAt }`. Lives in a new `EvictionCandidatesRepository` (or a
-method on each tracked repo that the service merges). Pure recency; size is not used for
-ordering.
-
-### Safe cascade delete — per entity repo
-
-Each entity repo gains a transactional `deleteCascade(id)` respecting the
-`onDelete:'restrict'` FK graph:
+Each entity repo gains a transactional `deleteCascade(id)`:
 - **mk:** delete `mk_activity`, `mk_votes`, `mk_roles`, `mk_knesset_terms`, `tracked_mks` → `mks`.
 - **committee:** delete `committee_sessions`, `tracked_committees` → `committees`.
 - **bill:** delete `tracked_bills` → `bills`.
 
-The service writes one `eviction_log` row per evicted entity before/after deletion (inside
-the same logical operation), capturing re-add info.
+(`tracked_*` rows are absent for orphans, but the delete is included to keep `deleteCascade`
+correct as a general primitive and future-proof against multi-user partial untracks.)
 
-## Schema changes (migration)
+## Service — `server/services/storage-manager.ts`
 
-- Add `last_accessed_at timestamptz NOT NULL DEFAULT now()` to `tracked_bills`,
-  `tracked_committees`, `tracked_mks`. Set to `now()` when a track row is created.
-- New `eviction_log`:
-  | Column | Type | Notes |
-  |---|---|---|
-  | `id` | serial PK | |
-  | `entity_type` | text | `'bill' \| 'committee' \| 'mk'` |
-  | `entity_ref` | text | oknesset_id (bill/committee) or knesset_site_id (mk) — to re-fetch |
-  | `title` | text | display name |
-  | `source_url` | text | for the re-add / link |
-  | `evicted_at` | timestamptz | |
+```ts
+export async function purgeOrphansIfNeeded(
+  usedBytes: () => Promise<number | null>,
+): Promise<{ purged: { bills: number; committees: number; mks: number }; summariesDeleted: number }>
+```
 
-  Ring buffer: after insert, delete rows beyond the newest `EVICTION_LOG_SIZE`. Own
-  `EvictionLogRepository`. Only tracked-item evictions are logged (summary-cache discards
-  are invisible/regenerable, so they are not logged).
+Logic:
+```
+limit = STORAGE_LIMIT_MB; if unset → return zeros          // feature off
+used = await usedBytes(); if used === null → return zeros   // size unknown → skip
+if used <= (limit - STORAGE_SLACK_MB) * 1MB → return zeros  // have slack → nothing to do
 
-## LRU "touch" signal
+// Over budget → purge ALL orphans (safe; tracked by no one)
+for id in mksRepo.findUntrackedIds():        mksRepo.deleteCascade(id);        log('mk', id)
+for c  in committeesRepo.findUntracked():     summariesRepo.deleteBySourceUrl(c.documentUrl)
+                                              committeesRepo.deleteCascade(c.id); log('committee', c.id)
+for id in billsRepo.findUntrackedIds():       billsRepo.deleteCascade(id);      log('bill', id)
+```
 
-The drawer loads all tracked items at once, so a bulk read can't feed per-item LRU.
-A deliberate per-item interaction updates recency:
-- `POST /api/tracking/touch { type, id }` → sets `tracked_<type>.last_accessed_at = now()`
-  for the shared user. Returns `204`/`200 {ok}`. Best-effort; failure ignored.
-- Frontend fires it (fire-and-forget) when the user clicks a card's "view source"/open
-  link in `BillCard` / `CommitteeCard` / `MkCard`.
-- New track rows already start at `now()`, so freshly added items are most-recent.
+- `SummariesRepository.deleteBySourceUrl(url)` — deletes `summaries_cache` rows whose
+  `sourceUrl` equals the committee's session document URL; no-op for `null`/empty.
+- Each deletion logs one line, e.g.
+  `Storage GC: purged orphan committee 7 (ועדת הכספים) + 1 summary`.
+- API list caches are never queried or deleted here.
 
-(If this wiring is later deemed unnecessary, eviction degrades to oldest-tracked via the
-same column seeded at creation — no structural change.)
+## Poller integration — `server/services/poller.ts`
 
-## Tracking-add integration
-
-`POST /api/tracking/add` (`server/routes/tracking.ts`):
-1. `await ensureSlack(meter)` (best-effort; never throws out — internal errors are logged
-   and swallowed so a metrics/eviction problem can't block a normal add).
-2. Perform the existing upsert + track.
-3. If the insert throws a storage/quota error (DB genuinely full), respond
-   `507 { error, code: 'STORAGE_FULL' }`.
-
-## Discarded placeholder UX
-
-- Parliament read exposes the log: extend `GET /api/parliament/:type` response — or add
-  `GET /api/parliament/discarded` returning `eviction_log` grouped by type. (Chosen:
-  separate endpoint to avoid changing the typed entity arrays.)
-- Each drawer tab renders muted **"Discarded"** cards: `title`, type, the label
-  "הוסר עקב מגבלת אחסון" / "Removed due to storage limits", and a **Re-add** button →
-  `tracking/add` with `entity_ref`/`source_url`. A successful re-add deletes that
-  `eviction_log` row (and may itself trigger `ensureSlack`).
-
-## Error toast (new)
-
-No toast system exists. Add a minimal one (no dependency):
-- `src/components/ui/toast.tsx` + a `ToastProvider` / `useToast()` and a fixed-position
-  `Toaster` (auto-dismiss ~5s, RTL-aware).
-- `api-client` surfaces the `STORAGE_FULL` code (it already throws on non-OK; extend to
-  carry `code`).
-- `HomePage` add handler catches `STORAGE_FULL` and calls
-  `toast.error(t('tracker.storage_full'))` → "לא ניתן לשמור — האחסון מלא. נסו להסיר פריט שאינכם צריכים" /
-  "Could not save — storage is full. Try removing an item you no longer need." i18n keys added to `he.json`/`en.json`.
+Add a step in `runPollCycle`, in its own try/catch (a GC failure must not affect the entity
+polls or cycle success):
+```ts
+try { await purgeOrphansIfNeeded(getDatabaseSizeBytes) }
+catch (err) { console.error('Poller: orphan purge failed:', err) }
+```
+Not counted toward cycle success/backoff (consistent with the committee-list refresh step).
 
 ## Testing
 
-**Unit / repo (pglite, stubbed meter):**
-- `ensureSlack` no-op when `STORAGE_LIMIT_MB` unset, or when `meter.usedBytes()` is `null`.
-- Over budget → evicts LRU tracked items oldest-`last_accessed_at` first; writes one
-  `eviction_log` row per item; stops when stub meter drops under target.
-- Circuit breaker: a meter that never drops stops at `EVICTION_MAX_PER_PASS` (does not wipe
-  everything) — proves lag-safety.
-- Last resort: with zero tracked items and over budget, discards oldest `summaries_cache`
-  rows; never deletes `knesset_*_cache`.
-- `deleteCascade` removes all children + tracking row with no FK violation, for each type.
-- `eviction_log` ring buffer caps at `EVICTION_LOG_SIZE`.
-- `tracking/touch` updates `last_accessed_at`.
+**Unit / repo (pglite, stubbed `usedBytes`):**
+- No-op when `STORAGE_LIMIT_MB` unset, when `usedBytes()` returns `null`, or when under budget.
+- Over budget → deletes entities with no tracking row; leaves tracked entities intact.
+- **Multi-user:** an entity tracked by user B is NOT deleted after user A untracks it
+  (`findUntracked*` excludes it because a tracking row still exists).
+- Orphan committee → its `summaries_cache` row (matching `documentUrl`) deleted; an unrelated
+  summary is kept; `knesset_*_cache` rows are untouched.
+- `deleteCascade` removes all children + any tracking row with no FK violation, per type.
+- Emits a server-log line per deletion (spy on `console.log`).
 
-**Route (supertest):**
-- `tracking/add` calls `ensureSlack` then inserts; returns `507 STORAGE_FULL` when the
-  insert fails on a simulated full DB.
-- `parliament/discarded` returns logged entries; re-add clears the entry.
+**Route (supertest):** existing `tracking` add/remove tests stay green (untrack still just
+removes the tracking row; the entity is reclaimed later by the poller sweep).
 
-**Component:** `Toaster` shows on a `STORAGE_FULL` rejection; a "Discarded" card renders
-title + Re-add and calls `tracking/add` on click.
+## Out of scope (revisit only if orphan purging proves insufficient)
 
-**`NeonApiMeter`:** mock `fetch` — parses `branch.logical_size`; returns `null` on non-OK.
-
-## Out of scope
-
-- Admin/analytics view of evictions (the log is enough for the discarded cards).
-- Automatic VACUUM / physical reclamation (Neon manages this; we track logical size).
-- Multi-user popularity signals (single shared account).
+- Evicting genuinely-tracked items (LRU, discarded placeholders, error toast).
+- Real-time/Neon-API size measurement.
+- Purging bill or MK document summaries (only committee summaries are in scope here).
+- VACUUM / physical reclamation (Postgres/Neon handles this; we act on logical pressure).
