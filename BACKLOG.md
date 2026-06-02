@@ -13,11 +13,16 @@ Spec: `docs/superpowers/specs/2026-06-02-join-analytics-design.md`.
 The original config-endpoint idea (moving URL mapping/help text to a read-only endpoint)
 was not pursued — the frontend selector remains the source of routing.
 
-## 2. Database Migration (Priority: Medium)
+### ✅ Database Migration — 2026-06-01
 
-Replace `src/data/*.json` files with a proper database (PostgreSQL or SQLite).
-All server services already read/write through helper functions (`readItems`, `writeItems`)
-in each route file — swap those functions for repository calls.
+Tracked parliament data moved from `src/data/*.json` to Postgres (Drizzle ORM +
+`node-postgres`, single driver for local Docker and Neon; pglite in tests). Phase 1
+introduced the schema, repositories, and startup migrations; Phase 2 cut the runtime
+over (JSON datastore deleted, curated baseline moved to `scripts/seed-data/` + `npm run
+db:seed`). Entity/tracking split with real FKs, per-user tracking against a single shared
+account, derived currency (`Mk.party`/`inactive`, `Bill.inactive`). Deployed live to
+Render against Neon. Specs: `docs/superpowers/specs/2026-05-30-database-migration-design.md`,
+`2026-05-31-db-migration-phase2-design.md`.
 
 ## 3. User Accounts & Alerts (Priority: Low)
 
@@ -158,7 +163,7 @@ Exponential backoff on total poll failure: starts at 1 min, doubles each cycle, 
 
 Activity feed in `MkCard` displays `bill_initiated` (📋) and `question` (❓) items with dates and direct links to the official Knesset record. Data is fetched via the Knesset scraper service on the backend and stored in `mks.json`.
 
-## 10. Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms) (Priority: Medium)
+## 18. Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms) (Priority: Medium)
 
 Phase 1 shipped the three-tab "Knesset Bills Overview" section (Recent = newest by `BillID desc`, Trending = manual curation, Policy-aligned = keyword match). Phase 2 enhancements, gated behind feature flags that already exist in `src/data/feature-flags.json`:
 
