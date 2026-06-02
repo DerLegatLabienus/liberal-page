@@ -93,6 +93,7 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 | `DELETE` | `/api/tracking/:type/:id` | Removes a tracking row from DB by entity `id` |
 | `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result via `SummariesRepository` (DB) |
 | `GET` | `/api/feature-flags` | Returns all feature flags as a flat map `Record<string, { enabled, value }>` from the DB |
+| `POST` | `/api/analytics/join` | Records a Join-section click-through (`{ status, mode }`) via `JoinAnalyticsRepository`. Returns `200 { ok: true }`, `400` on invalid combo. Fire-and-forget from the client; no read endpoint (data is DB-only) |
 
 `type` is one of `bill`, `committee`, or `mk`.
 

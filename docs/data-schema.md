@@ -200,6 +200,21 @@ One row per flag.
 | `description` | text | |
 | `updated_at` | timestamptz | |
 
+### `join_analytics`
+
+Single-table Join-section click-through analytics. One reserved row holds all-time
+totals; every other row is one day within a 1-year sliding window (pruned on write).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `bucket` | text PK | `'YYYY-MM-DD'` for a daily row, or the literal `'lifetime'` |
+| `total` | integer | click-throughs in this bucket (default 0) |
+| `breakdown` | jsonb | per-combination counts, keyed `'<status>:<mode>'` e.g. `{ "new:individual": 12 }` (default `{}`) |
+| `created_at` | timestamptz | set once on insert; on the `'lifetime'` row this is "since inception" |
+
+Written only by `JoinAnalyticsRepository` (`POST /api/analytics/join`). No read endpoint
+yet — inspected directly via SQL (admin read view is backlog #16).
+
 ### `bills`
 
 | Column | Type | Notes |
