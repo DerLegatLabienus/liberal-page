@@ -1,13 +1,17 @@
 # Backlog
 
-## 1. Join Flow Analytics / Config (Priority: Low)
+### ✅ Join Flow Analytics — Click-Through Tracking — 2026-06-02
 
-`JoinSection` uses a frontend-only selector that routes users to the correct
-effective-soft form. The site does not collect or store membership details.
+`JoinSelector` fires a fire-and-forget `POST /api/analytics/join {status, mode}` when a
+user clicks through to the external effective-soft form. Stored in a single
+`join_analytics` table: daily rows (1-year sliding window, pruned on write) + a `lifetime`
+row, each with a per-`status:mode` breakdown. No identity/payment/submission data is
+stored; the join flow is never blocked by analytics. DB-only — no read endpoint yet
+(admin view is #16; completion tracking deferred, provider-dependent).
+Spec: `docs/superpowers/specs/2026-06-02-join-analytics-design.md`.
 
-Potential future enhancement: move the URL mapping/help text to a read-only
-config endpoint or add anonymous click analytics. Do not proxy submissions or
-store identity/payment/signature data locally.
+The original config-endpoint idea (moving URL mapping/help text to a read-only endpoint)
+was not pursued — the frontend selector remains the source of routing.
 
 ## 2. Database Migration (Priority: Medium)
 
