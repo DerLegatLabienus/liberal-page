@@ -1,0 +1,1 @@
+ALTER TABLE "committees" ADD COLUMN "inactive" boolean DEFAULT false NOT NULL;

@@ -1,65 +1,19 @@
 import { Router } from 'express'
-import type { CommitteeListItem } from '../../src/types'
-import { readFileSync } from 'fs'
-import { CommitteeListRepository } from '../repositories/committee-list-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
 import { UsersRepository } from '../repositories/users-repository'
 import { enrichCommitteeSessions } from '../services/committee-session-enricher'
-import { getCurrentKnesset } from '../services/knesset-config'
-
-// Local mapping: CommitteeID → apps URL ID (CategoryID-based, with manual overrides)
-// Update src/data/committee-url-mapping.json to add/fix IDs when needed
-let urlMapping: Record<string, number> = {}
-try {
-  const mappingPath = `${process.cwd()}/src/data/committee-url-mapping.json`
-  urlMapping = JSON.parse(readFileSync(mappingPath, 'utf-8'))
-} catch { /* mapping unavailable, use empty */ }
+import { refreshCommitteeListIfStale } from '../services/committee-list-refresh'
 
 const router = Router()
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour - ensures mapping changes propagate quickly
-const repo = new CommitteeListRepository()
 const users = new UsersRepository()
 const committeesRepo = new CommitteesRepository()
 const trackedCommittees = new TrackedCommitteesRepository()
 
-async function odataFetchAll<T>(startPath: string): Promise<T[]> {
-  const results: T[] = []
-  let nextPath: string | null = startPath
-  while (nextPath) {
-    const res = await fetch(`${ODATA_BASE}/${nextPath}`, { headers: { Accept: 'application/json' } })
-    if (!res.ok) throw new Error(`OData error ${res.status}`)
-    const data = await res.json() as { value?: T[]; 'odata.nextLink'?: string }
-    results.push(...(data.value ?? []))
-    nextPath = data['odata.nextLink'] ?? null
-  }
-  return results
-}
-
 router.get('/list', async (_req, res) => {
   try {
-    const cached = await repo.get()
-    if (cached && repo.getAgeMs() < CACHE_TTL_MS) return res.json(cached)
-
-    // Fetch all Knesset 25 current committees
-    const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
-      `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%20${getCurrentKnesset()}&$select=CommitteeID,Name&$top=200&$format=json`
-    )
-
-    const committees: CommitteeListItem[] = raw.map((c) => {
-      const appsId = urlMapping[String(c.CommitteeID)]
-      return {
-        committeeId: c.CommitteeID,
-        name: c.Name.trim(),
-        knessetUrl: appsId
-          ? `https://main.knesset.gov.il/apps/committees/${appsId}`
-          : '',
-      }
-    })
-
-    await repo.set(committees)
-    res.json(committees)
+    res.json(await refreshCommitteeListIfStale())
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }

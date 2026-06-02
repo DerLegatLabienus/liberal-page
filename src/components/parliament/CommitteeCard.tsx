@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
+import { Badge } from '@/components/ui/badge'
 import type { Committee } from '@/types'
 
 interface CommitteeCardProps {
@@ -19,7 +20,12 @@ export default function CommitteeCard({ committee, onRemove, trackedMks: _tracke
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
       <div className="w-1 shrink-0 bg-blue-500" />
       <div className="flex-1 p-4" dir="rtl">
-        <p className="mb-1 text-right text-sm font-semibold text-foreground">{committee.name}</p>
+        <div className="mb-1 flex items-center gap-2">
+          <p className="text-right text-sm font-semibold text-foreground">{committee.name}</p>
+          {committee.inactive && (
+            <Badge variant="secondary">{t('tracker.closed')}</Badge>
+          )}
+        </div>
         {committee.chair && (
           <p className="mb-2 text-right text-xs text-muted-foreground">{t('tracker.chair_prefix')} {committee.chair}</p>
         )}

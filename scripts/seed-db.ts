@@ -99,6 +99,10 @@ async function main() {
     })
     await trackedCommitteesRepo.track(sharedUserId, committeeId)
   }
+  // upsert() never writes the inactive flag (so the poller can't revive a closed
+  // committee); apply seeded closure status explicitly.
+  const closedIds = committees.filter((c) => c.inactive).map((c) => c.oknesset_id)
+  await committeesRepo.setInactiveByIds(closedIds, true)
 
   const mksData = await readJson<Mk[]>('mks.json')
   const mksRepo = new MksRepository()

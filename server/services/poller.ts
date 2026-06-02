@@ -5,6 +5,7 @@ import { BillsRepository } from '../repositories/bills-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { getCurrentKnesset } from './knesset-config'
+import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import type { Bill, CommitteeSession } from '../../src/types'
 
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
@@ -152,6 +153,16 @@ function mapBillStatus(status: string): Bill['status'] | null {
 
 export async function runPollCycle(): Promise<boolean> {
   console.log('Poller: starting poll cycle', new Date().toISOString())
+
+  // Refresh the active-committee list and reconcile closure status. Isolated so a
+  // committee-list failure never aborts the entity polls below, and not counted
+  // toward cycle success (it must not drive backoff).
+  try {
+    await refreshCommitteeListIfStale()
+  } catch (err) {
+    console.error('Poller: error refreshing committee list:', err)
+  }
+
   const results = await Promise.allSettled([pollBills(), pollCommittees(), pollMks()])
   const anySuccess = results.some(
     (r) => r.status === 'fulfilled' && r.value === true

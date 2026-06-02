@@ -43,6 +43,13 @@
       "when": 1780242192048,
       "tag": "0005_glamorous_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780376659865,
+      "tag": "0006_fast_daredevil",
+      "breakpoints": true
     }
   ]
 }

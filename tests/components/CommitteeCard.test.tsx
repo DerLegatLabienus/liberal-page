@@ -80,6 +80,17 @@ describe('CommitteeCard', () => {
     expect(screen.queryByText('💙')).not.toBeInTheDocument()
   })
 
+  it('renders a Closed badge when the committee is inactive, keeping sessions visible', () => {
+    render(<CommitteeCard committee={committeeFixture({ inactive: true, recentSessions: [SESSION_EXTENDED] })} trackedMks={[]} />)
+    expect(screen.getByText('סגורה')).toBeInTheDocument()
+    expect(screen.getByText('הצעת חוק לתיקון פקודת מס הכנסה')).toBeInTheDocument()
+  })
+
+  it('does not render a Closed badge when the committee is active', () => {
+    render(<CommitteeCard committee={committeeFixture({ inactive: false })} trackedMks={[]} />)
+    expect(screen.queryByText('סגורה')).not.toBeInTheDocument()
+  })
+
   it('renders all 4 sessions when recentSessions has 4 entries', () => {
     const sessions: CommitteeSession[] = [
       SESSION_EXTENDED,

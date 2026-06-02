@@ -114,7 +114,8 @@
     "remove": "Remove",
     "mk_unknown": "Unknown MK",
     "chair_prefix": "Chair:",
-    "last_session_prefix": "Last session:"
+    "last_session_prefix": "Last session:",
+    "closed": "Closed"
   },
   "showcase": {
     "heading": "Liberals in Likud MKs",
