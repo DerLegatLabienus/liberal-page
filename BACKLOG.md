@@ -30,15 +30,16 @@ All API calls should go through a dedicated API layer inside each module.
 - The API layer is the single place to set base URLs, headers, error handling, and response shaping
 - Backend route files follow the same pattern: routes call services only, no direct Knesset API calls in handlers
 
-## 5. Closed Committees — Auto-Remove from All Views (Priority: Medium)
+### ✅ Closed Committees — Auto-Detect and Mark as Historical — 2026-06-02
 
-When a Knesset committee is closed/dissolved, it should be removed from the UI everywhere it appears.
-
-**Requirements:**
-- Committee data includes an `active` boolean (or a `closedDate` field) sourced from the Knesset API
-- Any component that lists or references committees filters out inactive ones
-- Protocols and MK cards that reference a now-closed committee display the committee name as plain text (historical record) rather than a selectable/linked item
-- The backend poller should keep committee status up to date
+Tracked committees absent from the Knesset OData `IsCurrent` active list are marked
+`inactive` and shown as a historical record with a "Closed" badge (sessions stay visible;
+manual removal only). Detection is a cheap DB cross-reference run after the committee-list
+cache refresh, driven by the poller each cycle. Safety floor (≥10 active committees) prevents
+mass false closures from a failed/empty fetch; reactivation is automatic on identical-id
+reappearance. The combobox already excludes closed committees via the API filter. Pure
+decision logic in `server/services/committee-status.ts`; refresh+reconcile in
+`server/services/committee-list-refresh.ts`. Spec: `docs/superpowers/specs/2026-06-02-closed-committees-design.md`.
 
 ## 6. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
 
