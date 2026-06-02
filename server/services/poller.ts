@@ -6,6 +6,8 @@ import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
+import { purgeOrphansIfNeeded } from './storage-manager'
+import { getDatabaseSizeBytes } from '../db/size'
 import type { Bill, CommitteeSession } from '../../src/types'
 
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
@@ -167,6 +169,15 @@ export async function runPollCycle(): Promise<boolean> {
   const anySuccess = results.some(
     (r) => r.status === 'fulfilled' && r.value === true
   )
+
+  // Reclaim storage by shedding the stalest orphan entities (tracked by no one) when the
+  // DB is over budget. Isolated and not counted toward cycle success/backoff.
+  try {
+    await purgeOrphansIfNeeded(getDatabaseSizeBytes)
+  } catch (err) {
+    console.error('Poller: orphan purge failed:', err)
+  }
+
   console.log('Poller: poll cycle complete', anySuccess ? '(success)' : '(all failed)')
   return anySuccess
 }

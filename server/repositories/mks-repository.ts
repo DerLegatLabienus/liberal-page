@@ -1,6 +1,6 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, notExists } from 'drizzle-orm'
 import { db } from '../db/client'
-import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../db/schema'
+import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes, trackedMks } from '../db/schema'
 import type { Mk, MkRole, MkActivity, MkVote } from '../../src/types'
 
 export interface MkTermInput { knessetNumber: number; faction: string }
@@ -145,6 +145,26 @@ export class MksRepository {
           sourceUrl: a.sourceUrl ?? null,
         })))
       }
+    })
+  }
+
+  /** MKs tracked by no user (orphans), with staleness ordering info. */
+  async findUntracked(): Promise<{ id: number; lastPolledAt: Date | null }[]> {
+    return db
+      .select({ id: mks.id, lastPolledAt: mks.lastPolledAt })
+      .from(mks)
+      .where(notExists(db.select().from(trackedMks).where(eq(trackedMks.mkId, mks.id))))
+  }
+
+  /** Deletes an MK, all child rows (activity/votes/roles/terms), and tracking rows (FK-safe). */
+  async deleteCascade(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(mkActivity).where(eq(mkActivity.mkId, id))
+      await tx.delete(mkVotes).where(eq(mkVotes.mkId, id))
+      await tx.delete(mkRoles).where(eq(mkRoles.mkId, id))
+      await tx.delete(mkKnessetTerms).where(eq(mkKnessetTerms.mkId, id))
+      await tx.delete(trackedMks).where(eq(trackedMks.mkId, id))
+      await tx.delete(mks).where(eq(mks.id, id))
     })
   }
 }

@@ -24,6 +24,16 @@ export class SummariesRepository {
     }
   }
 
+  /** Deletes cached summaries for a given source document URL. No-op on null/empty. */
+  async deleteBySourceUrl(url: string | null | undefined): Promise<number> {
+    if (!url) return 0
+    const deleted = await db
+      .delete(summariesCache)
+      .where(eq(summariesCache.sourceUrl, url))
+      .returning({ md5: summariesCache.md5 })
+    return deleted.length
+  }
+
   async set(md5: string, entry: SummaryEntry): Promise<void> {
     await db
       .insert(summariesCache)
