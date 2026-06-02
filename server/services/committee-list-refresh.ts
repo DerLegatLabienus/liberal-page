@@ -3,8 +3,8 @@ import type { CommitteeListItem } from '../../src/types'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { getCurrentKnesset } from './knesset-config'
+import { odataGetAllPages } from './odata'
 
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour - ensures mapping changes propagate quickly
 
 // Local mapping: CommitteeID → apps URL ID (CategoryID-based, with manual overrides).
@@ -18,19 +18,6 @@ try {
 const listRepo = new CommitteeListRepository()
 const committeesRepo = new CommitteesRepository()
 
-async function odataFetchAll<T>(startPath: string): Promise<T[]> {
-  const results: T[] = []
-  let nextPath: string | null = startPath
-  while (nextPath) {
-    const res = await fetch(`${ODATA_BASE}/${nextPath}`, { headers: { Accept: 'application/json' } })
-    if (!res.ok) throw new Error(`OData error ${res.status}`)
-    const data = await res.json() as { value?: T[]; 'odata.nextLink'?: string }
-    results.push(...(data.value ?? []))
-    nextPath = data['odata.nextLink'] ?? null
-  }
-  return results
-}
-
 /**
  * Returns the cached active-committee list, refreshing from Knesset OData when stale.
  * On a successful refresh, reconciles tracked committees' inactive flags against the
@@ -40,7 +27,7 @@ export async function refreshCommitteeListIfStale(): Promise<CommitteeListItem[]
   const cached = await listRepo.get()
   if (cached && listRepo.getAgeMs() < CACHE_TTL_MS) return cached
 
-  const raw = await odataFetchAll<{ CommitteeID: number; Name: string }>(
+  const raw = await odataGetAllPages<{ CommitteeID: number; Name: string }>(
     `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20KnessetNum%20eq%20${getCurrentKnesset()}&$select=CommitteeID,Name&$top=200&$format=json`
   )
 

@@ -3,8 +3,7 @@ import { MkListRepository } from '../repositories/mk-list-repository'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { getMkBySiteId } from './knesset-api'
-
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+import { odataGet } from './odata'
 
 interface KnessetConfig {
   currentKnesset: number
@@ -49,13 +48,10 @@ export async function runTransition(newKnesset: number): Promise<void> {
 
 export async function detectKnessetTransition(): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${ODATA_BASE}/KNS_PersonToPosition?$filter=PositionID%20eq%2043%20and%20IsCurrent%20eq%20true&$orderby=KnessetNum%20desc&$top=1&$select=KnessetNum&$format=json`,
-      { headers: { Accept: 'application/json' } }
+    const rows = await odataGet<{ KnessetNum: number }>(
+      'KNS_PersonToPosition?$filter=PositionID%20eq%2043%20and%20IsCurrent%20eq%20true&$orderby=KnessetNum%20desc&$top=1&$select=KnessetNum&$format=json'
     )
-    if (!res.ok) return false
-    const data = await res.json() as { value: Array<{ KnessetNum: number }> }
-    const liveKnesset = data.value?.[0]?.KnessetNum
+    const liveKnesset = rows[0]?.KnessetNum
     if (!liveKnesset || liveKnesset <= config.currentKnesset) return false
     await runTransition(liveKnesset)
     return true

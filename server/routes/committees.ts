@@ -4,9 +4,9 @@ import { TrackedCommitteesRepository } from '../repositories/tracked-committees-
 import { UsersRepository } from '../repositories/users-repository'
 import { enrichCommitteeSessions } from '../services/committee-session-enricher'
 import { refreshCommitteeListIfStale } from '../services/committee-list-refresh'
+import { fetchCommitteeDetail } from '../services/knesset-committees'
 
 const router = Router()
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const users = new UsersRepository()
 const committeesRepo = new CommitteesRepository()
 const trackedCommittees = new TrackedCommitteesRepository()
@@ -75,22 +75,15 @@ router.get('/info/:committeeId', async (req, res) => {
   if (!committeeId) return res.status(400).send('<h1>Invalid committee ID</h1>')
 
   try {
-    // Fetch committee info and recent sessions from Knesset OData
-    const [committees, sessions] = await Promise.all([
-      fetch(`${ODATA_BASE}/KNS_Committee?$filter=CommitteeID%20eq%20${committeeId}&$format=json`, { headers: { Accept: 'application/json' } })
-        .then(r => r.json() as Promise<{ value: Array<{ CommitteeID: number; Name: string; KnessetNum: number; CommitteeTypeDesc: string; Email: string | null }> }>),
-      fetch(`${ODATA_BASE}/KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=5&$select=CommitteeSessionID,StartDate,StatusDesc,TypeDesc,SessionUrl&$format=json`, { headers: { Accept: 'application/json' } })
-        .then(r => r.json() as Promise<{ value: Array<{ CommitteeSessionID: number; StartDate: string; StatusDesc: string; TypeDesc: string; SessionUrl: string }> }>),
-    ])
+    const detail = await fetchCommitteeDetail(committeeId)
+    if (!detail) return res.status(404).send('<h1>Committee not found</h1>')
+    const { committee, sessions } = detail
 
-    const committee = committees.value?.[0]
-    if (!committee) return res.status(404).send('<h1>Committee not found</h1>')
-
-    const sessionsHtml = sessions.value?.map(s => {
+    const sessionsHtml = sessions.map(s => {
       const date = new Date(s.StartDate).toLocaleDateString('he-IL')
       const link = s.SessionUrl?.replace('http://', 'https://') ?? ''
       return `<li>${date} — ${s.TypeDesc} (${s.StatusDesc})${link ? ` — <a href="${link}" target="_blank">צפה בישיבה ↗</a>` : ''}</li>`
-    }).join('') ?? ''
+    }).join('')
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.send(`<!DOCTYPE html>

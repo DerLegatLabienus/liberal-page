@@ -1,6 +1,5 @@
 import type { CommitteeSession } from '../../src/types'
-
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+import { odataGet } from './odata'
 
 interface ODataSession {
   CommitteeSessionID: number
@@ -12,12 +11,11 @@ interface ODataSession {
 interface ODataItem { Name: string; Ordinal: number }
 interface ODataCommittee { CommitteeID: number; Name: string }
 
-async function odataGet<T>(path: string): Promise<T[]> {
+// Enrichment is best-effort: a failed call yields no sessions rather than an error,
+// so it never blocks tracking. Wrap the throwing shared helper to preserve that.
+async function safeOdataGet<T>(path: string): Promise<T[]> {
   try {
-    const res = await fetch(`${ODATA_BASE}/${path}`, { headers: { Accept: 'application/json' } })
-    if (!res.ok) return []
-    const data = await res.json() as { value?: T[] }
-    return data.value ?? []
+    return await odataGet<T>(path)
   } catch {
     return []
   }
@@ -25,7 +23,7 @@ async function odataGet<T>(path: string): Promise<T[]> {
 
 async function resolveCommitteeId(committeeName: string): Promise<number | null> {
   const encoded = encodeURIComponent(committeeName.trim())
-  const results = await odataGet<ODataCommittee>(
+  const results = await safeOdataGet<ODataCommittee>(
     `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20Name%20eq%20'${encoded}'&$select=CommitteeID,Name&$top=1&$format=json`
   )
   return results[0]?.CommitteeID ?? null
@@ -40,14 +38,14 @@ export async function enrichCommitteeSessions(
     const committeeId = await resolveCommitteeId(committeeName)
     if (!committeeId) return []
 
-    const sessions = await odataGet<ODataSession>(
+    const sessions = await safeOdataGet<ODataSession>(
       `KNS_CommitteeSession?$filter=CommitteeID%20eq%20${committeeId}&$orderby=StartDate%20desc&$top=5&$select=CommitteeSessionID,StartDate,KnessetNum,SessionUrl&$format=json`
     )
     if (!sessions.length) return []
 
     const results: CommitteeSession[] = []
     for (const session of sessions) {
-      const items = await odataGet<ODataItem>(
+      const items = await safeOdataGet<ODataItem>(
         `KNS_CmtSessionItem?$filter=CommitteeSessionID%20eq%20${session.CommitteeSessionID}&$select=Name,Ordinal&$orderby=Ordinal&$top=5&$format=json`
       )
       const title = items.map(i => i.Name).filter(Boolean).join(' · ').slice(0, 120)

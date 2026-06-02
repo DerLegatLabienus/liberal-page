@@ -1,14 +1,12 @@
 import { Router } from 'express'
-import type { BillSearchResult } from '../../src/types'
 import { getCurrentKnesset } from '../services/knesset-config'
-import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills } from '../services/knesset-bills'
+import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, searchBills } from '../services/knesset-bills'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { UsersRepository } from '../repositories/users-repository'
 import { BillsRepository } from '../repositories/bills-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 
 const router = Router()
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const users = new UsersRepository()
 const billsRepo = new BillsRepository()
 const trackedBills = new TrackedBillsRepository()
@@ -18,18 +16,7 @@ router.get('/search', async (req, res) => {
   if (q.length < 3) return res.status(400).json({ error: 'Query must be at least 3 characters' })
 
   try {
-    const encoded = encodeURIComponent(q)
-    const url = `${ODATA_BASE}/KNS_Bill?$filter=KnessetNum%20eq%20${getCurrentKnesset()}%20and%20substringof('${encoded}',Name)&$top=20&$select=BillID,Name,StatusID&$format=json`
-    const response = await fetch(url, { headers: { Accept: 'application/json' } })
-    if (!response.ok) throw new Error(`OData error ${response.status}`)
-    const data = await response.json() as { value: Array<{ BillID: number; Name: string; StatusID: number }> }
-
-    const results: BillSearchResult[] = (data.value ?? []).map((b) => ({
-      billId: b.BillID,
-      name: b.Name.trim(),
-      knessetUrl: `https://main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx?t=lawsuggestionssearch&lawitemid=${b.BillID}`,
-    }))
-    res.json(results)
+    res.json(await searchBills(q, getCurrentKnesset()))
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }

@@ -1,6 +1,6 @@
 import type { KnessetMember } from '../../src/types'
+import { odataGet, odataGetAllPages } from './odata'
 
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const BATCH_SIZE = 40
 const FACTION_POSITION_ID = 54 // "חבר/ת סיעה" — has FactionName directly
 
@@ -8,29 +8,8 @@ interface SiteCodeRow { SiteId: number; KnsID: number }
 interface PersonRow { PersonID: number; FirstName: string; LastName: string; PictureDeputyUrl?: string | null }
 interface FactionPositionRow { PersonID: number; FactionName: string | null }
 
-async function odataFetch<T>(path: string): Promise<T[]> {
-  const res = await fetch(`${ODATA_BASE}/${path}`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`OData error ${res.status}: ${path}`)
-  const data = await res.json() as { value?: T[]; 'odata.nextLink'?: string }
-  return data.value ?? []
-}
-
-// Follows odata.nextLink pagination to collect all pages
-async function odataFetchAll<T>(path: string): Promise<T[]> {
-  const results: T[] = []
-  let nextPath: string | null = path
-
-  while (nextPath) {
-    const res = await fetch(`${ODATA_BASE}/${nextPath}`, { headers: { Accept: 'application/json' } })
-    if (!res.ok) throw new Error(`OData error ${res.status}: ${nextPath}`)
-    const data = await res.json() as { value?: T[]; 'odata.nextLink'?: string }
-    results.push(...(data.value ?? []))
-    // nextLink is a relative URL like "KNS_Person?$filter=...&$skiptoken=N"
-    nextPath = data['odata.nextLink'] ?? null
-  }
-
-  return results
-}
+const odataFetch = <T>(path: string): Promise<T[]> => odataGet<T>(path, { errorContext: 'OData' })
+const odataFetchAll = <T>(path: string): Promise<T[]> => odataGetAllPages<T>(path, { errorContext: 'OData' })
 
 export async function fetchAllKnessetMembers(): Promise<KnessetMember[]> {
   // Step 1: get all current MKs — follow odata.nextLink across pages (API caps at 100/page)

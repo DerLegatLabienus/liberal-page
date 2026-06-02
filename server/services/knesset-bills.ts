@@ -1,11 +1,11 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
-import type { KnessetBillOverviewItem, TrendingBillEntry } from '../../src/types'
+import type { KnessetBillOverviewItem, TrendingBillEntry, BillSearchResult } from '../../src/types'
 import { getBillStatusMap } from './bill-status-map'
 import { getCurrentKnesset } from './knesset-config'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
+import { odataGet } from './odata'
 
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 const TTL_MS = 5 * 60 * 1000
 
 function knessetUrl(billId: number): string {
@@ -68,15 +68,25 @@ async function cachedQuery(key: string, odataPath: string): Promise<KnessetBillO
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < TTL_MS) return hit.items
 
-  const res = await fetch(`${ODATA_BASE}/${odataPath}`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`OData error ${res.status}`)
-  const data = (await res.json()) as { value: RawBill[] }
-  const items = await mapRows(data.value ?? [])
+  const rows = await odataGet<RawBill>(odataPath)
+  const items = await mapRows(rows)
   cache.set(key, { items, at: Date.now() })
   return items
 }
 
 const SELECT = 'BillID,Name,StatusID,CommitteeID,LastUpdatedDate,SummaryLaw'
+
+/** Free-text bill search by name within a Knesset. Returns lightweight search results. */
+export async function searchBills(query: string, knesset: number): Promise<BillSearchResult[]> {
+  const encoded = encodeURIComponent(query)
+  const path = `KNS_Bill?$filter=KnessetNum%20eq%20${knesset}%20and%20substringof('${encoded}',Name)&$top=20&$select=BillID,Name,StatusID&$format=json`
+  const rows = await odataGet<{ BillID: number; Name: string; StatusID: number }>(path)
+  return rows.map((b) => ({
+    billId: b.BillID,
+    name: b.Name.trim(),
+    knessetUrl: knessetUrl(b.BillID),
+  }))
+}
 
 export async function fetchRecentBills(limit: number): Promise<KnessetBillOverviewItem[]> {
   const k = getCurrentKnesset()
@@ -118,10 +128,8 @@ async function fetchBillsByIds(ids: number[]): Promise<Map<number, KnessetBillOv
   if (ids.length === 0) return new Map()
   const ors = ids.map((id) => `BillID eq ${id}`).join(' or ')
   const odataPath = `KNS_Bill?$filter=${encodeURIComponent(ors)}&$top=${ids.length}&$select=${SELECT}&$format=json`
-  const res = await fetch(`${ODATA_BASE}/${odataPath}`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`OData error ${res.status}`)
-  const data = (await res.json()) as { value: RawBill[] }
-  const mapped = await mapRows(data.value ?? [])
+  const rows = await odataGet<RawBill>(odataPath)
+  const mapped = await mapRows(rows)
   return new Map(mapped.map((b) => [b.billId, b]))
 }
 

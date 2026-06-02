@@ -6,17 +6,9 @@
  *   The OData API uses an internal "KnsID" (PersonID) which must be looked up via KNS_MkSiteCode.
  */
 
-const BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+import { odataGet } from './odata'
 
-async function odata<T>(path: string): Promise<T[]> {
-  const url = `${BASE}/${path}`
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json' },
-  })
-  if (!res.ok) throw new Error(`Knesset OData error ${res.status}: ${path}`)
-  const data = await res.json() as { value?: T[] } | T[]
-  return (data as { value?: T[] }).value ?? (Array.isArray(data) ? data : [data as T])
-}
+const odata = <T>(path: string): Promise<T[]> => odataGet<T>(path, { errorContext: 'Knesset OData' })
 
 interface KNS_MkSiteCode {
   MKSiteCode: number

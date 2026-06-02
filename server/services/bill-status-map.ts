@@ -1,4 +1,5 @@
-const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
+import { odataGet } from './odata'
+
 const TTL_MS = 24 * 60 * 60 * 1000 // statuses are near-static; refresh daily
 
 let cache: { map: Map<number, string>; at: number } | null = null
@@ -10,13 +11,12 @@ export function _resetStatusMapCache() {
 export async function getBillStatusMap(): Promise<Map<number, string>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.map
 
-  const url = `${ODATA_BASE}/KNS_Status?$filter=TypeID%20eq%202&$select=StatusID,Desc&$format=json`
   try {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } })
-    if (!res.ok) throw new Error(`OData error ${res.status}`)
-    const data = (await res.json()) as { value: Array<{ StatusID: number; Desc: string }> }
+    const rows = await odataGet<{ StatusID: number; Desc: string }>(
+      'KNS_Status?$filter=TypeID%20eq%202&$select=StatusID,Desc&$format=json'
+    )
     const map = new Map<number, string>()
-    for (const row of data.value ?? []) map.set(row.StatusID, row.Desc)
+    for (const row of rows) map.set(row.StatusID, row.Desc)
     cache = { map, at: Date.now() }
     return map
   } catch {
