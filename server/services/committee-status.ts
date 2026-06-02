@@ -37,7 +37,11 @@ export function computeStatusChanges(
   const reactivate: string[] = []
 
   for (const { oknessetId, inactive } of tracked) {
-    const isActive = activeIds.has(Number(oknessetId))
+    // A committee without a numeric id can't be matched against the active list;
+    // leave its flag untouched rather than treating absence as closure.
+    const id = Number(oknessetId)
+    if (!oknessetId || Number.isNaN(id)) continue
+    const isActive = activeIds.has(id)
     if (isActive && inactive) {
       reactivate.push(oknessetId)
     } else if (!isActive && !inactive) {

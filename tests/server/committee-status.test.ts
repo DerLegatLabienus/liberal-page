@@ -44,6 +44,16 @@ describe('computeStatusChanges', () => {
     expect(reactivate).toEqual([])
   })
 
+  it('ignores committees with an empty/non-numeric oknesset_id', () => {
+    const tracked = [
+      { oknessetId: '', inactive: false },
+      { oknessetId: 'abc', inactive: false },
+    ]
+    const { deactivate, reactivate } = computeStatusChanges(tracked, activeSet(), MIN_ACTIVE_COMMITTEES)
+    expect(deactivate).toEqual([])
+    expect(reactivate).toEqual([])
+  })
+
   it('handles a mix of changes in one pass', () => {
     const tracked = [
       { oknessetId: '1001', inactive: true },  // present + inactive → reactivate
