@@ -280,7 +280,9 @@ location — the app never hosts them.
   backend** (the backend issues/guards the scheduling link rather than linking to
   Calendly directly).
 - **Registered users only** — depends on **item 3 (User Accounts & Alerts)**, which
-  provides login + per-user identity.
+  provides login + per-user identity. Intended login is **"Sign in with Google" (OAuth)**:
+  a verified identity + email with no password storage on our side. This means #3 can ship
+  as Google OAuth alone (no email/password/reset system) and still satisfy this gate.
 - **One active booking per user** — a user cannot book again until their current
   meeting is over or cancelled.
 - **No meeting data stored** in our backend; meetings happen on Zoom / in person.
@@ -299,8 +301,15 @@ location — the app never hosts them.
    event, so the backend needs Calendly **webhooks** (`invitee.created` to set the
    lock, `invitee.canceled` to clear it) plus an **expiry by the scheduled end time**
    to release the lock after the meeting passes.
-4. **Host selection.** Define the host pool and rotation (Calendly round-robin /
-   collective / managed-event team).
+4. **Host selection / meeting type — DEFERRED, must be swappable.** Whether a booking
+   is a 1-on-1 with a rotating representative (Calendly **round-robin**), a session with
+   a fixed panel (**collective**), or a managed group event is **intentionally left open**
+   and decided later. The implementation must NOT hard-wire one mode: the meeting type and
+   host pool live behind a single configuration/strategy seam (e.g. a Calendly event-type
+   identifier + host list in config, or a small `meetingStrategy` abstraction) so changing
+   "who you meet and how many" is a config edit, not a code rewrite. Auth gate, the
+   one-active-booking lock, and the brokering flow are identical regardless of which mode
+   is chosen — only the Calendly event reference changes.
 5. **Backend brokering flow.** Likely: logged-in user clicks "Meet Us" → backend
    checks no active lock → backend creates a single-use Calendly scheduling link
    (Calendly API) → embed/redirect → on `invitee.created` webhook set the lock with
