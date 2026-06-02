@@ -28,8 +28,12 @@ strategy.
   `knesset_committees_cache`) are never touched.
 - **Log every deletion to the server log** (console). No DB log table, no discarded-card UI,
   no toast.
-- Once pressure is detected, **purge all orphans in one pass** — they are pure garbage, so
-  there is no batching, re-poll loop, or size-lag concern.
+- **Shed the minimum, hold extracted info as long as possible:** when over budget, delete at
+  most a **bounded batch** of the **stalest** orphans (oldest `lastPolledAt`) per cycle —
+  never all at once. Successive cycles chip away only as needed, so already-extracted data
+  (summaries, activity, votes) is preserved as long as possible.
+- **No mid-cycle re-measure:** `pg_database_size` lags after deletes, so we measure once per
+  cycle and delete at most one batch; the next cycle re-measures after the size has settled.
 
 ## Configuration (env)
 
@@ -37,6 +41,7 @@ strategy.
 |---|---|---|
 | `STORAGE_LIMIT_MB` | unset | DB size cap. **If unset, the feature is a no-op** (opt-in). |
 | `STORAGE_SLACK_MB` | `2` | Headroom: purge when `usedMB > LIMIT − SLACK`. |
+| `ORPHAN_PURGE_BATCH` | `5` | Max orphans deleted per poll cycle (stalest first). |
 
 No new schema. No new columns. No new tables.
 
@@ -47,9 +52,9 @@ A small helper `getDatabaseSizeBytes(): Promise<number | null>` runs
 is unavailable (e.g. pglite in tests). The orphan purge takes the size source as an injected
 function so tests can stub it; production passes `getDatabaseSizeBytes`.
 
-`pg_database_size` lags after deletes (MVCC), but that is irrelevant here: we measure once
-per poll cycle, and when over budget we purge *all* orphans in a single pass rather than
-looping on the figure. The next cycle re-measures (by then VACUUM has typically run).
+`pg_database_size` lags after deletes (MVCC), so we measure exactly **once per poll cycle**
+and delete at most one bounded batch — never looping on the figure within a cycle. The next
+cycle re-measures (by then VACUUM has typically run) and sheds another batch if still over.
 
 ## Orphan detection (multi-user safe)
 
@@ -58,11 +63,12 @@ zero users. Computed directly with a `NOT EXISTS` / anti-join query against `tra
 `tracked_committees` / `tracked_mks`, so it is exact regardless of user count; no
 denormalized counter to maintain or drift.
 
-New repository methods:
-- `BillsRepository.findUntrackedIds(): Promise<number[]>`
-- `CommitteesRepository.findUntracked(): Promise<{ id: number; documentUrl: string | null }[]>`
-  (returns `lastSessionDocumentUrl` so summaries can be matched)
-- `MksRepository.findUntrackedIds(): Promise<number[]>`
+New repository methods return each orphan's `lastPolledAt` so the service can order by
+staleness across all types:
+- `BillsRepository.findUntracked(): Promise<{ id: number; lastPolledAt: Date | null }[]>`
+- `CommitteesRepository.findUntracked(): Promise<{ id: number; lastPolledAt: Date | null; documentUrl: string | null }[]>`
+  (`documentUrl` = `lastSessionDocumentUrl`, so summaries can be matched)
+- `MksRepository.findUntracked(): Promise<{ id: number; lastPolledAt: Date | null }[]>`
 
 ## Safe cascade delete (respects `onDelete:'restrict'` FKs)
 
@@ -88,11 +94,17 @@ limit = STORAGE_LIMIT_MB; if unset → return zeros          // feature off
 used = await usedBytes(); if used === null → return zeros   // size unknown → skip
 if used <= (limit - STORAGE_SLACK_MB) * 1MB → return zeros  // have slack → nothing to do
 
-// Over budget → purge ALL orphans (safe; tracked by no one)
-for id in mksRepo.findUntrackedIds():        mksRepo.deleteCascade(id);        log('mk', id)
-for c  in committeesRepo.findUntracked():     summariesRepo.deleteBySourceUrl(c.documentUrl)
-                                              committeesRepo.deleteCascade(c.id); log('committee', c.id)
-for id in billsRepo.findUntrackedIds():       billsRepo.deleteCascade(id);      log('bill', id)
+// Over budget → shed at most ORPHAN_PURGE_BATCH stalest orphans (tracked by no one).
+candidates = [
+  ...billsRepo.findUntracked().map(o => ({ type:'bill', ...o })),
+  ...committeesRepo.findUntracked().map(o => ({ type:'committee', ...o })),
+  ...mksRepo.findUntracked().map(o => ({ type:'mk', ...o })),
+]
+candidates.sort(by lastPolledAt ASC, null first; tie-break id ASC)   // stalest first
+for c in candidates.slice(0, ORPHAN_PURGE_BATCH):
+  if c.type === 'committee': summariesRepo.deleteBySourceUrl(c.documentUrl)
+  repo[c.type].deleteCascade(c.id); log(c.type, c.id)
+// no re-measure; the next poll cycle sheds another batch if still over budget
 ```
 
 - `SummariesRepository.deleteBySourceUrl(url)` — deletes `summaries_cache` rows whose
@@ -115,11 +127,15 @@ Not counted toward cycle success/backoff (consistent with the committee-list ref
 
 **Unit / repo (pglite, stubbed `usedBytes`):**
 - No-op when `STORAGE_LIMIT_MB` unset, when `usedBytes()` returns `null`, or when under budget.
-- Over budget → deletes entities with no tracking row; leaves tracked entities intact.
+- Over budget → deletes **at most `ORPHAN_PURGE_BATCH`** orphans, **stalest first** (oldest
+  `lastPolledAt`, nulls first, tie-break id); leaves the remaining orphans for later cycles.
+- A second call (still over budget) sheds the next batch — proves cross-cycle convergence and
+  that extracted data isn't wiped in one pass.
+- Tracked entities are never deleted.
 - **Multi-user:** an entity tracked by user B is NOT deleted after user A untracks it
-  (`findUntracked*` excludes it because a tracking row still exists).
-- Orphan committee → its `summaries_cache` row (matching `documentUrl`) deleted; an unrelated
-  summary is kept; `knesset_*_cache` rows are untouched.
+  (`findUntracked` excludes it because a tracking row still exists).
+- Orphan committee in the batch → its `summaries_cache` row (matching `documentUrl`) deleted;
+  an unrelated summary is kept; `knesset_*_cache` rows are untouched.
 - `deleteCascade` removes all children + any tracking row with no FK violation, per type.
 - Emits a server-log line per deletion (spy on `console.log`).
 
