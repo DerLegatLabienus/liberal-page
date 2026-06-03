@@ -50,7 +50,7 @@ describe('CommitteeCombobox', () => {
     render(<CommitteeCombobox onAdd={onAdd} />)
     await user.click(screen.getByText(/חפש ועדה/i))
     await user.click(screen.getByText('ועדת הכספים'))
-    expect(api.committees.track).toHaveBeenCalledWith(2, 'ועדת הכספים', expect.stringContaining('commmid=2'))
+    expect(api.committees.track).toHaveBeenCalledWith(2, 'ועדת הכספים', expect.stringContaining('commmid=2'), undefined)
     expect(onAdd).toHaveBeenCalledTimes(1)
   })
 })

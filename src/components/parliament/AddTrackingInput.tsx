@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api-client'
+import { api, type TrackScope } from '@/lib/api-client'
 import type { TrackingType } from '@/types'
 
 const RAW_ID_RE = /^\d+$/
 
 interface AddTrackingInputProps {
   onAdd: () => void
+  scope?: TrackScope
 }
 
-export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
+export default function AddTrackingInput({ onAdd, scope }: AddTrackingInputProps) {
   const { t } = useTranslation()
   const [value, setValue] = useState('')
   const [selectedType, setSelectedType] = useState<TrackingType | null>(null)
@@ -34,9 +35,9 @@ export default function AddTrackingInput({ onAdd }: AddTrackingInputProps) {
     setError(null)
     try {
       if (isRawId && selectedType) {
-        await api.tracking.add({ rawId: trimmed, type: selectedType })
+        await api.tracking.add({ rawId: trimmed, type: selectedType }, scope)
       } else {
-        await api.tracking.add({ url: trimmed })
+        await api.tracking.add({ url: trimmed }, scope)
       }
       setValue('')
       setSelectedType(null)

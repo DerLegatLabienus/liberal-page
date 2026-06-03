@@ -1,21 +1,24 @@
 import { Router } from 'express'
 import type { TrackingType } from '../../src/types'
-import { UsersRepository } from '../repositories/users-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
 import { TrackedMksRepository } from '../repositories/tracked-mks-repository'
 import { getCurrentKnesset } from '../services/knesset-config'
+import { optionalAuth } from '../middleware/auth'
+import { resolveReadScope } from '../services/tracking-scope'
 
 const router = Router()
-const users = new UsersRepository()
 const trackedBills = new TrackedBillsRepository()
 const trackedCommittees = new TrackedCommitteesRepository()
 const trackedMks = new TrackedMksRepository()
 
-router.get('/:type', async (req, res) => {
+// Default scope is the public group list; `?scope=personal` returns the caller's list.
+router.get('/:type', optionalAuth, async (req, res) => {
   const type = req.params.type as TrackingType
   try {
-    const userId = await users.getSharedUserId()
+    const scope = await resolveReadScope(req)
+    if (!scope.ok) return res.status(scope.status).json({ error: scope.error })
+    const userId = scope.userId
     if (type === 'bill') return res.json(await trackedBills.getAll(userId, getCurrentKnesset()))
     if (type === 'committee') return res.json(await trackedCommittees.getAll(userId))
     if (type === 'mk') return res.json(await trackedMks.getAll(userId, getCurrentKnesset()))

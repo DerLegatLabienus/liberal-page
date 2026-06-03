@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { api } from '@/lib/api-client'
+import { api, type TrackScope } from '@/lib/api-client'
 import type { BillSearchResult } from '@/types'
 
 interface BillSearchComboboxProps {
   onAdd: () => void
+  scope?: TrackScope
 }
 
-export default function BillSearchCombobox({ onAdd }: BillSearchComboboxProps) {
+export default function BillSearchCombobox({ onAdd, scope }: BillSearchComboboxProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<BillSearchResult[]>([])
@@ -44,7 +45,7 @@ export default function BillSearchCombobox({ onAdd }: BillSearchComboboxProps) {
     setOpen(false)
     setQuery('')
     setResults([])
-    await api.bills.track(result.billId, result.name, result.knessetUrl).catch(() => {/* ignore */})
+    await api.bills.track(result.billId, result.name, result.knessetUrl, scope).catch(() => {/* ignore */})
     onAdd()
   }
 

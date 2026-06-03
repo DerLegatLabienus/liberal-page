@@ -115,7 +115,9 @@
     "mk_unknown": "ח\"כ לא מוגדר",
     "chair_prefix": "יו\"ר:",
     "last_session_prefix": "ישיבה אחרונה:",
-    "closed": "סגורה"
+    "closed": "סגורה",
+    "group_list": "רשימת הקבוצה",
+    "my_list": "הרשימה שלי"
   },
   "showcase": {
     "heading": "ח\"כים ליברלים בליכוד",

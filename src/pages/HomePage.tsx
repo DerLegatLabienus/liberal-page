@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParliament } from '@/hooks/useParliament'
-import { api } from '@/lib/api-client'
+import { api, type TrackScope } from '@/lib/api-client'
+import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
@@ -17,8 +18,13 @@ import JoinSection from '@/components/sections/JoinSection'
 export default function HomePage() {
   const { i18n } = useTranslation()
   const isHebrew = i18n.language === 'he'
+  const { user } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { bills, committees, mks, loading, lastSyncedAt, refresh } = useParliament()
+  const [scope, setScope] = useState<TrackScope>('group')
+  const { bills, committees, mks, loading, lastSyncedAt, refresh } = useParliament(scope)
+
+  // Personal list is editable by its owner; the group list only by admins.
+  const canEdit = scope === 'personal' ? !!user : user?.role === 'admin'
 
   const hasNewData =
     bills.some((b) => b.hasNewData) ||
@@ -30,19 +36,16 @@ export default function HomePage() {
   const handleAdd = useCallback(() => refresh(), [refresh])
 
   const handleRemoveBill = useCallback(async (id: number) => {
-    await api.tracking.remove('bill', id)
-    refresh()
-  }, [refresh])
+    await api.tracking.remove('bill', id, scope); refresh()
+  }, [refresh, scope])
 
   const handleRemoveCommittee = useCallback(async (id: number) => {
-    await api.tracking.remove('committee', id)
-    refresh()
-  }, [refresh])
+    await api.tracking.remove('committee', id, scope); refresh()
+  }, [refresh, scope])
 
   const handleRemoveMk = useCallback(async (id: number) => {
-    await api.tracking.remove('mk', id)
-    refresh()
-  }, [refresh])
+    await api.tracking.remove('mk', id, scope); refresh()
+  }, [refresh, scope])
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,6 +83,10 @@ export default function HomePage() {
           onRemoveBill={handleRemoveBill}
           onRemoveCommittee={handleRemoveCommittee}
           onRemoveMk={handleRemoveMk}
+          scope={scope}
+          onScopeChange={setScope}
+          canEdit={canEdit}
+          isLoggedIn={!!user}
         />
       )}
     </div>

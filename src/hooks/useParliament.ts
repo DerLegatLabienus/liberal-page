@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api } from '@/lib/api-client'
+import { api, type TrackScope } from '@/lib/api-client'
 import type { Bill, Committee, Mk } from '@/types'
 
 interface ParliamentState {
@@ -12,7 +12,7 @@ interface ParliamentState {
   refresh: () => void
 }
 
-export function useParliament(): ParliamentState {
+export function useParliament(scope: TrackScope = 'group'): ParliamentState {
   const [bills, setBills] = useState<Bill[]>([])
   const [committees, setCommittees] = useState<Committee[]>([])
   const [mks, setMks] = useState<Mk[]>([])
@@ -25,9 +25,9 @@ export function useParliament(): ParliamentState {
     setError(null)
     try {
       const [b, c, m] = await Promise.all([
-        api.parliament.getBills(),
-        api.parliament.getCommittees(),
-        api.parliament.getMks(),
+        api.parliament.getBills(scope),
+        api.parliament.getCommittees(scope),
+        api.parliament.getMks(scope),
       ])
       setBills(b)
       setCommittees(c)
@@ -38,7 +38,7 @@ export function useParliament(): ParliamentState {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [scope])
 
   useEffect(() => {
     refresh()

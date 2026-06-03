@@ -60,8 +60,8 @@ async function main() {
   await ff.setFlag('policyFilter', flagsRaw.bills.policyFilterEnabled, null, 'Policy-aligned tab toggle')
   await ff.setFlag('storagePressure', true, flagsRaw.storage.pressure, 'Orphan-purge config "limitMb:slackMb"; "-1" disables')
 
-  // Create the shared user
-  const sharedUserId = await new UsersRepository().getSharedUserId()
+  // Seed the public group list (the group account owns the default tracked items).
+  const sharedUserId = await new UsersRepository().getGroupUserId()
 
   const trackedBillsRepo = new TrackedBillsRepository()
   const trackedCommitteesRepo = new TrackedCommitteesRepository()

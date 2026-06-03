@@ -3,7 +3,8 @@ import request from 'supertest'
 import express from 'express'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
-import { trackedBills, bills } from '../../server/db/schema'
+import { trackedBills, bills, users } from '../../server/db/schema'
+import { issueAccessToken } from '../../server/services/auth-service'
 
 vi.mock('../../server/services/knesset-config', () => ({
   getCurrentKnesset: vi.fn().mockReturnValue(25),
@@ -52,26 +53,30 @@ describe('GET /api/bills/search', () => {
 })
 
 describe('POST /api/bills/track', () => {
-  beforeAll(async () => { await setupTestDb() })
+  let token: string
+  beforeAll(async () => {
+    await setupTestDb()
+    const [m] = await db.insert(users).values({ label: 'm', email: 'bills-m@x.com', role: 'member', createdAt: new Date() }).returning({ id: users.id })
+    token = issueAccessToken({ id: m.id, email: 'bills-m@x.com', name: 'M', role: 'member' })
+  })
 
   beforeEach(async () => {
-    // Delete in FK-dependency order; keep users row to avoid stale cache in module-level singleton
     await db.delete(trackedBills)
     await db.delete(bills)
   })
 
   it('returns 400 when billId is missing', async () => {
-    const res = await request(app).post('/api/bills/track').send({ name: 'test' })
+    const res = await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({ name: 'test' })
     expect(res.status).toBe(400)
   })
 
   it('returns 400 when name is missing', async () => {
-    const res = await request(app).post('/api/bills/track').send({ billId: 1038990 })
+    const res = await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({ billId: 1038990 })
     expect(res.status).toBe(400)
   })
 
   it('creates a bills entity and tracked_bills row on first track', async () => {
-    const res = await request(app).post('/api/bills/track').send({
+    const res = await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
       knessetUrl: 'https://www.knesset.gov.il/privatelaw/hql_knesset_det.aspx?knesset=25&hql_id=1038990',
@@ -90,7 +95,7 @@ describe('POST /api/bills/track', () => {
   })
 
   it('stores a non-empty oknesset_id equal to String(billId) when tracking via /track', async () => {
-    await request(app).post('/api/bills/track').send({
+    await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
     })
@@ -100,12 +105,12 @@ describe('POST /api/bills/track', () => {
   })
 
   it('returns duplicate:true and does not create a second tracked_bills row', async () => {
-    await request(app).post('/api/bills/track').send({
+    await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
     })
 
-    const res = await request(app).post('/api/bills/track').send({
+    const res = await request(app).post('/api/bills/track').set('Authorization', `Bearer ${token}`).send({
       billId: 1038990,
       name: 'הצעת חוק חופש העיסוק',
     })

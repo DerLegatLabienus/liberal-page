@@ -22,7 +22,7 @@ describe('TrackedCommitteesRepository', () => {
     await db.delete(trackedCommittees); await db.delete(committeeSessions)
     await db.delete(committees); await db.delete(users)
     usersRepo['cachedId'] = null
-    userId = await usersRepo.getSharedUserId()
+    userId = await usersRepo.getGroupUserId()
   })
 
   it('track/getAll/untrack round-trips; entity persists after untrack', async () => {

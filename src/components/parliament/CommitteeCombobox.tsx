@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useCommitteeList } from '@/hooks/useCommitteeList'
-import { api } from '@/lib/api-client'
+import { api, type TrackScope } from '@/lib/api-client'
 import type { CommitteeListItem } from '@/types'
 
-interface CommitteeComboboxProps { onAdd: () => void }
+interface CommitteeComboboxProps { onAdd: () => void; scope?: TrackScope }
 
-export default function CommitteeCombobox({ onAdd }: CommitteeComboboxProps) {
+export default function CommitteeCombobox({ onAdd, scope }: CommitteeComboboxProps) {
   const { committees, loading } = useCommitteeList()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -26,7 +26,7 @@ export default function CommitteeCombobox({ onAdd }: CommitteeComboboxProps) {
   const handleSelect = async (item: CommitteeListItem) => {
     setOpen(false)
     setQuery('')
-    await api.committees.track(item.committeeId, item.name, item.knessetUrl).catch(() => {})
+    await api.committees.track(item.committeeId, item.name, item.knessetUrl, scope).catch(() => {})
     onAdd()
   }
 

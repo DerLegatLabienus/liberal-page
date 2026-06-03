@@ -34,20 +34,26 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export type TrackScope = 'group' | 'personal'
+// Reads default to the group list; pass 'personal' to read the caller's list.
+const readQ = (scope?: TrackScope) => (scope === 'personal' ? '?scope=personal' : '')
+// Writes default to personal; pass 'group' (admin only) to edit the public list.
+const writeQ = (scope?: TrackScope) => (scope === 'group' ? '?scope=group' : '')
+
 export const api = {
   parliament: {
-    getBills: () => apiFetch<Bill[]>('/parliament/bill'),
-    getCommittees: () => apiFetch<Committee[]>('/parliament/committee'),
-    getMks: () => apiFetch<Mk[]>('/parliament/mk'),
+    getBills: (scope?: TrackScope) => apiFetch<Bill[]>(`/parliament/bill${readQ(scope)}`),
+    getCommittees: (scope?: TrackScope) => apiFetch<Committee[]>(`/parliament/committee${readQ(scope)}`),
+    getMks: (scope?: TrackScope) => apiFetch<Mk[]>(`/parliament/mk${readQ(scope)}`),
   },
   tracking: {
-    add: (payload: { url?: string; rawId?: string; type?: TrackingType }) =>
-      apiFetch<{ ok: boolean; item: Bill | Committee | Mk }>('/tracking/add', {
+    add: (payload: { url?: string; rawId?: string; type?: TrackingType }, scope?: TrackScope) =>
+      apiFetch<{ ok: boolean; item: Bill | Committee | Mk }>(`/tracking/add${writeQ(scope)}`, {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    remove: (type: TrackingType, id: number) =>
-      apiFetch<{ ok: boolean }>(`/tracking/${type}/${id}`, { method: 'DELETE' }),
+    remove: (type: TrackingType, id: number, scope?: TrackScope) =>
+      apiFetch<{ ok: boolean }>(`/tracking/${type}/${id}${writeQ(scope)}`, { method: 'DELETE' }),
   },
   summarize: (url: string) =>
     apiFetch<{ summary: string }>('/summarize', {
@@ -56,8 +62,8 @@ export const api = {
     }),
   bills: {
     search: (q: string) => apiFetch<BillSearchResult[]>(`/bills/search?q=${encodeURIComponent(q)}`),
-    track: (billId: number, name: string, knessetUrl: string) =>
-      apiFetch<{ ok: boolean; duplicate?: boolean; item?: Bill }>('/bills/track', {
+    track: (billId: number, name: string, knessetUrl: string, scope?: TrackScope) =>
+      apiFetch<{ ok: boolean; duplicate?: boolean; item?: Bill }>(`/bills/track${writeQ(scope)}`, {
         method: 'POST',
         body: JSON.stringify({ billId, name, knessetUrl }),
       }),
@@ -71,8 +77,8 @@ export const api = {
   },
   committees: {
     list: () => apiFetch<CommitteeListItem[]>('/committees/list'),
-    track: (committeeId: number, name: string, knessetUrl: string) =>
-      apiFetch<{ ok: boolean; duplicate?: boolean }>('/committees/track', {
+    track: (committeeId: number, name: string, knessetUrl: string, scope?: TrackScope) =>
+      apiFetch<{ ok: boolean; duplicate?: boolean }>(`/committees/track${writeQ(scope)}`, {
         method: 'POST',
         body: JSON.stringify({ committeeId, name, knessetUrl }),
       }),

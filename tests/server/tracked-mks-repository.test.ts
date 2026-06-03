@@ -23,7 +23,7 @@ describe('TrackedMksRepository', () => {
     await db.delete(trackedMks); await db.delete(mkVotes); await db.delete(mkActivity)
     await db.delete(mkRoles); await db.delete(mkKnessetTerms); await db.delete(mks); await db.delete(users)
     usersRepo['cachedId'] = null
-    userId = await usersRepo.getSharedUserId()
+    userId = await usersRepo.getGroupUserId()
   })
 
   it('track/getAll/untrack round-trips; derives party; entity persists', async () => {

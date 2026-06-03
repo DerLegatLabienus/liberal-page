@@ -18,7 +18,7 @@ describe('GET /api/parliament/:type', () => {
   beforeEach(async () => { await db.delete(trackedBills); await db.delete(bills); await db.delete(users) })
 
   it('returns tracked bills for the shared user', async () => {
-    const userId = await new UsersRepository().getSharedUserId()
+    const userId = await new UsersRepository().getGroupUserId()
     const billId = await new BillsRepository().upsert({
       oknessetId: '', number: '1', title: 'חוק', status: 'בוועדה', committee: '',
       sourceUrl: '', documentUrl: null, knessetUrl: null, knessetNumber: 25, hasNewData: false, lastPolledAt: null,

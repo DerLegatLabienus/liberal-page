@@ -1,13 +1,13 @@
 import { Router } from 'express'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
-import { UsersRepository } from '../repositories/users-repository'
 import { enrichCommitteeSessions } from '../services/committee-session-enricher'
 import { refreshCommitteeListIfStale } from '../services/committee-list-refresh'
 import { fetchCommitteeDetail } from '../services/knesset-committees'
+import { requireAuth } from '../middleware/auth'
+import { resolveWriteScope } from '../services/tracking-scope'
 
 const router = Router()
-const users = new UsersRepository()
 const committeesRepo = new CommitteesRepository()
 const trackedCommittees = new TrackedCommitteesRepository()
 
@@ -19,10 +19,12 @@ router.get('/list', async (_req, res) => {
   }
 })
 
-router.post('/track', async (req, res) => {
+router.post('/track', requireAuth, async (req, res) => {
   const { committeeId, name, knessetUrl } = req.body as { committeeId?: number; name?: string; knessetUrl?: string }
   if (!committeeId || !name) return res.status(400).json({ error: 'committeeId and name required' })
-  const userId = await users.getSharedUserId()
+  const scope = await resolveWriteScope(req)
+  if (!scope.ok) return res.status(scope.status).json({ error: scope.error })
+  const userId = scope.userId
   const all = await committeesRepo.getAll()
   const entity = all.find((c) => c.oknesset_id === String(committeeId) || c.name.trim() === name.trim())
   let id: number

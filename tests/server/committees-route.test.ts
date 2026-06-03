@@ -3,7 +3,8 @@ import request from 'supertest'
 import express from 'express'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
-import { trackedCommittees, committees } from '../../server/db/schema'
+import { trackedCommittees, committees, users } from '../../server/db/schema'
+import { issueAccessToken } from '../../server/services/auth-service'
 
 vi.mock('../../server/services/committee-session-enricher', () => ({
   enrichCommitteeSessions: vi.fn().mockResolvedValue([]),
@@ -63,21 +64,25 @@ describe('GET /api/committees/list', () => {
 })
 
 describe('POST /api/committees/track', () => {
-  beforeAll(async () => { await setupTestDb() })
+  let token: string
+  beforeAll(async () => {
+    await setupTestDb()
+    const [m] = await db.insert(users).values({ label: 'm', email: 'cmt-m@x.com', role: 'member', createdAt: new Date() }).returning({ id: users.id })
+    token = issueAccessToken({ id: m.id, email: 'cmt-m@x.com', name: 'M', role: 'member' })
+  })
 
   beforeEach(async () => {
-    // Delete in FK-dependency order; keep users row to avoid stale cache in module-level singleton
     await db.delete(trackedCommittees)
     await db.delete(committees)
   })
 
   it('returns 400 when committeeId or name is missing', async () => {
-    const res = await request(app).post('/api/committees/track').send({ name: 'test' })
+    const res = await request(app).post('/api/committees/track').set('Authorization', `Bearer ${token}`).send({ name: 'test' })
     expect(res.status).toBe(400)
   })
 
   it('creates a committees entity and tracked_committees row on first track', async () => {
-    const res = await request(app).post('/api/committees/track').send({
+    const res = await request(app).post('/api/committees/track').set('Authorization', `Bearer ${token}`).send({
       committeeId: 2, name: 'ועדת הכספים',
       knessetUrl: 'https://main.knesset.gov.il/apps/committees/1234',
     })
@@ -95,11 +100,11 @@ describe('POST /api/committees/track', () => {
   })
 
   it('returns duplicate:true and does not create a second tracked_committees row', async () => {
-    await request(app).post('/api/committees/track').send({
+    await request(app).post('/api/committees/track').set('Authorization', `Bearer ${token}`).send({
       committeeId: 2, name: 'ועדת הכספים',
     })
 
-    const res = await request(app).post('/api/committees/track').send({
+    const res = await request(app).post('/api/committees/track').set('Authorization', `Bearer ${token}`).send({
       committeeId: 2, name: 'ועדת הכספים',
     })
     expect(res.status).toBe(200)

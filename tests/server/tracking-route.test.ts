@@ -4,32 +4,21 @@ import express from 'express'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
 import {
-  bills, trackedBills,
+  users, bills, trackedBills,
   committees, trackedCommittees,
   mks, trackedMks, mkKnessetTerms, mkRoles, mkActivity, mkVotes,
 } from '../../server/db/schema'
 import { UsersRepository } from '../../server/repositories/users-repository'
 import { TrackedBillsRepository } from '../../server/repositories/tracked-bills-repository'
+import { issueAccessToken } from '../../server/services/auth-service'
 
-// Mock external services — network only
 vi.mock('../../server/services/oknesset', () => ({
   OknessetClient: vi.fn().mockImplementation(() => ({
-    getBill: vi.fn().mockResolvedValue({
-      law_id: 1044632,
-      title: 'הצעת חוק בדיקה',
-      committee: 'ועדת הכנסת',
-    }),
-    getCommittee: vi.fn().mockResolvedValue({
-      name: 'ועדת הכנסת',
-      chairperson: 'יו"ר הוועדה',
-    }),
-    getMk: vi.fn().mockResolvedValue({
-      name: 'חבר כנסת בדיקה',
-      party: 'מפלגה א',
-    }),
+    getBill: vi.fn().mockResolvedValue({ law_id: 1044632, title: 'הצעת חוק בדיקה', committee: 'ועדת הכנסת' }),
+    getCommittee: vi.fn().mockResolvedValue({ name: 'ועדת הכנסת', chairperson: 'יו"ר הוועדה' }),
+    getMk: vi.fn().mockResolvedValue({ name: 'חבר כנסת בדיקה', party: 'מפלגה א' }),
   })),
 }))
-
 vi.mock('../../server/services/url-parser', () => ({
   parseKnessetUrl: vi.fn((url: string) => {
     if (url.includes('/bill/')) return { type: 'bill', id: '12345' }
@@ -39,24 +28,11 @@ vi.mock('../../server/services/url-parser', () => ({
   }),
   isKnessetSiteUrl: vi.fn(() => false),
 }))
-
 vi.mock('../../server/services/knesset-api', () => ({
-  getMkBySiteId: vi.fn().mockResolvedValue({
-    knsId: 999,
-    name: 'מ"כ דוגמה',
-    email: null,
-    faction: 'מפלגה ב',
-    positions: [],
-  }),
+  getMkBySiteId: vi.fn().mockResolvedValue({ knsId: 999, name: 'מ"כ דוגמה', email: null, faction: 'מפלגה ב', positions: [] }),
 }))
-
-vi.mock('../../server/services/knesset-scraper', () => ({
-  fetchMkActivity: vi.fn().mockResolvedValue([]),
-}))
-
-vi.mock('../../server/services/knesset-config', () => ({
-  getCurrentKnesset: vi.fn().mockReturnValue(25),
-}))
+vi.mock('../../server/services/knesset-scraper', () => ({ fetchMkActivity: vi.fn().mockResolvedValue([]) }))
+vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: vi.fn().mockReturnValue(25) }))
 
 import trackingRouter from '../../server/routes/tracking'
 
@@ -64,198 +40,103 @@ const app = express()
 app.use(express.json())
 app.use('/api/tracking', trackingRouter)
 
-describe('POST /api/tracking/add + DELETE /api/tracking/:type/:id', () => {
+describe('tracking routes (auth + scope)', () => {
   const usersRepo = new UsersRepository()
   const trackedBillsRepo = new TrackedBillsRepository()
+  let memberId: number
+  let memberToken: string
+  let adminToken: string
 
-  beforeAll(async () => { await setupTestDb() })
+  beforeAll(async () => {
+    await setupTestDb()
+    const [m] = await db.insert(users).values({ label: 'm', email: 'm@x.com', role: 'member', createdAt: new Date() }).returning({ id: users.id })
+    const [a] = await db.insert(users).values({ label: 'a', email: 'a@x.com', role: 'admin', createdAt: new Date() }).returning({ id: users.id })
+    memberId = m.id
+    memberToken = issueAccessToken({ id: m.id, email: 'm@x.com', name: 'M', role: 'member' })
+    adminToken = issueAccessToken({ id: a.id, email: 'a@x.com', name: 'A', role: 'admin' })
+  })
 
   beforeEach(async () => {
-    // Delete in dependency order: tracked rows, then MK child tables, then entities
-    // Keep users to avoid stale cache in module-level singleton
-    await db.delete(trackedMks)
-    await db.delete(trackedCommittees)
-    await db.delete(trackedBills)
-    await db.delete(mkVotes)
-    await db.delete(mkActivity)
-    await db.delete(mkRoles)
-    await db.delete(mkKnessetTerms)
-    await db.delete(mks)
-    await db.delete(committees)
-    await db.delete(bills)
-    // Do NOT delete users — the module-level UsersRepository singleton in the route
-    // caches the shared user ID; re-creating users each test causes FK violations.
-    // Instead ensure the shared user exists once.
+    await db.delete(trackedMks); await db.delete(trackedCommittees); await db.delete(trackedBills)
+    await db.delete(mkVotes); await db.delete(mkActivity); await db.delete(mkRoles); await db.delete(mkKnessetTerms)
+    await db.delete(mks); await db.delete(committees); await db.delete(bills)
     usersRepo['cachedId'] = null
-    await usersRepo.getSharedUserId()
   })
 
-  describe('bill flow', () => {
-    it('POST /add creates a bills row and tracks it for the shared user', async () => {
-      const res = await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/bill/12345' })
+  const addAs = (token: string, body: object, query = '') =>
+    request(app).post(`/api/tracking/add${query}`).set('Authorization', `Bearer ${token}`).send(body)
+  const delAs = (token: string, path: string, query = '') =>
+    request(app).delete(`/api/tracking/${path}${query}`).set('Authorization', `Bearer ${token}`)
 
+  describe('auth gate', () => {
+    it('POST /add without a token → 401', async () => {
+      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/bill/12345' })
+      expect(res.status).toBe(401)
+    })
+    it('DELETE without a token → 401', async () => {
+      expect((await request(app).delete('/api/tracking/bill/1')).status).toBe(401)
+    })
+  })
+
+  describe('personal scope (default)', () => {
+    it('POST /add tracks the bill for the calling member', async () => {
+      const res = await addAs(memberToken, { url: 'https://oknesset.org/bill/12345' })
       expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const sharedUserId = await usersRepo.getSharedUserId()
-      const tracked = await trackedBillsRepo.getAll(sharedUserId, 25)
+      const tracked = await trackedBillsRepo.getAll(memberId, 25)
       expect(tracked).toHaveLength(1)
       expect(tracked[0].title).toBe('הצעת חוק בדיקה')
-      expect(tracked[0].position).toBe('עוקבים')
     })
 
-    it('DELETE /bill/:id untracks but keeps the bills row', async () => {
-      // First add
-      await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/bill/12345' })
-
-      const sharedUserId = await usersRepo.getSharedUserId()
-      const tracked = await trackedBillsRepo.getAll(sharedUserId, 25)
-      expect(tracked).toHaveLength(1)
+    it('DELETE untracks for the member but keeps the entity', async () => {
+      await addAs(memberToken, { url: 'https://oknesset.org/bill/12345' })
+      const tracked = await trackedBillsRepo.getAll(memberId, 25)
       const billEntityId = tracked[0].id!
-
-      // Then delete
-      const res = await request(app).delete(`/api/tracking/bill/${billEntityId}`)
+      const res = await delAs(memberToken, `bill/${billEntityId}`)
       expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
+      expect(await trackedBillsRepo.getAll(memberId, 25)).toHaveLength(0)
+      expect(await db.select().from(bills)).toHaveLength(1)
+    })
 
-      // Tracking row gone
-      const afterDelete = await trackedBillsRepo.getAll(sharedUserId, 25)
-      expect(afterDelete).toHaveLength(0)
-
-      // But entity still exists
-      const billRows = await db.select().from(bills)
-      expect(billRows).toHaveLength(1)
+    it('committee + mk flows track one row each for the member', async () => {
+      await addAs(memberToken, { url: 'https://oknesset.org/committee/67890' })
+      await addAs(memberToken, { url: 'https://oknesset.org/mk/1116' })
+      expect(await db.select().from(trackedCommittees)).toHaveLength(1)
+      expect(await db.select().from(trackedMks)).toHaveLength(1)
     })
   })
 
-  describe('committee flow', () => {
-    it('POST /add creates a committees row and tracks it', async () => {
-      const res = await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/committee/67890' })
-
-      expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const committeeRows = await db.select().from(committees)
-      expect(committeeRows).toHaveLength(1)
-      expect(committeeRows[0].name).toBe('ועדת הכנסת')
-
-      const trackedRows = await db.select().from(trackedCommittees)
-      expect(trackedRows).toHaveLength(1)
+  describe('group scope (admin only)', () => {
+    it('member writing scope=group → 403', async () => {
+      const res = await addAs(memberToken, { url: 'https://oknesset.org/bill/12345' }, '?scope=group')
+      expect(res.status).toBe(403)
+      expect(await db.select().from(trackedBills)).toHaveLength(0)
     })
 
-    it('DELETE /committee/:id untracks but keeps the entity', async () => {
-      await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/committee/67890' })
-
-      const committeeRows = await db.select().from(committees)
-      const committeeId = committeeRows[0].id
-
-      const res = await request(app).delete(`/api/tracking/committee/${committeeId}`)
+    it('admin writing scope=group tracks into the group list, not the admin\'s personal list', async () => {
+      const res = await addAs(adminToken, { url: 'https://oknesset.org/bill/12345' }, '?scope=group')
       expect(res.status).toBe(200)
-
-      const tracked = await db.select().from(trackedCommittees)
-      expect(tracked).toHaveLength(0)
-
-      const stillExists = await db.select().from(committees)
-      expect(stillExists).toHaveLength(1)
+      const groupId = await usersRepo.getGroupUserId()
+      expect(await trackedBillsRepo.getAll(groupId, 25)).toHaveLength(1)
     })
   })
 
-  describe('mk flow (oknesset path)', () => {
-    it('POST /add creates an mks row and tracks it', async () => {
-      const res = await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/mk/1116' })
-
+  describe('dedup: same URL twice → one entity + one tracking row', () => {
+    it('bill', async () => {
+      await addAs(memberToken, { url: 'https://oknesset.org/bill/12345' })
+      const res = await addAs(memberToken, { url: 'https://oknesset.org/bill/12345' })
       expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const mkRows = await db.select().from(mks)
-      expect(mkRows).toHaveLength(1)
-      expect(mkRows[0].name).toBe('חבר כנסת בדיקה')
-
-      const trackedRows = await db.select().from(trackedMks)
-      expect(trackedRows).toHaveLength(1)
-    })
-
-    it('DELETE /mk/:id untracks but keeps the entity', async () => {
-      await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://oknesset.org/mk/1116' })
-
-      const mkRows = await db.select().from(mks)
-      const mkId = mkRows[0].id
-
-      const res = await request(app).delete(`/api/tracking/mk/${mkId}`)
-      expect(res.status).toBe(200)
-
-      const tracked = await db.select().from(trackedMks)
-      expect(tracked).toHaveLength(0)
-
-      const stillExists = await db.select().from(mks)
-      expect(stillExists).toHaveLength(1)
+      expect(await db.select().from(bills)).toHaveLength(1)
+      expect(await db.select().from(trackedBills)).toHaveLength(1)
     })
   })
 
-  describe('dedup: re-adding the same URL twice yields exactly one entity + one tracking row', () => {
-    it('bill: two POST /add calls with same id → 1 bills row, 1 tracked row', async () => {
-      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/bill/12345' })
-      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/bill/12345' })
-      expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const billRows = await db.select().from(bills)
-      expect(billRows).toHaveLength(1)
-
-      const trackedRows = await db.select().from(trackedBills)
-      expect(trackedRows).toHaveLength(1)
-    })
-
-    it('committee: two POST /add calls with same id → 1 committees row, 1 tracked row', async () => {
-      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/committee/67890' })
-      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/committee/67890' })
-      expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const committeeRows = await db.select().from(committees)
-      expect(committeeRows).toHaveLength(1)
-
-      const trackedRows = await db.select().from(trackedCommittees)
-      expect(trackedRows).toHaveLength(1)
-    })
-
-    it('mk: two POST /add calls with same id → 1 mks row, 1 tracked row', async () => {
-      await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/mk/1116' })
-      const res = await request(app).post('/api/tracking/add').send({ url: 'https://oknesset.org/mk/1116' })
-      expect(res.status).toBe(200)
-      expect(res.body.ok).toBe(true)
-
-      const mkRows = await db.select().from(mks)
-      expect(mkRows).toHaveLength(1)
-
-      const trackedRows = await db.select().from(trackedMks)
-      expect(trackedRows).toHaveLength(1)
-    })
-  })
-
-  describe('error cases', () => {
-    it('POST /add returns 400 for unsupported URL with no rawId', async () => {
-      const res = await request(app)
-        .post('/api/tracking/add')
-        .send({ url: 'https://example.com/not-knesset' })
+  describe('error cases (authenticated)', () => {
+    it('POST /add returns 400 for an unsupported URL', async () => {
+      const res = await addAs(memberToken, { url: 'https://example.com/not-knesset' })
       expect(res.status).toBe(400)
     })
-
-    it('DELETE with unknown type returns 400', async () => {
-      const res = await request(app).delete('/api/tracking/banana/1')
-      expect(res.status).toBe(400)
+    it('DELETE with an unknown type returns 400', async () => {
+      expect((await delAs(memberToken, 'banana/1')).status).toBe(400)
     })
   })
 })

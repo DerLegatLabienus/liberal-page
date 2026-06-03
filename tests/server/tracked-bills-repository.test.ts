@@ -21,7 +21,7 @@ describe('TrackedBillsRepository', () => {
   beforeEach(async () => {
     await db.delete(trackedBills); await db.delete(bills); await db.delete(users)
     usersRepo['cachedId'] = null
-    userId = await usersRepo.getSharedUserId()
+    userId = await usersRepo.getGroupUserId()
   })
 
   it('track() then getAll() returns the bill with position/notes', async () => {

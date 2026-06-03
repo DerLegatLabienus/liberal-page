@@ -56,7 +56,8 @@ describe('BillSearchCombobox', () => {
     expect(api.bills.track).toHaveBeenCalledWith(
       1038990,
       'הצעת חוק חופש העיסוק',
-      expect.stringContaining('1038990')
+      expect.stringContaining('1038990'),
+      undefined,
     )
     expect(onAdd).toHaveBeenCalledTimes(1)
   })

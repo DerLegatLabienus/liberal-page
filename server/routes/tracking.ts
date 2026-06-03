@@ -3,7 +3,6 @@ import { parseKnessetUrl, isKnessetSiteUrl } from '../services/url-parser'
 import { OknessetClient } from '../services/oknesset'
 import { getMkBySiteId } from '../services/knesset-api'
 import { fetchMkActivity } from '../services/knesset-scraper'
-import { UsersRepository } from '../repositories/users-repository'
 import { BillsRepository } from '../repositories/bills-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
@@ -11,11 +10,12 @@ import { TrackedBillsRepository } from '../repositories/tracked-bills-repository
 import { TrackedCommitteesRepository } from '../repositories/tracked-committees-repository'
 import { TrackedMksRepository } from '../repositories/tracked-mks-repository'
 import { getCurrentKnesset } from '../services/knesset-config'
+import { requireAuth } from '../middleware/auth'
+import { resolveWriteScope } from '../services/tracking-scope'
 import type { TrackingType } from '../../src/types'
 
 const router = Router()
 const oknesset = new OknessetClient()
-const users = new UsersRepository()
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()
 const mksRepo = new MksRepository()
@@ -23,7 +23,7 @@ const trackedBills = new TrackedBillsRepository()
 const trackedCommittees = new TrackedCommitteesRepository()
 const trackedMks = new TrackedMksRepository()
 
-router.post('/add', async (req, res) => {
+router.post('/add', requireAuth, async (req, res) => {
   try {
     const { url, rawId, type: rawType } = req.body as {
       url?: string
@@ -35,11 +35,14 @@ router.post('/add', async (req, res) => {
     if (!parsed && rawId && rawType) parsed = { type: rawType, id: rawId }
     if (!parsed) return res.status(400).json({ error: 'הקישור אינו נתמך' })
 
+    const scope = await resolveWriteScope(req)
+    if (!scope.ok) return res.status(scope.status).json({ error: scope.error })
+    const userId = scope.userId
+
     const { type, id } = parsed
 
     if (type === 'bill') {
       const data = await oknesset.getBill(id)
-      const userId = await users.getSharedUserId()
       const k = getCurrentKnesset()
       const existingBill = (await billsRepo.getAll(k)).find((b) => b.oknesset_id === id)
       const billId = existingBill?.id ?? await billsRepo.upsert({
@@ -61,7 +64,6 @@ router.post('/add', async (req, res) => {
 
     if (type === 'committee') {
       const data = await oknesset.getCommittee(id)
-      const userId = await users.getSharedUserId()
       const existingCommittee = (await committeesRepo.getAll()).find((c) => c.oknesset_id === id)
       const committeeId = existingCommittee?.id ?? await committeesRepo.upsert({
         oknesset_id: id,
@@ -125,7 +127,6 @@ router.post('/add', async (req, res) => {
         }
       }
 
-      const userId = await users.getSharedUserId()
       const allMks = await mksRepo.getAll(getCurrentKnesset())
       const existingMk = allMks.find((m) =>
         (mkInput.knesset_site_id && m.knesset_site_id === mkInput.knesset_site_id) ||
@@ -143,10 +144,12 @@ router.post('/add', async (req, res) => {
   }
 })
 
-router.delete('/:type/:id', async (req, res) => {
+router.delete('/:type/:id', requireAuth, async (req, res) => {
   try {
     const type = req.params.type as TrackingType
-    const userId = await users.getSharedUserId()
+    const scope = await resolveWriteScope(req)
+    if (!scope.ok) return res.status(scope.status).json({ error: scope.error })
+    const userId = scope.userId
     const entityId = Number(req.params.id)
     if (type === 'bill') await trackedBills.untrack(userId, entityId)
     else if (type === 'committee') await trackedCommittees.untrack(userId, entityId)

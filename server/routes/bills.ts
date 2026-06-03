@@ -2,12 +2,12 @@ import { Router } from 'express'
 import { getCurrentKnesset } from '../services/knesset-config'
 import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, searchBills } from '../services/knesset-bills'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
-import { UsersRepository } from '../repositories/users-repository'
 import { BillsRepository } from '../repositories/bills-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
+import { requireAuth } from '../middleware/auth'
+import { resolveWriteScope } from '../services/tracking-scope'
 
 const router = Router()
-const users = new UsersRepository()
 const billsRepo = new BillsRepository()
 const trackedBills = new TrackedBillsRepository()
 
@@ -22,10 +22,12 @@ router.get('/search', async (req, res) => {
   }
 })
 
-router.post('/track', async (req, res) => {
+router.post('/track', requireAuth, async (req, res) => {
   const { billId, name, knessetUrl } = req.body as { billId?: number; name?: string; knessetUrl?: string }
   if (!billId || !name) return res.status(400).json({ error: 'billId and name required' })
-  const userId = await users.getSharedUserId()
+  const scope = await resolveWriteScope(req)
+  if (!scope.ok) return res.status(scope.status).json({ error: scope.error })
+  const userId = scope.userId
   const k = getCurrentKnesset()
   const existing = (await billsRepo.getAll(k)).find(
     (b) => b.number === String(billId) || b.title?.trim() === name.trim()

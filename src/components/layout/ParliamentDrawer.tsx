@@ -15,6 +15,7 @@ import MkCard from '@/components/parliament/MkCard'
 import BillSearchCombobox from '@/components/parliament/BillSearchCombobox'
 import CommitteeCombobox from '@/components/parliament/CommitteeCombobox'
 import type { Bill, Committee, Mk, KnessetMember } from '@/types'
+import type { TrackScope } from '@/lib/api-client'
 
 interface ParliamentDrawerProps {
   open: boolean
@@ -29,12 +30,17 @@ interface ParliamentDrawerProps {
   onRemoveBill: (id: number) => void
   onRemoveCommittee: (id: number) => void
   onRemoveMk: (id: number) => void
+  scope: TrackScope
+  onScopeChange: (s: TrackScope) => void
+  canEdit: boolean
+  isLoggedIn: boolean
 }
 
 export default function ParliamentDrawer({
   open, onClose, bills, committees, mks,
   loading, lastSyncedAt, onRefresh, onAdd,
   onRemoveBill, onRemoveCommittee, onRemoveMk,
+  scope, onScopeChange, canEdit, isLoggedIn,
 }: ParliamentDrawerProps) {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
@@ -49,9 +55,9 @@ export default function ParliamentDrawer({
     setSelectedMk(member)
     // Track in background if not already tracked
     const alreadyTracked = mks.some((m) => m.knesset_site_id === String(member.siteId))
-    if (!alreadyTracked) {
+    if (!alreadyTracked && canEdit) {
       const url = `https://www.knesset.gov.il/mk/Apps/mk/mk-positions/${member.siteId}`
-      api.tracking.add({ url }).then(() => onAdd()).catch(() => {/* silently ignore */})
+      api.tracking.add({ url }, scope).then(() => onAdd()).catch(() => {/* silently ignore */})
     }
   }
 
@@ -65,9 +71,28 @@ export default function ParliamentDrawer({
           <SheetTitle className="text-white">{t('ui.drawer_title')}</SheetTitle>
         </SheetHeader>
 
-        <div className="border-b border-border bg-blue-50 px-4 py-3">
-          <AddTrackingInput onAdd={onAdd} />
-        </div>
+        {isLoggedIn && (
+          <div className="flex gap-1 border-b border-border bg-slate-50 px-4 py-2">
+            <button
+              onClick={() => onScopeChange('group')}
+              className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${scope === 'group' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-slate-100'}`}
+            >
+              {t('tracker.group_list')}
+            </button>
+            <button
+              onClick={() => onScopeChange('personal')}
+              className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${scope === 'personal' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-slate-100'}`}
+            >
+              {t('tracker.my_list')}
+            </button>
+          </div>
+        )}
+
+        {canEdit && (
+          <div className="border-b border-border bg-blue-50 px-4 py-3">
+            <AddTrackingInput onAdd={onAdd} scope={scope} />
+          </div>
+        )}
 
         <Tabs defaultValue="bills" className="flex flex-1 flex-col overflow-hidden">
           <TabsList className="w-full rounded-none border-b border-border">
@@ -78,9 +103,9 @@ export default function ParliamentDrawer({
 
           <div className="flex-1 overflow-y-auto">
             <TabsContent value="bills" className="m-0 space-y-3 p-4">
-              <BillSearchCombobox onAdd={onAdd} />
+              {canEdit && <BillSearchCombobox onAdd={onAdd} scope={scope} />}
               {bills.map((bill) => (
-                <BillCard key={bill.id} bill={bill} onRemove={onRemoveBill} />
+                <BillCard key={bill.id} bill={bill} onRemove={canEdit ? onRemoveBill : undefined} />
               ))}
               {bills.length === 0 && (
                 <p className="py-8 text-right text-sm text-muted-foreground">{t('ui.drawer_empty_bills')}</p>
@@ -88,9 +113,9 @@ export default function ParliamentDrawer({
             </TabsContent>
 
             <TabsContent value="committees" className="m-0 space-y-3 p-4">
-              <CommitteeCombobox onAdd={onAdd} />
+              {canEdit && <CommitteeCombobox onAdd={onAdd} scope={scope} />}
               {committees.map((c) => (
-                <CommitteeCard key={c.id} committee={c} onRemove={onRemoveCommittee} trackedMks={mks} />
+                <CommitteeCard key={c.id} committee={c} onRemove={canEdit ? onRemoveCommittee : undefined} trackedMks={mks} />
               ))}
               {committees.length === 0 && (
                 <p className="py-8 text-right text-sm text-muted-foreground">{t('ui.drawer_empty_committees')}</p>
@@ -98,7 +123,7 @@ export default function ParliamentDrawer({
             </TabsContent>
 
             <TabsContent value="mks" className="m-0 space-y-3 p-4">
-              <MkCombobox onSelect={handleSelectMk} selectedSiteId={selectedMk?.siteId ?? null} />
+              {canEdit && <MkCombobox onSelect={handleSelectMk} selectedSiteId={selectedMk?.siteId ?? null} />}
               {selectedMk && <MkActivityCard member={selectedMk} />}
               {mks.length > 0 && (
                 <div className="space-y-3">
@@ -106,7 +131,7 @@ export default function ParliamentDrawer({
                     {t('ui.drawer_mks_tab')}
                   </p>
                   {mks.map((mk) => (
-                    <MkCard key={mk.id} mk={mk} onRemove={onRemoveMk} />
+                    <MkCard key={mk.id} mk={mk} onRemove={canEdit ? onRemoveMk : undefined} />
                   ))}
                 </div>
               )}
