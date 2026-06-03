@@ -4,14 +4,23 @@ import { db } from '../../server/db/client'
 import {
   bills, committees, committeeSessions, mks, mkActivity,
   users, trackedBills, trackedCommittees, trackedMks,
-  summariesCache, knessetMembersCache,
+  summariesCache, knessetMembersCache, featureFlags,
 } from '../../server/db/schema'
-import { purgeOrphansIfNeeded } from '../../server/services/storage-manager'
+import { purgeOrphansIfNeeded, STORAGE_FLAG } from '../../server/services/storage-manager'
+import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
 
-const OVER = async () => 100 * 1024 * 1024  // 100 MB used
-const UNDER = async () => 1 * 1024 * 1024    // 1 MB used
+const flagsRepo = new FeatureFlagsRepository()
+const OVER = async () => 100 * 1024 * 1024   // 100 MB
+const UNDER = async () => 1 * 1024 * 1024     // 1 MB
+const HUGE = async () => 500 * 1024 * 1024    // 500 MB (over the default 450 cap)
 
 let userId: number
+
+/** Set the storagePressure flag value ('limit:slack' or '-1'); null = remove (absent). */
+async function setPressure(value: string | null) {
+  if (value === null) { await db.delete(featureFlags); return }
+  await flagsRepo.setFlag(STORAGE_FLAG, true, value, 'storage pressure config')
+}
 
 async function addBill(num: string, tracked: boolean, polled: Date | null) {
   const [b] = await db.insert(bills).values({
@@ -54,36 +63,44 @@ describe('purgeOrphansIfNeeded', () => {
     await db.delete(trackedBills); await db.delete(trackedCommittees); await db.delete(trackedMks)
     await db.delete(mkActivity); await db.delete(committeeSessions)
     await db.delete(bills); await db.delete(committees); await db.delete(mks)
-    await db.delete(summariesCache); await db.delete(knessetMembersCache)
-    delete process.env.STORAGE_LIMIT_MB
-    delete process.env.STORAGE_SLACK_MB
+    await db.delete(summariesCache); await db.delete(knessetMembersCache); await db.delete(featureFlags)
     delete process.env.ORPHAN_PURGE_BATCH
+    await setPressure('50:2') // default for most tests: cap 50 MB, slack 2 MB
   })
   afterEach(() => { vi.restoreAllMocks() })
 
-  it('is a no-op when STORAGE_LIMIT_MB is unset', async () => {
+  it('is disabled when the flag value is "-1"', async () => {
+    await setPressure('-1')
     await addBill('1', false, null)
     const r = await purgeOrphansIfNeeded(OVER)
     expect(r.purged).toEqual({ bills: 0, committees: 0, mks: 0 })
     expect(await db.select().from(bills)).toHaveLength(1)
   })
 
+  it('is on by default when the flag row is absent', async () => {
+    await setPressure(null) // no flag → default "450:2", on
+    await addBill('1', false, null)
+    // under the default 450 cap → no purge
+    await purgeOrphansIfNeeded(OVER)
+    expect(await db.select().from(bills)).toHaveLength(1)
+    // over the default cap → purge
+    await purgeOrphansIfNeeded(HUGE)
+    expect(await db.select().from(bills)).toHaveLength(0)
+  })
+
   it('is a no-op when size is unknown (null)', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     await addBill('1', false, null)
     await purgeOrphansIfNeeded(async () => null)
     expect(await db.select().from(bills)).toHaveLength(1)
   })
 
   it('is a no-op when under budget', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     await addBill('1', false, null)
     await purgeOrphansIfNeeded(UNDER)
     expect(await db.select().from(bills)).toHaveLength(1)
   })
 
   it('over budget: deletes orphans but never tracked entities', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     const orphan = await addBill('orphan', false, null)
     const tracked = await addBill('tracked', true, null)
     const r = await purgeOrphansIfNeeded(OVER)
@@ -94,25 +111,22 @@ describe('purgeOrphansIfNeeded', () => {
   })
 
   it('deletes at most ORPHAN_PURGE_BATCH stalest-first, shedding the rest on later calls', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     process.env.ORPHAN_PURGE_BATCH = '2'
-    // three orphan MKs with increasing lastPolledAt → oldest two go first
     const a = await addMk('a', false, new Date('2025-01-01'))
     const b = await addMk('b', false, new Date('2025-06-01'))
     const c = await addMk('c', false, new Date('2026-01-01'))
 
     await purgeOrphansIfNeeded(OVER)
     let left = (await db.select().from(mks)).map((m) => m.id)
-    expect(left).toEqual([c])              // a and b (stalest) removed; c kept
+    expect(left).toEqual([c])
     expect(left).not.toContain(a); expect(left).not.toContain(b)
 
-    await purgeOrphansIfNeeded(OVER)       // next cycle sheds the remaining one
+    await purgeOrphansIfNeeded(OVER)
     left = (await db.select().from(mks)).map((m) => m.id)
     expect(left).toEqual([])
   })
 
   it('deletes an orphan committee\'s matching summary but keeps unrelated summaries and API caches', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     const docUrl = 'https://docs/protocol-7.pdf'
     await addCommittee('orphan-cmt', false, null, docUrl)
     await db.insert(summariesCache).values({ md5: 'm1', summary: 's', createdAt: new Date(), sourceUrl: docUrl })
@@ -122,13 +136,11 @@ describe('purgeOrphansIfNeeded', () => {
     const r = await purgeOrphansIfNeeded(OVER)
     expect(r.purged.committees).toBe(1)
     expect(r.summariesDeleted).toBe(1)
-    const sums = (await db.select().from(summariesCache)).map((s) => s.md5)
-    expect(sums).toEqual(['m2'])                                  // matching summary gone, other kept
-    expect(await db.select().from(knessetMembersCache)).toHaveLength(1) // API cache untouched
+    expect((await db.select().from(summariesCache)).map((s) => s.md5)).toEqual(['m2'])
+    expect(await db.select().from(knessetMembersCache)).toHaveLength(1)
   })
 
   it('is multi-user safe: an entity another user still tracks is not deleted', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     const [u2] = await db.insert(users).values({ label: 'other', createdAt: new Date() }).returning({ id: users.id })
     const [b] = await db.insert(bills).values({
       number: 'shared', title: 't', status: 'בוועדה', sourceUrl: 'https://x', knessetNumber: 25, lastPolledAt: null,
@@ -141,7 +153,6 @@ describe('purgeOrphansIfNeeded', () => {
   })
 
   it('logs one server-log line per deletion', async () => {
-    process.env.STORAGE_LIMIT_MB = '50'
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     await addBill('o1', false, null)
     await addBill('o2', false, null)

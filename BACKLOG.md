@@ -98,16 +98,18 @@ Parliamentary content items (bill titles, MK names, committee names, activity de
 ### ✅ Storage Pressure — Purge Orphaned (Untracked) Entities — 2026-06-03
 
 `untrack` only removes the tracking row, leaving the entity + children as orphans. On each
-poll cycle, when `pg_database_size` exceeds `STORAGE_LIMIT_MB − STORAGE_SLACK_MB` (opt-in;
-no-op if `STORAGE_LIMIT_MB` unset), the poller deletes up to `ORPHAN_PURGE_BATCH` (default 5)
-of the **stalest orphan entities** — bills/committees/MKs tracked by no user (anti-join on
+poll cycle, when `pg_database_size` exceeds `limit − slack`, the poller deletes up to
+`ORPHAN_PURGE_BATCH` (default 5) of the **stalest orphan entities** — bills/committees/MKs
+tracked by no user (anti-join on
 the tracking tables, multi-user safe) — plus their children and an orphaned committee's
 session summary, **stalest first** (oldest `lastPolledAt`). Sheds the minimum per cycle so
 already-extracted data is preserved; converges across cycles. API list caches are never
-touched; each deletion is logged to the server console. No schema change. Scoped down from
-the original LRU/eviction-log/discarded-card/toast sketch — if orphan purging proves
-insufficient we will revisit. `server/services/storage-manager.ts`,
-`server/db/size.ts`; spec `docs/superpowers/specs/2026-06-02-storage-pressure-design.md`.
+touched; each deletion is logged to the server console. No schema change. Configured by the
+`storagePressure` feature flag (DB-seeded, **on by default**), value `"limitMb:slackMb"`
+(e.g. `"450:2"`); value `"-1"` disables. Scoped down from the original
+LRU/eviction-log/discarded-card/toast sketch — if orphan purging proves insufficient we will
+revisit. `server/services/storage-manager.ts`, `server/db/size.ts`; spec
+`docs/superpowers/specs/2026-06-02-storage-pressure-design.md`.
 
 ## 18. Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms) (Priority: Medium)
 

@@ -3,5 +3,8 @@
     "trendingAlgorithm": "manual",
     "recentRanking": "newest",
     "policyFilterEnabled": true
+  },
+  "storage": {
+    "pressure": "450:2"
   }
 }

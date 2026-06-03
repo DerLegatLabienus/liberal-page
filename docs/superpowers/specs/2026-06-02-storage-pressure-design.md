@@ -20,7 +20,7 @@ strategy.
 ## Decisions (locked during brainstorming)
 
 - **Trigger only under storage pressure**, measured by `pg_database_size(current_database())`
-  vs `STORAGE_LIMIT_MB`. Runs **on each poll cycle**.
+  vs the `storagePressure` flag's `limit`. Runs **on each poll cycle**.
 - **Delete only entities tracked by no one** — determined from the tracking tables, so it is
   correct for any number of users. Genuinely-tracked items are never touched (no LRU).
 - **Also delete `summaries_cache` rows for orphaned committees** (matched by the committee's
@@ -35,15 +35,17 @@ strategy.
 - **No mid-cycle re-measure:** `pg_database_size` lags after deletes, so we measure once per
   cycle and delete at most one batch; the next cycle re-measures after the size has settled.
 
-## Configuration (env)
+## Configuration
 
-| Var | Default | Meaning |
-|---|---|---|
-| `STORAGE_LIMIT_MB` | unset | DB size cap. **If unset, the feature is a no-op** (opt-in). |
-| `STORAGE_SLACK_MB` | `2` | Headroom: purge when `usedMB > LIMIT − SLACK`. |
-| `ORPHAN_PURGE_BATCH` | `5` | Max orphans deleted per poll cycle (stalest first). |
+Driven by the **`storagePressure` feature flag** (in the existing `feature_flags` table,
+DB-seeded, **on by default**) — not env vars, so it is runtime-tunable without a redeploy.
 
-No new schema. No new columns. No new tables.
+| Knob | Where | Default | Meaning |
+|---|---|---|---|
+| limit + slack | `storagePressure` flag `value` | `"450:2"` | `"limitMb:slackMb"`. Purge when `usedMB > limit − slack`. `value = "-1"` **disables**. If the flag row is absent, the default `"450:2"` keeps it on. |
+| batch size | `ORPHAN_PURGE_BATCH` env | `5` | Max orphans deleted per poll cycle (stalest first). Optional override only. |
+
+No new schema, columns, or tables (the flag reuses `feature_flags`).
 
 ## Size measurement
 
@@ -90,9 +92,10 @@ export async function purgeOrphansIfNeeded(
 
 Logic:
 ```
-limit = STORAGE_LIMIT_MB; if unset → return zeros          // feature off
-used = await usedBytes(); if used === null → return zeros   // size unknown → skip
-if used <= (limit - STORAGE_SLACK_MB) * 1MB → return zeros  // have slack → nothing to do
+cfg = parsePressureValue(flags['storagePressure']?.value)   // "limitMb:slackMb"; default "450:2"
+if cfg === null → return zeros                               // flag value "-1" → disabled
+used = await usedBytes(); if used === null → return zeros    // size unknown → skip
+if used <= (cfg.limitMb - cfg.slackMb) * 1MB → return zeros  // have slack → nothing to do
 
 // Over budget → shed at most ORPHAN_PURGE_BATCH stalest orphans (tracked by no one).
 candidates = [
@@ -126,7 +129,8 @@ Not counted toward cycle success/backoff (consistent with the committee-list ref
 ## Testing
 
 **Unit / repo (pglite, stubbed `usedBytes`):**
-- No-op when `STORAGE_LIMIT_MB` unset, when `usedBytes()` returns `null`, or when under budget.
+- Disabled when the flag value is `"-1"`; **on by default** when the flag row is absent
+  (uses `"450:2"`); no-op when `usedBytes()` returns `null` or when under budget.
 - Over budget → deletes **at most `ORPHAN_PURGE_BATCH`** orphans, **stalest first** (oldest
   `lastPolledAt`, nulls first, tie-break id); leaves the remaining orphans for later cycles.
 - A second call (still over budget) sheds the next batch — proves cross-cycle convergence and
@@ -142,14 +146,14 @@ Not counted toward cycle success/backoff (consistent with the committee-list ref
 **Route (supertest):** existing `tracking` add/remove tests stay green (untrack still just
 removes the tracking row; the entity is reclaimed later by the poller sweep).
 
-## Operational caveat — verify before activating
+## Operational caveat — verify the size signal
 
-The feature is **off by default** (no-op unless `STORAGE_LIMIT_MB` is set), so shipping it
-changes nothing until that env var is set in the deploy environment — activation is a
-deliberate deploy step.
+The feature is **on by default** (the seeded `storagePressure` flag `"450:2"`, or the same
+built-in default when the flag row is absent). To disable it, set the flag value to `"-1"`.
+The high default cap (450 MB) means it does nothing until the DB actually grows near that
+size, so "on by default" is safe for a small DB. Tune `limitMb` to the deployment's plan.
 
-**Before setting `STORAGE_LIMIT_MB` in production, confirm `pg_database_size` actually drops
-after deletes on the target DB.** Plain `DELETE` creates dead tuples; ordinary
+**Confirm `pg_database_size` actually drops after deletes on the target DB.** Plain `DELETE` creates dead tuples; ordinary
 (auto)VACUUM marks them reusable but does **not** shrink the on-disk size that
 `pg_database_size` reports — only `VACUUM FULL`/repack does. If the metric is effectively
 monotonic between full vacuums (verify on Neon, whose storage architecture is non-standard),

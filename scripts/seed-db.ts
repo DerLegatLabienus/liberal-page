@@ -50,11 +50,15 @@ async function main() {
   const currentKnesset = cfgRaw.currentKnesset
   await new KnessetConfigRepository().set(currentKnesset)
 
-  const flagsRaw = await readJson<{ bills: { trendingAlgorithm: string; recentRanking: string; policyFilterEnabled: boolean } }>('feature-flags.json')
+  const flagsRaw = await readJson<{
+    bills: { trendingAlgorithm: string; recentRanking: string; policyFilterEnabled: boolean }
+    storage: { pressure: string }
+  }>('feature-flags.json')
   const ff = new FeatureFlagsRepository()
   await ff.setFlag('trendingAlgorithm', true, flagsRaw.bills.trendingAlgorithm, 'Trending tab ranking source')
   await ff.setFlag('recentRanking', true, flagsRaw.bills.recentRanking, 'Recent tab ordering')
   await ff.setFlag('policyFilter', flagsRaw.bills.policyFilterEnabled, null, 'Policy-aligned tab toggle')
+  await ff.setFlag('storagePressure', true, flagsRaw.storage.pressure, 'Orphan-purge config "limitMb:slackMb"; "-1" disables')
 
   // Create the shared user
   const sharedUserId = await new UsersRepository().getSharedUserId()

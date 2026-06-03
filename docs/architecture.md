@@ -145,12 +145,13 @@ The poller:
 - Checks MK activity through the Knesset website API (`GetParlamentayActivity`), which returns private bills, plenary votes, and parliamentary questions in the same order the Knesset website displays them. Uses `knesset_site_id` (e.g. 1116) as the MK identifier.
 - Updates `lastPolledAt`.
 - Reclaims storage via `purgeOrphansIfNeeded` (`server/services/storage-manager.ts`): when
-  `pg_database_size` exceeds `STORAGE_LIMIT_MB − STORAGE_SLACK_MB`, deletes up to
-  `ORPHAN_PURGE_BATCH` (default 5) of the **stalest orphan entities** — bills/committees/MKs
-  that no user tracks (anti-join on the tracking tables, multi-user safe) — plus their
-  children and an orphaned committee's session summary. Opt-in: no-op unless
-  `STORAGE_LIMIT_MB` is set. (Note: `untrack` only removes the tracking row, so entities
-  become orphans that this step later reclaims.)
+  `pg_database_size` exceeds `limit − slack`, deletes up to `ORPHAN_PURGE_BATCH` (default 5,
+  env-overridable) of the **stalest orphan entities** — bills/committees/MKs that no user
+  tracks (anti-join on the tracking tables, multi-user safe) — plus their children and an
+  orphaned committee's session summary. Config is the **`storagePressure` feature flag**
+  (DB-seeded, **on by default**): value `"limitMb:slackMb"` (e.g. `"450:2"`); value `"-1"`
+  disables; when the flag row is absent the default `"450:2"` keeps it on. (Note: `untrack`
+  only removes the tracking row, so entities become orphans that this step later reclaims.)
 - All writes go through `BillsRepository`, `CommitteesRepository`, and `MksRepository` (Postgres). There is no JSON file writing.
 
 The header badge is derived from `hasNewData` values. The current implementation does not clear those flags when the drawer opens.

@@ -2,11 +2,32 @@ import { BillsRepository } from '../repositories/bills-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { SummariesRepository } from '../repositories/summaries-repository'
+import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()
 const mksRepo = new MksRepository()
 const summariesRepo = new SummariesRepository()
+const flagsRepo = new FeatureFlagsRepository()
+
+// Config lives in the `storagePressure` feature flag (on by default), value = "limitMb:slackMb"
+// (e.g. "450:2"); value "-1" disables. When the flag row is absent, the default keeps the
+// feature on so activation needs no env var or re-seed.
+export const STORAGE_FLAG = 'storagePressure'
+const DEFAULT_PRESSURE = '450:2'
+
+interface PressureConfig { limitMb: number; slackMb: number }
+
+export function parsePressureValue(value: string | null | undefined): PressureConfig | null {
+  const raw = (value ?? DEFAULT_PRESSURE).trim()
+  if (raw === '-1') return null // disabled
+  const [limitStr, slackStr] = raw.split(':')
+  const limitMb = Number(limitStr)
+  const slackMb = slackStr === undefined || slackStr === '' ? 2 : Number(slackStr)
+  if (!Number.isFinite(limitMb) || limitMb <= 0) return null
+  if (!Number.isFinite(slackMb) || slackMb < 0) return null
+  return { limitMb, slackMb }
+}
 
 type OrphanType = 'bill' | 'committee' | 'mk'
 interface Candidate {
@@ -40,14 +61,14 @@ const ZERO: PurgeResult = { purged: { bills: 0, committees: 0, mks: 0 }, summari
 export async function purgeOrphansIfNeeded(
   usedBytes: () => Promise<number | null>,
 ): Promise<PurgeResult> {
-  const limitMb = num('STORAGE_LIMIT_MB')
-  if (limitMb === undefined) return ZERO // feature disabled (opt-in)
+  const flags = await flagsRepo.getAll()
+  const cfg = parsePressureValue(flags[STORAGE_FLAG]?.value)
+  if (cfg === null) return ZERO // disabled via flag value "-1" (or malformed)
 
   const used = await usedBytes()
   if (used === null) return ZERO // size unknown → skip, never block
 
-  const slackMb = num('STORAGE_SLACK_MB') ?? 2
-  const targetBytes = (limitMb - slackMb) * 1024 * 1024
+  const targetBytes = (cfg.limitMb - cfg.slackMb) * 1024 * 1024
   if (used <= targetBytes) return ZERO // have slack
 
   const batchSize = num('ORPHAN_PURGE_BATCH') ?? 5
