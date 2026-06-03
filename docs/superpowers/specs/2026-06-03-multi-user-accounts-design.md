@@ -60,8 +60,11 @@ revocation.
 - Rotation deletes the used row; logout deletes the user's rows.
 - On each login/refresh, delete that user's expired rows; a periodic global sweep in the
   poller runs `DELETE FROM refresh_tokens WHERE expires_at < now()`.
-- **Reuse detection:** a refresh token presented that no longer exists (already rotated
-  away) is treated as leaked → delete **all** that user's refresh tokens, forcing re-login.
+- **Reuse detection:** the raw refresh token is **self-identifying** — `${userId}.${randomHex}`
+  (only the sha256 hash of the whole string is stored). On a hash miss (token already rotated
+  away / replayed), parse the `userId` prefix and delete **all** that user's refresh tokens,
+  forcing re-login. (Hash-only storage couldn't identify the user on a miss; the prefix fixes
+  that.)
 
 ## Data model (migration)
 

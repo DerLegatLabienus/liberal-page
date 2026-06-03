@@ -124,6 +124,9 @@
     "search_placeholder": "חפש ח\"כ...",
     "no_selection": "חפש ובחר ח\"כ למעלה"
   },
+  "auth": {
+    "sign_out": "התנתק"
+  },
   "site": {
     "party_name": "הליברלים בליכוד",
     "cell_subtitle": "תנועה ליברלית בתוך הליכוד",

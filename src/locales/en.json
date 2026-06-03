@@ -124,6 +124,9 @@
     "search_placeholder": "Search MK...",
     "no_selection": "Search and select an MK above"
   },
+  "auth": {
+    "sign_out": "Sign out"
+  },
   "site": {
     "party_name": "Liberals in Likud",
     "cell_subtitle": "A liberal movement within Likud",

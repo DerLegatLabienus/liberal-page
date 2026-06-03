@@ -8,6 +8,7 @@ import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { purgeOrphansIfNeeded } from './storage-manager'
 import { getDatabaseSizeBytes } from '../db/size'
+import { AuthRepository } from '../repositories/auth-repository'
 import type { Bill, CommitteeSession } from '../../src/types'
 
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
@@ -176,6 +177,13 @@ export async function runPollCycle(): Promise<boolean> {
     await purgeOrphansIfNeeded(getDatabaseSizeBytes)
   } catch (err) {
     console.error('Poller: orphan purge failed:', err)
+  }
+
+  // Delete expired refresh tokens so the table holds only currently-valid sessions.
+  try {
+    await new AuthRepository().deleteExpired(new Date())
+  } catch (err) {
+    console.error('Poller: refresh-token cleanup failed:', err)
   }
 
   console.log('Poller: poll cycle complete', anySuccess ? '(success)' : '(all failed)')

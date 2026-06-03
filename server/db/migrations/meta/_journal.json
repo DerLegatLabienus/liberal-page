@@ -64,6 +64,20 @@
       "when": 1780464975559,
       "tag": "0008_storage_pressure_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780499328056,
+      "tag": "0009_parallel_joseph",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780499336260,
+      "tag": "0010_seed_first_admin",
+      "breakpoints": true
     }
   ]
 }

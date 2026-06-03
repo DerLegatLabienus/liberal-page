@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import AuthControl from '@/components/layout/AuthControl'
 import { useDirection } from '@/hooks/useDirection'
 import siteData from '@/data/site.json'
 import type { SiteConfig } from '@/types'
@@ -76,6 +77,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
           >
             {t('ui.lang_toggle')}
           </button>
+          <AuthControl />
           <div className="relative">
             <Button
               onClick={trackerEnabled ? onOpenDrawer : undefined}

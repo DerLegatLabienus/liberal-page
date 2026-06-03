@@ -7,6 +7,11 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   label: text('label').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  email: text('email').unique(),
+  name: text('name'),
+  googleSub: text('google_sub').unique(),
+  role: text('role').notNull().default('member'), // 'admin' | 'member' | 'group'
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 })
 
 export const trackedBills = pgTable('tracked_bills', {

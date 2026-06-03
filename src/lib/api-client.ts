@@ -2,11 +2,31 @@ import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, Bill
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
+// --- Auth wiring (set by AuthProvider) --------------------------------------------------
+let accessToken: string | null = null
+// Returns a fresh access token on success, or null if refresh failed (→ signed out).
+let refreshHandler: (() => Promise<string | null>) | null = null
+
+export function setAccessToken(token: string | null): void { accessToken = token }
+export function setRefreshHandler(fn: (() => Promise<string | null>) | null): void { refreshHandler = fn }
+
+async function doFetch(path: string, options: RequestInit | undefined, token: string | null): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options?.headers as Record<string, string> | undefined) }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return fetch(`${API_BASE}${path}`, { ...options, headers })
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  let res = await doFetch(path, options, accessToken)
+
+  // On 401, try a single refresh, then retry with the new token. Never for the auth
+  // endpoints themselves (would recurse).
+  const isAuthEndpoint = path.startsWith('/auth/')
+  if (res.status === 401 && refreshHandler && !isAuthEndpoint) {
+    const fresh = await refreshHandler()
+    if (fresh) res = await doFetch(path, options, fresh)
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string }
     throw new Error(body.error ?? `API error ${res.status}`)
@@ -68,4 +88,16 @@ export const api = {
         body: JSON.stringify({ status, mode }),
       }),
   },
+  auth: {
+    google: (idToken: string) =>
+      apiFetch<AuthResponse>('/auth/google', { method: 'POST', body: JSON.stringify({ idToken }) }),
+    refresh: (refreshToken: string) =>
+      apiFetch<AuthResponse>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
+    logout: (refreshToken: string) =>
+      apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
+    me: () => apiFetch<{ user: AuthUser }>('/auth/me'),
+  },
 }
+
+export interface AuthUser { id: number; email: string | null; name: string | null; role: string }
+export interface AuthResponse { accessToken: string; refreshToken: string; user: AuthUser }
