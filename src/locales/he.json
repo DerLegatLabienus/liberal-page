@@ -129,6 +129,19 @@
   "auth": {
     "sign_out": "התנתק"
   },
+  "admin": {
+    "title": "ניהול",
+    "invites": "הזמנות",
+    "email_placeholder": "אימייל להזמנה",
+    "role_member": "חבר",
+    "role_admin": "מנהל",
+    "invite_add": "הוסף",
+    "remove": "הסר",
+    "no_invites": "אין הזמנות",
+    "users": "משתמשים",
+    "make_admin": "הפוך למנהל",
+    "make_member": "הפוך לחבר"
+  },
   "site": {
     "party_name": "הליברלים בליכוד",
     "cell_subtitle": "תנועה ליברלית בתוך הליכוד",

@@ -372,12 +372,42 @@ Stores liberal/supporter flags keyed by Knesset site ID.
 
 ### `users`
 
-One row exists: the shared "house account" (`id = 1`). All tracking is per-user against this account.
+Real accounts plus one internal `role = 'group'` row that owns the public/default tracking
+list. Tracking is per-user via the `tracked_*` join tables.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | serial PK | always 1 for the shared account |
-| `email` | text | unique |
+| `id` | serial PK | |
+| `label` | text | legacy/display label |
+| `email` | text | unique; null for the `group` row |
+| `name` | text | display name from Google |
+| `google_sub` | text | unique Google subject id; null for the `group` row |
+| `role` | text | `'admin' \| 'member' \| 'group'` (default `member`) |
+| `last_login_at` | timestamptz | |
+| `created_at` | timestamptz | |
+
+### `allowed_emails`
+
+Invite allowlist for the closed group; presence permits sign-in, `role` is granted on first login.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `email` | text PK | |
+| `role` | text | `'admin' \| 'member'` (default `member`) |
+| `invited_by` | integer → users.id | nullable |
+| `created_at` | timestamptz | |
+
+### `refresh_tokens`
+
+Active sessions. Only the sha256 hash is stored; validity = row exists and not expired
+(invalidation is deletion). Raw token is `userId.randomHex` (self-identifying for reuse detection).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | serial PK | |
+| `user_id` | integer → users.id | onDelete restrict |
+| `token_hash` | text | sha256 of the raw refresh token |
+| `expires_at` | timestamptz | |
 | `created_at` | timestamptz | |
 
 ### `tracked_bills`

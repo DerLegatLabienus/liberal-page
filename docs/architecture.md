@@ -97,6 +97,28 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 
 `type` is one of `bill`, `committee`, or `mk`.
 
+## Auth & multi-user
+
+Closed, invite-only accounts via **Google sign-in** (GIS ID token → `POST /api/auth/google`,
+verified server-side, gated by the `allowed_emails` allowlist). Sessions are **bearer JWTs**:
+a short-lived access token (`Authorization: Bearer`) plus a rotating refresh token whose
+sha256 hash is stored in `refresh_tokens` (invalidation = row deletion; reuse of a rotated
+token revokes all of a user's sessions). Roles: `admin`, `member`, and an internal `group`
+account that owns the public list. Middleware: `requireAuth` / `requireAdmin` / `optionalAuth`.
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/auth/google` | verify Google ID token + allowlist → issue tokens |
+| `POST` | `/api/auth/refresh` | rotate refresh token → new access token |
+| `POST` | `/api/auth/logout` | delete the refresh token |
+| `GET` | `/api/auth/me` | current user |
+| `*` | `/api/admin/*` | invites (allowlist) + user role management (admin only) |
+
+**Tracking scopes.** `GET /api/parliament/:type` returns the public **group** list by default;
+`?scope=personal` returns the caller's list. Writes (`/tracking/add`, `DELETE`,
+`/bills/track`, `/committees/track`) default to the caller's personal list; `?scope=group`
+edits the public list and requires admin.
+
 Supported URL parsing currently includes:
 
 - `oknesset.org/bill/<id>`

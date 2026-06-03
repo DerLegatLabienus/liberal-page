@@ -103,7 +103,18 @@ export const api = {
       apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     me: () => apiFetch<{ user: AuthUser }>('/auth/me'),
   },
+  admin: {
+    listInvites: () => apiFetch<{ invites: Invite[] }>('/admin/invites'),
+    addInvite: (email: string, role: 'admin' | 'member') =>
+      apiFetch<{ ok: boolean }>('/admin/invites', { method: 'POST', body: JSON.stringify({ email, role }) }),
+    removeInvite: (email: string) =>
+      apiFetch<{ ok: boolean }>(`/admin/invites/${encodeURIComponent(email)}`, { method: 'DELETE' }),
+    listUsers: () => apiFetch<{ users: AuthUser[] }>('/admin/users'),
+    setRole: (id: number, role: 'admin' | 'member') =>
+      apiFetch<{ ok: boolean }>(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  },
 }
 
 export interface AuthUser { id: number; email: string | null; name: string | null; role: string }
 export interface AuthResponse { accessToken: string; refreshToken: string; user: AuthUser }
+export interface Invite { email: string; role: string; createdAt: string }

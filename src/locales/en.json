@@ -129,6 +129,19 @@
   "auth": {
     "sign_out": "Sign out"
   },
+  "admin": {
+    "title": "Admin",
+    "invites": "Invites",
+    "email_placeholder": "Email to invite",
+    "role_member": "Member",
+    "role_admin": "Admin",
+    "invite_add": "Add",
+    "remove": "Remove",
+    "no_invites": "No invites",
+    "users": "Users",
+    "make_admin": "Make admin",
+    "make_member": "Make member"
+  },
   "site": {
     "party_name": "Liberals in Likud",
     "cell_subtitle": "A liberal movement within Likud",

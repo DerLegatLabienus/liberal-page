@@ -11,6 +11,7 @@ import committeesRouter from './routes/committees'
 import featureFlagsRouter from './routes/feature-flags'
 import analyticsRouter from './routes/analytics'
 import authRouter from './routes/auth'
+import adminRouter from './routes/admin'
 import { startPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
 
@@ -43,6 +44,7 @@ app.use('/api/committees', committeesRouter)
 app.use('/api/feature-flags', featureFlagsRouter)
 app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/admin', adminRouter)
 app.use('/api/summarize', summarizeRouter)
 
 app.get('/api/health', (_req, res) => {

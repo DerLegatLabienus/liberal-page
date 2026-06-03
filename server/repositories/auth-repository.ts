@@ -1,4 +1,4 @@
-import { eq, lt } from 'drizzle-orm'
+import { eq, lt, ne, count } from 'drizzle-orm'
 import { db } from '../db/client'
 import { users, allowedEmails, refreshTokens } from '../db/schema'
 
@@ -75,5 +75,39 @@ export class AuthRepository {
   async deleteExpired(now: Date): Promise<number> {
     const deleted = await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, now)).returning({ id: refreshTokens.id })
     return deleted.length
+  }
+
+  // --- Admin: invites (allowlist) -------------------------------------------------------
+
+  async listInvites(): Promise<{ email: string; role: string; createdAt: string }[]> {
+    const rows = await db.select().from(allowedEmails)
+    return rows.map((r) => ({ email: r.email, role: r.role, createdAt: r.createdAt.toISOString() }))
+  }
+
+  async addInvite(email: string, role: string, invitedBy: number | null): Promise<void> {
+    await db.insert(allowedEmails)
+      .values({ email, role, invitedBy, createdAt: new Date() })
+      .onConflictDoUpdate({ target: allowedEmails.email, set: { role } })
+  }
+
+  async removeInvite(email: string): Promise<void> {
+    await db.delete(allowedEmails).where(eq(allowedEmails.email, email))
+  }
+
+  // --- Admin: users + roles -------------------------------------------------------------
+
+  /** Real accounts (excludes the internal `group` list-owner row). */
+  async listUsers(): Promise<AuthUser[]> {
+    const rows = await db.select().from(users).where(ne(users.role, 'group'))
+    return rows.map(toUser)
+  }
+
+  async countAdmins(): Promise<number> {
+    const [row] = await db.select({ n: count() }).from(users).where(eq(users.role, 'admin'))
+    return row?.n ?? 0
+  }
+
+  async setUserRole(id: number, role: string): Promise<void> {
+    await db.update(users).set({ role }).where(eq(users.id, id))
   }
 }
