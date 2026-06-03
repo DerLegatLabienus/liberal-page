@@ -45,7 +45,10 @@ DB-seeded, **on by default**) — not env vars, so it is runtime-tunable without
 | limit + slack | `storagePressure` flag `value` | `"450:2"` | `"limitMb:slackMb"`. Purge when `usedMB > limit − slack`. `value = "-1"` **disables**. If the flag row is absent, the default `"450:2"` keeps it on. |
 | batch size | `ORPHAN_PURGE_BATCH` env | `5` | Max orphans deleted per poll cycle (stalest first). Optional override only. |
 
-No new schema, columns, or tables (the flag reuses `feature_flags`).
+No new schema, columns, or tables (the flag reuses `feature_flags`). The flag row is seeded
+two ways: a data migration (`0008_storage_pressure_flag.sql`, idempotent
+`INSERT … ON CONFLICT DO NOTHING`) so existing/production DBs get it automatically on boot,
+and `seed-db` for fresh seeded databases.
 
 ## Size measurement
 
