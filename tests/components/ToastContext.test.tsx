@@ -18,7 +18,7 @@ describe('ToastProvider', () => {
     act(() => { screen.getByText('go').click() })
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('nope, not invited')
-    expect(alert).toHaveClass('bg-destructive') // error styling
+    expect(alert.style.background).toBe('#dc2626') // error red
 
     act(() => { vi.advanceTimersByTime(5000) })
     expect(screen.queryByRole('alert')).toBeNull()

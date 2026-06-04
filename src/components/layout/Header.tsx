@@ -133,6 +133,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
             >
               {t('ui.nav_tracker')}
             </Button>
+            <div className="pt-1"><AuthControl /></div>
           </nav>
         </div>
       )}

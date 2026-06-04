@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type ToastType = 'error' | 'success' | 'info'
 interface Toast { id: number; message: string; type: ToastType }
@@ -28,22 +29,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), DISMISS_MS)
   }, [])
 
+  // Render the toast stack via a portal to <body> so no ancestor stacking/overflow context
+  // can hide a fired toast. Inline styles + explicit colors guarantee visibility regardless
+  // of the CSS pipeline. z-index above everything (drawer/dialog use 40–50).
+  const stack = (
+    <div
+      data-testid="toast-stack"
+      style={{ position: 'fixed', left: 0, right: 0, bottom: 16, zIndex: 2147483647,
+               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+               padding: '0 16px', pointerEvents: 'none' }}
+    >
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          role="alert"
+          style={{ pointerEvents: 'auto', maxWidth: 420, borderRadius: 8, padding: '8px 16px',
+                   fontSize: 14, color: '#fff', boxShadow: '0 4px 14px rgba(0,0,0,.25)',
+                   background: t.type === 'error' ? '#dc2626' : t.type === 'success' ? '#059669' : '#0f172a' }}
+        >
+          {t.message}
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            role="alert"
-            className={`pointer-events-auto max-w-md rounded-lg px-4 py-2 text-sm shadow-lg ${
-              t.type === 'error' ? 'bg-destructive text-white' : 'bg-slate-900 text-white'
-            }`}
-          >
-            {t.message}
-          </div>
-        ))}
-      </div>
+      {typeof document !== 'undefined' ? createPortal(stack, document.body) : stack}
     </ToastContext.Provider>
   )
 }
