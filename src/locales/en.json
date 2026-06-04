@@ -128,6 +128,7 @@
   },
   "auth": {
     "sign_out": "Sign out",
+    "signed_in": "Signed in",
     "not_invited": "This email isn't on the invite list. Ask an admin for an invitation.",
     "sign_in_failed": "Sign-in failed. Please try again."
   },

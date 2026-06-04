@@ -21,11 +21,13 @@ export default function AuthControl() {
   const { user, signIn, signOut } = auth
 
   const handleSignIn = (idToken: string) => {
-    signIn(idToken).catch((err: unknown) => {
-      // 403 = email not on the invite allowlist; anything else = generic failure.
-      const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
-      toastCtx?.toast(msg, 'error')
-    })
+    signIn(idToken)
+      .then(() => toastCtx?.toast(t('auth.signed_in'), 'success'))
+      .catch((err: unknown) => {
+        // 403 = email not on the invite allowlist; anything else = generic failure.
+        const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
+        toastCtx?.toast(msg, 'error')
+      })
   }
 
   if (user) {
