@@ -1,17 +1,21 @@
 import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 
 // vi.hoisted() runs before module-level code so the fns are available inside vi.mock factories
-const { mockGetBill, mockGetCommitteeSessions } = vi.hoisted(() => ({
+const { mockGetBill, mockEnrichCommitteeSessions } = vi.hoisted(() => ({
   mockGetBill: vi.fn().mockRejectedValue(new Error('network error')),
-  mockGetCommitteeSessions: vi.fn().mockRejectedValue(new Error('network error')),
+  mockEnrichCommitteeSessions: vi.fn().mockRejectedValue(new Error('network error')),
 }))
 
-// Mock all three external service modules — network calls never happen in tests
+// Mock all external service modules — network calls never happen in tests
 vi.mock('../../server/services/oknesset', () => ({
   OknessetClient: vi.fn().mockImplementation(() => ({
     getBill: mockGetBill,
-    getCommitteeSessions: mockGetCommitteeSessions,
   })),
+}))
+
+// Committee sessions are polled via the Knesset-OData enricher (not oknesset.org).
+vi.mock('../../server/services/committee-session-enricher', () => ({
+  enrichCommitteeSessions: mockEnrichCommitteeSessions,
 }))
 
 vi.mock('../../server/services/knesset-scraper', () => ({

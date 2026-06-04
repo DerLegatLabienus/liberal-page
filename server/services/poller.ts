@@ -6,6 +6,7 @@ import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
+import { enrichCommitteeSessions } from './committee-session-enricher'
 import { purgeOrphansIfNeeded } from './storage-manager'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
@@ -59,40 +60,30 @@ async function pollCommittees(): Promise<boolean> {
 
   let anySuccess = false
 
+  const aiEnabled = process.env.COMMITTEE_AI === 'true'
+
   for (const committee of committees) {
     if (!committee.oknesset_id || !committee.id) continue
     try {
-      const sessions = await oknesset.getCommitteeSessions(committee.oknesset_id, 1)
-      let lastSessionDate = committee.lastSessionDate
-      let lastSessionDocumentUrl = committee.lastSessionDocumentUrl
-      let lastSessionSummary = committee.lastSessionSummary
-      let changed = false
-
-      if (sessions.length > 0) {
-        const latest = sessions[0] as Record<string, unknown>
-        const sessionDate = String(latest.date ?? '')
-        if (sessionDate && sessionDate !== committee.lastSessionDate) {
-          lastSessionDate = sessionDate
-          changed = true
-          if (typeof latest.protocol_file === 'string') {
-            lastSessionDocumentUrl = latest.protocol_file
-            lastSessionSummary = await summarizer.summarizeUrl(latest.protocol_file)
-          }
-        }
-      }
+      // Refresh sessions from Knesset OData (resolves by committee name), the same source
+      // used at track time. NOT oknesset.org — a committee's oknesset_id is a Knesset
+      // CommitteeID, a different ID space, and oknesset.org returns an HTML page for it.
+      const sessions = await enrichCommitteeSessions(committee.name, [], aiEnabled)
+      const latest = sessions[0]
+      const changed = !!latest && latest.date !== committee.lastSessionDate
 
       await committeesRepo.upsert(
         {
           oknesset_id: committee.oknesset_id,
           name: committee.name,
           chair: committee.chair,
-          lastSessionDate,
-          lastSessionSummary: lastSessionSummary ?? null,
-          lastSessionDocumentUrl: lastSessionDocumentUrl ?? null,
+          lastSessionDate: latest ? latest.date : committee.lastSessionDate,
+          lastSessionSummary: committee.lastSessionSummary ?? null,
+          lastSessionDocumentUrl: committee.lastSessionDocumentUrl ?? null,
           sourceUrl: committee.sourceUrl,
           hasNewData: changed ? true : committee.hasNewData,
           lastPolledAt: new Date().toISOString(),
-          recentSessions: (committee.recentSessions ?? []) as CommitteeSession[],
+          recentSessions: sessions.length ? sessions : ((committee.recentSessions ?? []) as CommitteeSession[]),
         },
         committee.id,
       )
