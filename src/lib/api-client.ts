@@ -29,9 +29,16 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string }
-    throw new Error(body.error ?? `API error ${res.status}`)
+    const err = new Error(body.error ?? `API error ${res.status}`) as Error & { status?: number }
+    err.status = res.status
+    throw err
   }
   return res.json() as Promise<T>
+}
+
+/** HTTP status carried on errors thrown by the api client (when available). */
+export function errorStatus(e: unknown): number | undefined {
+  return (e as { status?: number } | null)?.status
 }
 
 export type TrackScope = 'group' | 'personal'

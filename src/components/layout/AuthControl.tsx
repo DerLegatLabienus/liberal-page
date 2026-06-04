@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
+import { useToastOptional } from '@/contexts/ToastContext'
+import { errorStatus } from '@/lib/api-client'
 import AdminPanel from '@/components/admin/AdminPanel'
 
 /**
@@ -12,10 +14,19 @@ import AdminPanel from '@/components/admin/AdminPanel'
 export default function AuthControl() {
   const { t } = useTranslation()
   const auth = useAuthOptional()
+  const toastCtx = useToastOptional()
   const [adminOpen, setAdminOpen] = useState(false)
 
   if (!auth || !auth.ready) return null
   const { user, signIn, signOut } = auth
+
+  const handleSignIn = (idToken: string) => {
+    signIn(idToken).catch((err: unknown) => {
+      // 403 = email not on the invite allowlist; anything else = generic failure.
+      const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
+      toastCtx?.toast(msg, 'error')
+    })
+  }
 
   if (user) {
     return (
@@ -46,8 +57,8 @@ export default function AuthControl() {
 
   return (
     <GoogleLogin
-      onSuccess={(cred) => { if (cred.credential) void signIn(cred.credential) }}
-      onError={() => { /* surfaced by GIS UI */ }}
+      onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
+      onError={() => toastCtx?.toast(t('auth.sign_in_failed'), 'error')}
       useOneTap={false}
       shape="pill"
       size="medium"

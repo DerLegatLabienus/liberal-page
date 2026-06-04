@@ -55,6 +55,20 @@ describe('AuthProvider', () => {
     expect(api.auth.refresh).toHaveBeenCalledWith('stored-ref')
   })
 
+  it('propagates a sign-in failure so the caller can surface it (e.g. uninvited 403)', async () => {
+    const err = Object.assign(new Error('This email is not invited'), { status: 403 })
+    vi.mocked(api.auth.google).mockRejectedValue(err)
+    let caught: unknown
+    function Catcher() {
+      const { signIn } = useAuth()
+      return <button onClick={() => signIn('idtok').catch((e) => { caught = e })}>x</button>
+    }
+    render(<AuthProvider><Catcher /></AuthProvider>)
+    await userEvent.click(screen.getByText('x'))
+    await waitFor(() => expect(caught).toBe(err))
+    expect((caught as { status?: number }).status).toBe(403)
+  })
+
   it('signs out, clearing the user and stored token', async () => {
     vi.mocked(api.auth.google).mockResolvedValue(RESP)
     vi.mocked(api.auth.logout).mockResolvedValue({ ok: true })
