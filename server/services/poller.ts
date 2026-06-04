@@ -1,6 +1,6 @@
-import { OknessetClient } from './oknesset'
 import { Summarizer } from './summarizer'
 import { fetchMkActivity } from './knesset-scraper'
+import { fetchBillStatusById } from './knesset-bills'
 import { BillsRepository } from '../repositories/bills-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
@@ -10,7 +10,7 @@ import { enrichCommitteeSessions } from './committee-session-enricher'
 import { purgeOrphansIfNeeded } from './storage-manager'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
-import type { Bill, CommitteeSession } from '../../src/types'
+import type { CommitteeSession } from '../../src/types'
 
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
 const BACKOFF_INITIAL_MS = 60_000   // 1 minute minimum on failure
@@ -18,7 +18,6 @@ const BACKOFF_MAX_MS = 600_000      // 10 minutes maximum on failure
 
 let currentDelayMs = INTERVAL_MS
 
-const oknesset = new OknessetClient()
 const summarizer = new Summarizer()
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()
@@ -33,8 +32,10 @@ async function pollBills(): Promise<boolean> {
   for (const bill of bills) {
     if (!bill.oknesset_id || !bill.id) continue
     try {
-      const fresh = await oknesset.getBill(bill.oknesset_id)
-      const newStatus = mapBillStatus(String(fresh.status ?? ''))
+      // Status comes from Knesset OData by BillID (a bill's oknesset_id is a Knesset
+      // BillID). NOT oknesset.org — that's a different ID space and returns an HTML page
+      // for these ids, which broke res.json().
+      const newStatus = await fetchBillStatusById(Number(bill.oknesset_id))
       const changed = newStatus !== null && newStatus !== bill.status
       if (bill.documentUrl) {
         await summarizer.summarizeUrl(bill.documentUrl)
@@ -133,16 +134,6 @@ async function pollMks(): Promise<boolean> {
   }
 
   return anySuccess
-}
-
-function mapBillStatus(status: string): Bill['status'] | null {
-  const map: Record<string, Bill['status']> = {
-    committee: 'בוועדה',
-    vote: 'הצבעה קרובה',
-    passed: 'עבר',
-    rejected: 'נדחה',
-  }
-  return map[status.toLowerCase()] ?? null
 }
 
 export async function runPollCycle(): Promise<boolean> {

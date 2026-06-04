@@ -76,6 +76,15 @@ async function cachedQuery(key: string, odataPath: string): Promise<KnessetBillO
 
 const SELECT = 'BillID,Name,StatusID,CommitteeID,LastUpdatedDate,SummaryLaw'
 
+/** Current (Hebrew) status for a bill by its Knesset BillID, or null if not found. */
+export async function fetchBillStatusById(billId: number): Promise<string | null> {
+  const path = `KNS_Bill?$filter=BillID%20eq%20${billId}&$top=1&$select=${SELECT}&$format=json`
+  const rows = await odataGet<RawBill>(path)
+  if (!rows.length) return null
+  const [item] = await mapRows(rows)
+  return item.status || null
+}
+
 /** Free-text bill search by name within a Knesset. Returns lightweight search results. */
 export async function searchBills(query: string, knesset: number): Promise<BillSearchResult[]> {
   const encoded = encodeURIComponent(query)

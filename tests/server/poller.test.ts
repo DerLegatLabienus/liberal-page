@@ -1,16 +1,14 @@
 import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 
 // vi.hoisted() runs before module-level code so the fns are available inside vi.mock factories
-const { mockGetBill, mockEnrichCommitteeSessions } = vi.hoisted(() => ({
-  mockGetBill: vi.fn().mockRejectedValue(new Error('network error')),
+const { mockFetchBillStatus, mockEnrichCommitteeSessions } = vi.hoisted(() => ({
+  mockFetchBillStatus: vi.fn().mockRejectedValue(new Error('network error')),
   mockEnrichCommitteeSessions: vi.fn().mockRejectedValue(new Error('network error')),
 }))
 
-// Mock all external service modules — network calls never happen in tests
-vi.mock('../../server/services/oknesset', () => ({
-  OknessetClient: vi.fn().mockImplementation(() => ({
-    getBill: mockGetBill,
-  })),
+// Bill status comes from Knesset OData (not oknesset.org).
+vi.mock('../../server/services/knesset-bills', () => ({
+  fetchBillStatusById: mockFetchBillStatus,
 }))
 
 // Committee sessions are polled via the Knesset-OData enricher (not oknesset.org).
@@ -87,15 +85,15 @@ describe('runPollCycle', () => {
     expect(result).toBe(false)
   })
 
-  it('updates bill status in DB when oknesset returns a new status', async () => {
+  it('updates bill status in DB when Knesset OData returns a new status', async () => {
     const billId = await billsRepo.upsert({
       oknessetId: '1', number: '101', title: 'חוק בדיקה', status: 'בוועדה',
       committee: '', sourceUrl: 'https://example.gov.il/bill', documentUrl: null,
       knessetUrl: null, knessetNumber: 25, hasNewData: false, lastPolledAt: null,
     })
 
-    // Override the shared mock spy to return a new status for this test
-    mockGetBill.mockResolvedValueOnce({ status: 'passed' })
+    // Knesset OData returns the already-mapped Hebrew status for this bill
+    mockFetchBillStatus.mockResolvedValueOnce('עבר')
 
     await runPollCycle()
 

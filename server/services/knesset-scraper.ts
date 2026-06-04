@@ -39,7 +39,15 @@ export async function fetchMkActivity(siteId: number, limit = 10): Promise<MkAct
     headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
   })
   if (!res.ok) throw new Error(`Knesset Website API error ${res.status}`)
-  const data = await res.json() as KnessetActivityResponse
+  // The Knesset site can answer 200 with an HTML bot/maintenance page; parsing that as
+  // JSON would throw "Unexpected token '<'". Treat a non-JSON body as "no activity".
+  let data: KnessetActivityResponse
+  try {
+    data = await res.json() as KnessetActivityResponse
+  } catch {
+    console.warn(`Knesset Website API returned non-JSON for MK ${siteId}; skipping this cycle`)
+    return []
+  }
 
   const bills: MkActivity[] = (data.PrivateBills ?? []).map((b) => ({
     type: 'bill_initiated' as const,
