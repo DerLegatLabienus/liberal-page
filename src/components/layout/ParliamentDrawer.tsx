@@ -101,7 +101,10 @@ export default function ParliamentDrawer({
             <TabsTrigger value="mks" className="flex-1">{t('ui.drawer_mks_tab')}</TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto">
+          <div
+            className={`flex-1 overflow-y-auto transition-opacity duration-200 ${loading ? 'pointer-events-none opacity-40' : 'opacity-100'}`}
+            aria-busy={loading}
+          >
             <TabsContent value="bills" className="m-0 space-y-3 p-4">
               {canEdit && <BillSearchCombobox onAdd={onAdd} scope={scope} />}
               {bills.map((bill) => (

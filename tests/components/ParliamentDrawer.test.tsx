@@ -25,6 +25,10 @@ const defaultProps = {
   onRemoveBill: vi.fn(),
   onRemoveCommittee: vi.fn(),
   onRemoveMk: vi.fn(),
+  scope: 'group' as const,
+  onScopeChange: vi.fn(),
+  canEdit: false,
+  isLoggedIn: false,
 }
 
 describe('ParliamentDrawer', () => {
@@ -36,6 +40,16 @@ describe('ParliamentDrawer', () => {
   it('uses an opaque native site surface for the drawer shell', () => {
     render(<ParliamentDrawer {...defaultProps} />)
     expect(document.querySelector('[data-slot="sheet-content"]')).toHaveClass('bg-white')
+  })
+
+  it('dims the list (aria-busy) while loading a scope switch, opaque when idle', () => {
+    const { rerender } = render(<ParliamentDrawer {...defaultProps} loading={true} />)
+    const busy = document.querySelector('[aria-busy="true"]')
+    expect(busy).not.toBeNull()
+    expect(busy).toHaveClass('opacity-40')
+
+    rerender(<ParliamentDrawer {...defaultProps} loading={false} />)
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
   })
 
   it('switches to committees tab on click', async () => {
