@@ -19,7 +19,9 @@ Email is a best-effort side channel: a send failure must never break the API cal
 - **Alert recipients:** personal trackers only. Group-list-only bills do not generate alerts (the group account has no email).
 - **Opt-out:** per-user toggle `users.email_alerts`, **default on**.
 - **Batching:** **one digest email per member per poll cycle**, grouping all of that member's changed bills.
-- **Delivery semantics:** fire-and-forget toward the trigger; send result + lifecycle status **persisted** in `sent_emails`.
+- **Delivery semantics:** fire-and-forget toward the trigger. Sends are recorded in a **minimal `sent_emails` ledger** (`sent`/`failed`, set once). Delivery lifecycle (delivered/bounced/…) is **logged only** via the webhook — never stored.
+- **Logging/privacy:** every email log line redacts the address to its local part (`avivavitan63@…`, domain dropped) and carries the Resend message id for full lookup in the Resend dashboard. No other PII logged.
+- **Storage pressure:** the `sent_emails` ledger is wired into a generalized reclaimer pipeline and is the **first thing trimmed** when the DB is over budget.
 - **Invite re-sends:** the invite email fires on **every** `POST /api/admin/invites`, including re-invites.
 - **Toggle placement:** inside the signed-in `AuthControl` area.
 - **Templates:** stored in DB (`email_templates`), edited via the admin panel, rendered through one generalized `renderTemplate(name, params)` with `{{placeholder}}` substitution and a shared layout/style wrapper.
@@ -43,11 +45,13 @@ Email is a best-effort side channel: a send failure must never break the API cal
                                 ▼
                         getResend() ──▶ Resend API ──▶ {id} or {error}
                                 │
-                                ▼ record
-                        sent_emails (id, to, template, status, error)
-                                ▲ update
- Resend webhook ──▶ POST /api/webhooks/resend (svix-verified) ─┘
-   (delivered / bounced / complained / delivery_delayed)
+                                ▼ record (minimal, prunable ledger)
+                        sent_emails (id, to, template, status='sent'|'failed')
+                                          │ trimmed first under storage pressure
+
+ Resend webhook ──▶ POST /api/webhooks/resend (svix-verified)
+   (delivered / bounced / complained / delayed) ──▶ SERVER LOG ONLY, stores nothing
+       e.g.  [email] delivery event=bounced to=avivavitan63@… msgId=re_abc123
 ```
 
 ## Schema changes
@@ -70,19 +74,18 @@ export const emailTemplates = pgTable('email_templates', {
 })
 ```
 
-### `sent_emails`
+### `sent_emails` (minimal send ledger — recorded at send, never updated)
 ```ts
 export const sentEmails = pgTable('sent_emails', {
-  id: text('id').primaryKey(),              // Resend message id
+  id: text('id').primaryKey(),              // Resend message id (or 'failed:<uuid>' on send error)
   toEmail: text('to_email').notNull(),
   template: text('template').notNull(),
-  subject: text('subject').notNull().default(''),
-  status: text('status').notNull().default('sent'), // sent|delivered|bounced|complained|delivery_delayed|failed
+  status: text('status').notNull().default('sent'), // 'sent' | 'failed' (set once, at send time)
   error: text('error'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 ```
+Delivery lifecycle (delivered/bounced/complained/delayed) is **not** stored here — it is logged only (see webhook). This table is the audit ledger of what we attempted to send, and is the **first thing trimmed under storage pressure**.
 
 ### Migrations
 - `0012` — `npm run db:generate` after adding `users.email_alerts`, `email_templates`, `sent_emails`.
@@ -102,9 +105,10 @@ Follows `FeatureFlagsRepository`. In-memory cache with TTL (e.g. 5 min), reset o
 - `_resetCache()` for tests.
 
 ### 2. `server/repositories/sent-emails-repository.ts` (new)
-- `record({ id, toEmail, template, subject, status, error }): Promise<void>` (upsert on `id`).
-- `updateStatus(id, status, error?): Promise<void>` (no-op if `id` unknown).
-- `get(id)` / `list(limit)` for tests/observability.
+- `record({ id, toEmail, template, status, error }): Promise<void>` (insert; ignore conflict on `id`).
+- `deleteOldest(limit: number): Promise<number>` — delete the `limit` oldest rows by `createdAt`, return count deleted (used by the storage-pressure reclaimer).
+- `count(): Promise<number>` / `list(limit)` for tests/observability.
+- No `updateStatus` — the webhook never writes to the DB.
 
 ### 3. `server/services/email-render.ts` (new)
 Generalized, storage-agnostic render layer (callers never see HTML or the DB).
@@ -121,9 +125,12 @@ The send primitive. Lazy client, mirroring `getGoogleClient()`.
   - `renderTemplate(template, params, { raw })` → `{ subject, html }`.
   - If `getResend()` is `null`: `console.warn` and **return** (dev/test no-op; nothing recorded).
   - Else `resend.emails.send({ from: EMAIL_FROM, to, subject, html })`.
-    - On success: `sentEmailsRepo.record({ id: data.id, toEmail: to, template, subject, status: 'sent' })`.
-    - On error/throw: `console.error`; record with a synthetic id (`failed:${uuid}`) and `status: 'failed'`, `error`. **Never throw.**
+    - On success: `sentEmailsRepo.record({ id: data.id, toEmail: to, template, status: 'sent' })` and `console.info('[email] sent template=%s to=%s msgId=%s', template, redactEmail(to), data.id)`.
+    - On error/throw: `console.error('[email] send failed template=%s to=%s', template, redactEmail(to), err)`; record with a synthetic id (`failed:${uuid}`), `status: 'failed'`, `error`. **Never throw.**
 - `sendEmailsThrottled(messages: SendArgs[]): Promise<void>` — sends sequentially with ≥500 ms spacing (≤2 req/s) for digest bursts.
+
+### 4a. `server/services/email-redaction.ts` (new, tiny)
+- `redactEmail(email: string): string` — `'avivavitan63@gmail.com'` → `'avivavitan63@…'` (keep local part, drop domain). No `@` → returns `'…'`. Used by every email log line (send + webhook) so no full address ever reaches the logs.
 
 ### 5. Invitation wiring — `server/routes/admin.ts`
 After `await authRepo.addInvite(...)`:
@@ -154,10 +161,16 @@ findAlertRecipients(billIds: number[]): Promise<Array<{ userId: number; email: s
 ```
 Join `tracked_bills` → `users` where `bill_id IN (billIds)` AND `users.role <> 'group'` AND `users.email IS NOT NULL` AND `users.email_alerts = true`. `[]` for empty input.
 
-### 9. Delivery webhook — `server/routes/webhooks.ts` (new)
+### 9. Delivery webhook — `server/routes/webhooks.ts` (new) — **log only, stores nothing**
 - `POST /api/webhooks/resend`, **public** (no `requireAuth`, excluded from CORS gating), mounted with `express.raw({ type: 'application/json' })` so the raw body is available for signature verification.
 - Verify with `svix`: `new Webhook(process.env.RESEND_WEBHOOK_SECRET).verify(rawBody, { 'svix-id', 'svix-timestamp', 'svix-signature' })`. Invalid → `400`.
-- Map event `type` → status: `email.sent`→`sent`, `email.delivered`→`delivered`, `email.bounced`→`bounced`, `email.complained`→`complained`, `email.delivery_delayed`→`delivery_delayed`. Call `sentEmailsRepo.updateStatus(data.email_id, status, errorIfAny)`. Unknown id → no-op. Always `200` on a verified event.
+- On a verified event, **log a single structured line and return `200`** — no DB read or write:
+  ```
+  console.info('[email] delivery event=%s to=%s msgId=%s',
+    type.replace('email.', ''), redactEmail(data.to?.[0] ?? ''), data.email_id)
+  ```
+  e.g. `[email] delivery event=bounced to=avivavitan63@… msgId=re_abc123`.
+- The Resend message id is the lookup key for full detail (subject, full address, bounce reason) in the Resend dashboard. No `sent_emails` update; the webhook touches no repository.
 
 ### 10. Admin template editor
 - Routes (`server/routes/admin.ts`, `requireAdmin`): `GET /api/admin/email-templates` (list), `PUT /api/admin/email-templates/:name` (`{ subject, html }`).
@@ -179,25 +192,48 @@ Widen `Bill.status` (`src/types.ts:16`) from the 4-value union to `string` (the 
 - `PUBLIC_SITE_URL` — invite link target, e.g. `https://derlegatlabienus.github.io`.
 - `RESEND_WEBHOOK_SECRET` — Svix signing secret from the Resend webhook config.
 
+### 15. Storage-pressure generalization — `server/services/storage-manager.ts`
+The current `purgeOrphansIfNeeded` is orphan-entity-specific. Generalize it into a **reclaimer pipeline** so the `sent_emails` ledger (and future growing tables) participate in pressure relief.
+
+```ts
+interface Reclaimer { name: string; reclaim(): Promise<number> } // rows freed this pass
+```
+
+- Rename the entry point to `relieveStoragePressureIfNeeded(usedBytes)`, keeping the same `(usedBytes) => Promise<PurgeResult>` contract. Update the one poller call (`server/services/poller.ts:159`) and the test imports/`describe` in `tests/server/storage-manager.test.ts` (mechanical rename).
+- Pressure check unchanged (reuses the `storagePressure` flag, `limitMb:slackMb`, `-1` disables). When over budget:
+  ```ts
+  for (const r of reclaimers) {
+    const freed = await r.reclaim()
+    if (freed > 0) used = await usedBytes()      // re-measure only after a change
+    if (used !== null && used <= target) break   // back under budget → stop
+  }
+  ```
+- Reclaimers, **cheapest / least-valuable first**:
+  1. `sentEmailsReclaimer` — `sentEmailsRepo.deleteOldest(SENT_EMAIL_PURGE_BATCH)` (default 500, env-overridable like `ORPHAN_PURGE_BATCH`). Writes count into `result.sentEmailsDeleted`.
+  2. `orphanEntitiesReclaimer` — the existing orphan logic extracted verbatim (stalest-first untracked bills/committees/MKs + children + summaries, batch 5).
+- `PurgeResult` gains `sentEmailsDeleted: number` (existing fields untouched → current storage-manager tests stay green). Per-cycle cadence preserved: one batch per reclaimer per cycle, recovering gradually across cycles.
+
 ## Dedup
 The poller fires only when `newStatus !== bill.status` and writes `newStatus` the same cycle → each change emails once. No "already notified" table.
 
 ## Error handling
 - Missing `RESEND_API_KEY`: `sendEmail` no-ops; nothing recorded; code paths work.
-- Resend send rejection: logged + recorded as `failed`; never propagates to invite response or poll result.
-- Webhook bad signature → `400`; unknown email id → `200` no-op.
+- Resend send rejection: logged (redacted) + recorded as `failed`; never propagates to invite response or poll result.
+- Webhook bad signature → `400`; verified event always → `200` after logging (no DB lookup, so an unknown id is irrelevant).
 - `PATCH /api/auth/me` non-boolean → `400`.
 - Missing template row at render → logged send failure (not surfaced to trigger).
 
 ## Testing
 - **`email-render.ts`**: `{{placeholder}}` substitution; HTML-escapes non-raw params; injects raw `bills`; wraps in `_layout`; missing key → empty.
 - **`email.ts`** (mock `resend` + repos): key unset → no client call, no record, resolves; key set → calls `emails.send` and records `sent` with returned id; send rejects → records `failed`, resolves; `sendEmailsThrottled` preserves order and spacing.
+- **`redactEmail`**: `a@b.com` → `a@…`; no `@` → `…`; empty → `…`.
 - **Invite route**: adding an invite calls `sendEmail`; route returns `{ ok: true }` even when `sendEmail` rejects.
 - **Poller digest**: two users tracking overlapping bills, one with `emailAlerts=false`; simulate changes; exactly one digest per eligible user with correct bills grouped; opted-out and group users get none.
 - **`findAlertRecipients`**: only personal trackers with email + alerts on; excludes group role / null email / alerts off; `[]` for empty input.
-- **Webhook**: valid signature + `email.delivered` updates row to `delivered`; bad signature → `400`; unknown id → `200` no-op.
+- **Webhook**: valid signature + `email.delivered` → `200` and a log line containing the redacted recipient + msgId, and **no DB write** (spy on `SentEmailsRepository`); bad signature → `400`.
 - **`EmailTemplatesRepository`**: get/update round-trip; cache reset on update.
-- **`SentEmailsRepository`**: record + updateStatus; updateStatus on unknown id is a no-op.
+- **`SentEmailsRepository`**: record + `deleteOldest` (deletes by oldest `createdAt`, returns count); `count`.
+- **Storage-pressure reclaimer**: over budget → `sentEmailsReclaimer` trims oldest batch first, `relieveStoragePressureIfNeeded` reports `sentEmailsDeleted`; re-measures and stops before purging orphan entities if back under budget; existing orphan-purge tests still pass.
 - **Admin templates routes**: list + update under `requireAdmin`; non-admin → `403`.
 - **Preference route + UI**: `PATCH /api/auth/me` updates the flag; `AuthControl` toggle calls `api.auth.updateMe`.
 
