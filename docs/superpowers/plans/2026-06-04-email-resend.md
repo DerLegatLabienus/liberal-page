@@ -722,6 +722,8 @@ Expected: FAIL — cannot find module `email`.
 
 - [ ] **Step 3: Implement**
 
+> SDK note: this assumes `resend.emails.send()` resolves to `{ data: { id }, error }` (current Resend SDK). Confirm against the installed version (`node -e "console.log(require('resend/package.json').version)"`); if the shape differs, adjust the destructuring and the test mock together.
+
 ```ts
 // server/services/email.ts
 import { Resend } from 'resend'
@@ -1263,14 +1265,26 @@ describe('sendBillAlerts', () => {
 Run: `npx vitest run tests/server/poller-alerts.test.ts`
 Expected: FAIL — `sendBillAlerts` is not exported.
 
-- [ ] **Step 3: Implement in `server/services/poller.ts`**
+- [ ] **Step 3a: Export a Knesset bill-URL helper**
+
+A bill's `knessetUrl` column is frequently null (many insert paths don't set it), so the digest must construct the link from `oknesset_id`. `server/services/knesset-bills.ts` has a private `knessetUrl(billId)`; add a public wrapper at the end of that file:
+```ts
+/** Public bill page URL for a Knesset BillID (a bill's oknesset_id is a BillID). */
+export function knessetBillUrl(billId: number): string {
+  return knessetUrl(billId)
+}
+```
+
+- [ ] **Step 3b: Implement in `server/services/poller.ts`**
 
 Add imports near the other imports:
 ```ts
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 import { renderFragment } from './email-render'
 import { sendEmailsThrottled, type SendArgs } from './email'
+import { fetchBillStatusById, knessetBillUrl } from './knesset-bills'
 ```
+(`fetchBillStatusById` is already imported in this file — merge `knessetBillUrl` into that existing import line rather than duplicating it.)
 Add a shared instance near the other repo instances:
 ```ts
 const trackedBillsRepo = new TrackedBillsRepository()
@@ -1321,7 +1335,9 @@ Inside the loop, right after `const changed = newStatus !== null && newStatus !=
       if (changed) {
         changes.push({
           billId: bill.id, title: bill.title ?? '', oldStatus: bill.status ?? null,
-          newStatus: newStatus as string, knessetUrl: bill.knessetUrl ?? '',
+          newStatus: newStatus as string,
+          // knessetUrl column is often null; build from the BillID (oknesset_id) as fallback.
+          knessetUrl: bill.knessetUrl || knessetBillUrl(Number(bill.oknesset_id)),
         })
       }
 ```
@@ -1484,21 +1500,24 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Add a failing test for the sent-emails reclaimer**
 
-Append to `tests/server/storage-manager.test.ts` (and update the import at the top — see Step 3). Add inside the file a new describe block:
+Add these two imports to the **top** of `tests/server/storage-manager.test.ts` (alongside the existing imports — `sentEmails` joins the existing `../../server/db/schema` import; add the repository import as a new line):
 ```ts
-import { sentEmails } from '../../server/db/schema'
 import { SentEmailsRepository } from '../../server/repositories/sent-emails-repository'
+```
+(Add `sentEmails` to the names already imported from `'../../server/db/schema'`.)
 
+Then append this new describe block at the **end** of the file. Note the pressure config: `OVER` returns 100 MB, so the configured limit must be *below* that to be "over budget" — use `'50:2'` (target = 48 MB):
+```ts
 describe('relieveStoragePressureIfNeeded — sent_emails reclaimer', () => {
   const sentRepo = new SentEmailsRepository()
-  beforeEach(async () => { await db.delete(sentEmails); await setPressure('450:2') })
+  beforeEach(async () => { await db.delete(sentEmails); await setPressure('50:2') })
 
   it('trims the oldest sent_emails first when over budget', async () => {
     for (let i = 0; i < 3; i++) {
       await db.insert(sentEmails).values({ id: `m${i}`, toEmail: 'a@x.com', template: 't', status: 'sent', createdAt: new Date(2020 + i, 0, 1) })
     }
     process.env.SENT_EMAIL_PURGE_BATCH = '2'
-    const r = await relieveStoragePressureIfNeeded(OVER)
+    const r = await relieveStoragePressureIfNeeded(OVER) // 100 MB > 48 MB target
     expect(r.sentEmailsDeleted).toBe(2)
     expect(await sentRepo.count()).toBe(1)
     delete process.env.SENT_EMAIL_PURGE_BATCH
@@ -1506,7 +1525,7 @@ describe('relieveStoragePressureIfNeeded — sent_emails reclaimer', () => {
 
   it('does not trim when under budget', async () => {
     await db.insert(sentEmails).values({ id: 'm0', toEmail: 'a@x.com', template: 't', status: 'sent', createdAt: new Date() })
-    const r = await relieveStoragePressureIfNeeded(UNDER)
+    const r = await relieveStoragePressureIfNeeded(UNDER) // 1 MB < 48 MB target
     expect(r.sentEmailsDeleted).toBe(0)
     expect(await sentRepo.count()).toBe(1)
   })
@@ -2023,5 +2042,10 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 **Placeholder scan:** No TBD/TODO; every code step has complete code; every run step has an exact command + expected result.
 
 **Type consistency:** `SendArgs` (Task 8) is reused verbatim in Task 13. `AuthUser.emailAlerts` added in Task 10 (server) and Task 16 (client). `EmailTemplate` shape identical across Tasks 5/16/17. `PurgeResult.sentEmailsDeleted` defined in Task 15 and asserted in its tests. `findAlertRecipients` return shape (Task 11) matches its consumer grouping (Task 13). `renderFragment`/`renderTemplate` (Task 7) match callers (Tasks 8,13).
+
+**Post-advisor fixes folded in:**
+- Task 13 constructs the digest link from `oknesset_id` via a new `knessetBillUrl` export (the `knessetUrl` column is often null), instead of relying on `bill.knessetUrl`.
+- Task 15's reclaimer test uses `setPressure('50:2')` so `OVER` (100 MB) actually exceeds the 48 MB target; imports moved to the file top.
+- Task 8 notes the Resend `{ data, error }` SDK shape must be confirmed against the installed version.
 
 **Ordering note:** Tasks 1–8 build the email core; 9–14 wire features; 15 generalizes storage; 16–18 frontend; 19 verifies. Each task is independently committable and leaves tests green.
