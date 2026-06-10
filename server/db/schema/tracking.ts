@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp, unique } from 'drizzle-orm/pg-core'
+import { pgTable, serial, integer, text, timestamp, unique, boolean } from 'drizzle-orm/pg-core'
 import { bills } from './bills'
 import { committees } from './committees'
 import { mks } from './mks'
@@ -12,6 +12,7 @@ export const users = pgTable('users', {
   googleSub: text('google_sub').unique(),
   role: text('role').notNull().default('member'), // 'admin' | 'member' | 'group'
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  emailAlerts: boolean('email_alerts').notNull().default(true),
 })
 
 export const trackedBills = pgTable('tracked_bills', {
