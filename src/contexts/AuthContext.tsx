@@ -8,6 +8,7 @@ interface AuthContextValue {
   ready: boolean            // initial session-restore finished
   signIn: (googleIdToken: string) => Promise<void>
   signOut: () => Promise<void>
+  updateUser: (patch: Partial<AuthUser>) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -27,6 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [ready, setReady] = useState(false)
   const refreshToken = useRef<string | null>(localStorage.getItem(REFRESH_KEY))
+
+  const updateUser = useCallback((patch: Partial<AuthUser>) => {
+    setUser((u) => (u ? { ...u, ...patch } : u))
+  }, [])
 
   const apply = useCallback((accessToken: string, newRefresh: string, u: AuthUser) => {
     setAccessToken(accessToken)
@@ -77,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   return (
-    <AuthContext.Provider value={{ user, ready, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, ready, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

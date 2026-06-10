@@ -3,7 +3,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
-import { errorStatus } from '@/lib/api-client'
+import { api, errorStatus } from '@/lib/api-client'
 import AdminPanel from '@/components/admin/AdminPanel'
 
 /**
@@ -18,7 +18,7 @@ export default function AuthControl() {
   const [adminOpen, setAdminOpen] = useState(false)
 
   if (!auth || !auth.ready) return null
-  const { user, signIn, signOut } = auth
+  const { user, signIn, signOut, updateUser } = auth
 
   const handleSignIn = (idToken: string) => {
     signIn(idToken)
@@ -47,6 +47,24 @@ export default function AuthControl() {
             <AdminPanel open={adminOpen} onClose={() => setAdminOpen(false)} />
           </>
         )}
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            aria-label={t('auth.email_alerts')}
+            checked={user.emailAlerts}
+            onChange={async (e) => {
+              const next = e.target.checked
+              try {
+                const res = await api.auth.updateMe(next)
+                updateUser({ emailAlerts: res.user.emailAlerts })
+                toastCtx?.toast(t('auth.preferences_saved'), 'success')
+              } catch {
+                toastCtx?.toast(t('auth.preferences_failed'), 'error')
+              }
+            }}
+          />
+          {t('auth.email_alerts')}
+        </label>
         <button
           onClick={() => { void signOut() }}
           className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

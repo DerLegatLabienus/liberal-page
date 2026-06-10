@@ -13,7 +13,7 @@ vi.mock('@/lib/api-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api-client')>()
   return {
     ...actual,
-    api: { auth: { google: vi.fn(), refresh: vi.fn(), logout: vi.fn() } },
+    api: { auth: { google: vi.fn(), refresh: vi.fn(), logout: vi.fn(), updateMe: vi.fn() } },
     setAccessToken: vi.fn(),
     setRefreshHandler: vi.fn(),
   }
@@ -52,5 +52,19 @@ describe('AuthControl sign-in toasts', () => {
     renderControl()
     await userEvent.click(await screen.findByText('google-signin'))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
+  })
+
+  it('toggles email alerts via api.auth.updateMe when signed in', async () => {
+    vi.mocked(api.auth.updateMe).mockResolvedValue({
+      user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: false },
+    })
+    vi.mocked(api.auth.google).mockResolvedValue({
+      accessToken: 'a', refreshToken: 'r', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: true },
+    })
+    renderControl()
+    await userEvent.click(await screen.findByText('google-signin'))
+    const checkbox = await screen.findByRole('checkbox', { name: /alerts|התראות/i })
+    await userEvent.click(checkbox)
+    expect(api.auth.updateMe).toHaveBeenCalledWith(false)
   })
 })

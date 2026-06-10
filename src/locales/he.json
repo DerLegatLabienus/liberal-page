@@ -130,7 +130,10 @@
     "sign_out": "התנתק",
     "signed_in": "התחברת בהצלחה",
     "not_invited": "כתובת האימייל אינה מורשית. פנו למנהל לקבלת הזמנה.",
-    "sign_in_failed": "ההתחברות נכשלה. נסו שוב."
+    "sign_in_failed": "ההתחברות נכשלה. נסו שוב.",
+    "email_alerts": "התראות במייל",
+    "preferences_saved": "ההעדפה נשמרה",
+    "preferences_failed": "שמירת ההעדפה נכשלה"
   },
   "admin": {
     "title": "ניהול",
