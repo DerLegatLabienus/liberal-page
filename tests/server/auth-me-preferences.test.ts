@@ -10,7 +10,7 @@ vi.mock('../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn().mockImplementation(() => ({ findUserById, setEmailAlerts })),
 }))
 vi.mock('../../server/middleware/auth', () => ({
-  requireAuth: (req: any, _res: any, next: any) => { req.user = { id: 7, role: 'member' }; next() },
+  requireAuth: (req: express.Request, _res: express.Response, next: express.NextFunction) => { req.user = { id: 7, role: 'member' }; next() },
 }))
 vi.mock('../../server/services/auth-service', () => ({
   verifyGoogleIdToken: vi.fn(), issueAccessToken: vi.fn(), issueRefreshToken: vi.fn(),

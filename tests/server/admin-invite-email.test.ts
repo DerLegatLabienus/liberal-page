@@ -17,7 +17,7 @@ vi.mock('../../server/repositories/auth-repository', () => ({
 }))
 
 vi.mock('../../server/middleware/auth', () => ({
-  requireAdmin: (req: any, _res: any, next: any) => { req.user = { id: 1, role: 'admin' }; next() },
+  requireAdmin: (req: express.Request, _res: express.Response, next: express.NextFunction) => { req.user = { id: 1, role: 'admin' }; next() },
 }))
 
 import adminRouter from '../../server/routes/admin'

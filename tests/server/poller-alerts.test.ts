@@ -29,7 +29,7 @@ describe('sendBillAlerts', () => {
     expect(sendEmailsThrottled).toHaveBeenCalledTimes(1)
     const messages = sendEmailsThrottled.mock.calls[0][0]
     expect(messages).toHaveLength(2)
-    const u1 = messages.find((m: any) => m.to === 'one@x.com')
+    const u1 = messages.find((m: { to: string; template: string; params: Record<string, string>; raw?: string[] }) => m.to === 'one@x.com')
     expect(u1.params.count).toBe('2')
     expect(u1.template).toBe('bill_digest')
     expect(u1.raw).toContain('bills')
