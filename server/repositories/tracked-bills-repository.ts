@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, ne, isNotNull } from 'drizzle-orm'
 import { db } from '../db/client'
-import { trackedBills } from '../db/schema'
+import { trackedBills, users } from '../db/schema'
 import { BillsRepository } from './bills-repository'
 import type { Bill } from '../../src/types'
 
@@ -35,5 +35,23 @@ export class TrackedBillsRepository {
   async isTracked(userId: number, billId: number): Promise<boolean> {
     const rows = await db.select().from(trackedBills).where(and(eq(trackedBills.userId, userId), eq(trackedBills.billId, billId)))
     return rows.length > 0
+  }
+
+  /** Personal trackers (role != group, with an email, alerts enabled) of any of the given bills. */
+  async findAlertRecipients(
+    billIds: number[],
+  ): Promise<Array<{ userId: number; email: string; name: string | null; billId: number }>> {
+    if (billIds.length === 0) return []
+    const rows = await db
+      .select({ userId: trackedBills.userId, email: users.email, name: users.name, billId: trackedBills.billId })
+      .from(trackedBills)
+      .innerJoin(users, eq(trackedBills.userId, users.id))
+      .where(and(
+        inArray(trackedBills.billId, billIds),
+        ne(users.role, 'group'),
+        isNotNull(users.email),
+        eq(users.emailAlerts, true),
+      ))
+    return rows.map((r) => ({ userId: r.userId, email: r.email as string, name: r.name, billId: r.billId }))
   }
 }
