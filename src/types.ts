@@ -13,7 +13,7 @@ export interface Bill {
   oknesset_id: string
   number: string
   title: string
-  status: 'בוועדה' | 'הצבעה קרובה' | 'עבר' | 'נדחה'
+  status: string // Hebrew status label from Knesset KNS_Status (full vocabulary)
   position: 'תומכים' | 'מתנגדים' | 'עוקבים'
   notes: string
   committee: string

@@ -2,14 +2,14 @@ import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Bill } from '@/types'
 
-const STATUS_BADGE: Record<Bill['status'], string> = {
+const STATUS_BADGE: Record<string, string> = {
   'בוועדה': 'bg-green-100 text-green-700',
   'הצבעה קרובה': 'bg-orange-100 text-orange-700',
   'עבר': 'bg-slate-100 text-slate-600',
   'נדחה': 'bg-red-100 text-red-600',
 }
 
-const STATUS_BAR: Record<Bill['status'], string> = {
+const STATUS_BAR: Record<string, string> = {
   'בוועדה': 'bg-green-500',
   'הצבעה קרובה': 'bg-orange-500',
   'עבר': 'bg-slate-400',
@@ -27,11 +27,11 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
 
   return (
     <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
-      <div className={`w-1 shrink-0 ${STATUS_BAR[bill.status]}`} />
+      <div className={`w-1 shrink-0 ${STATUS_BAR[bill.status] ?? 'bg-slate-300'}`} />
       <div className="flex-1 p-4" dir="rtl">
         <div className="mb-2 flex items-start justify-between gap-2">
           <p className="text-right text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[bill.status]}`}>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[bill.status] ?? 'bg-slate-100 text-slate-700'}`}>
             {bill.status}
           </span>
         </div>

@@ -49,7 +49,7 @@ export class BillsRepository {
       oknesset_id: row.oknessetId,
       number: row.number,
       title: row.title,
-      status: row.status as Bill['status'],
+      status: row.status ?? '',
       committee: row.committee,
       sourceUrl: row.sourceUrl,
       documentUrl: row.documentUrl,
