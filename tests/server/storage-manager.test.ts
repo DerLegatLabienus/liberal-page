@@ -4,9 +4,10 @@ import { db } from '../../server/db/client'
 import {
   bills, committees, committeeSessions, mks, mkActivity,
   users, trackedBills, trackedCommittees, trackedMks,
-  summariesCache, knessetMembersCache, featureFlags,
+  summariesCache, knessetMembersCache, featureFlags, sentEmails,
 } from '../../server/db/schema'
-import { purgeOrphansIfNeeded, STORAGE_FLAG } from '../../server/services/storage-manager'
+import { relieveStoragePressureIfNeeded, STORAGE_FLAG } from '../../server/services/storage-manager'
+import { SentEmailsRepository } from '../../server/repositories/sent-emails-repository'
 import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
 
 const flagsRepo = new FeatureFlagsRepository()
@@ -52,7 +53,7 @@ async function addMk(name: string, tracked: boolean, polled: Date | null) {
   return m.id
 }
 
-describe('purgeOrphansIfNeeded', () => {
+describe('relieveStoragePressureIfNeeded — orphan entities', () => {
   beforeAll(async () => {
     await setupTestDb()
     const [u] = await db.insert(users).values({ label: 'shared', createdAt: new Date() }).returning({ id: users.id })
@@ -72,7 +73,7 @@ describe('purgeOrphansIfNeeded', () => {
   it('is disabled when the flag value is "-1"', async () => {
     await setPressure('-1')
     await addBill('1', false, null)
-    const r = await purgeOrphansIfNeeded(OVER)
+    const r = await relieveStoragePressureIfNeeded(OVER)
     expect(r.purged).toEqual({ bills: 0, committees: 0, mks: 0 })
     expect(await db.select().from(bills)).toHaveLength(1)
   })
@@ -81,29 +82,29 @@ describe('purgeOrphansIfNeeded', () => {
     await setPressure(null) // no flag → default "450:2", on
     await addBill('1', false, null)
     // under the default 450 cap → no purge
-    await purgeOrphansIfNeeded(OVER)
+    await relieveStoragePressureIfNeeded(OVER)
     expect(await db.select().from(bills)).toHaveLength(1)
     // over the default cap → purge
-    await purgeOrphansIfNeeded(HUGE)
+    await relieveStoragePressureIfNeeded(HUGE)
     expect(await db.select().from(bills)).toHaveLength(0)
   })
 
   it('is a no-op when size is unknown (null)', async () => {
     await addBill('1', false, null)
-    await purgeOrphansIfNeeded(async () => null)
+    await relieveStoragePressureIfNeeded(async () => null)
     expect(await db.select().from(bills)).toHaveLength(1)
   })
 
   it('is a no-op when under budget', async () => {
     await addBill('1', false, null)
-    await purgeOrphansIfNeeded(UNDER)
+    await relieveStoragePressureIfNeeded(UNDER)
     expect(await db.select().from(bills)).toHaveLength(1)
   })
 
   it('over budget: deletes orphans but never tracked entities', async () => {
     const orphan = await addBill('orphan', false, null)
     const tracked = await addBill('tracked', true, null)
-    const r = await purgeOrphansIfNeeded(OVER)
+    const r = await relieveStoragePressureIfNeeded(OVER)
     expect(r.purged.bills).toBe(1)
     const remaining = await db.select().from(bills)
     expect(remaining.map((b) => b.id)).toEqual([tracked])
@@ -116,12 +117,12 @@ describe('purgeOrphansIfNeeded', () => {
     const b = await addMk('b', false, new Date('2025-06-01'))
     const c = await addMk('c', false, new Date('2026-01-01'))
 
-    await purgeOrphansIfNeeded(OVER)
+    await relieveStoragePressureIfNeeded(OVER)
     let left = (await db.select().from(mks)).map((m) => m.id)
     expect(left).toEqual([c])
     expect(left).not.toContain(a); expect(left).not.toContain(b)
 
-    await purgeOrphansIfNeeded(OVER)
+    await relieveStoragePressureIfNeeded(OVER)
     left = (await db.select().from(mks)).map((m) => m.id)
     expect(left).toEqual([])
   })
@@ -133,7 +134,7 @@ describe('purgeOrphansIfNeeded', () => {
     await db.insert(summariesCache).values({ md5: 'm2', summary: 's', createdAt: new Date(), sourceUrl: 'https://other' })
     await db.insert(knessetMembersCache).values({ siteId: 1, name: 'x', party: 'p', isLiberal: false, isSupporter: false, cachedAt: new Date() })
 
-    const r = await purgeOrphansIfNeeded(OVER)
+    const r = await relieveStoragePressureIfNeeded(OVER)
     expect(r.purged.committees).toBe(1)
     expect(r.summariesDeleted).toBe(1)
     expect((await db.select().from(summariesCache)).map((s) => s.md5)).toEqual(['m2'])
@@ -147,7 +148,7 @@ describe('purgeOrphansIfNeeded', () => {
     }).returning({ id: bills.id })
     await db.insert(trackedBills).values({ userId: u2.id, billId: b.id, createdAt: new Date() })
 
-    const r = await purgeOrphansIfNeeded(OVER)
+    const r = await relieveStoragePressureIfNeeded(OVER)
     expect(r.purged.bills).toBe(0)
     expect(await db.select().from(bills)).toHaveLength(1)
   })
@@ -156,8 +157,31 @@ describe('purgeOrphansIfNeeded', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     await addBill('o1', false, null)
     await addBill('o2', false, null)
-    await purgeOrphansIfNeeded(OVER)
+    await relieveStoragePressureIfNeeded(OVER)
     const gcLines = logSpy.mock.calls.filter((c) => String(c[0]).includes('Storage GC'))
     expect(gcLines).toHaveLength(2)
+  })
+})
+
+describe('relieveStoragePressureIfNeeded — sent_emails reclaimer', () => {
+  const sentRepo = new SentEmailsRepository()
+  beforeEach(async () => { await db.delete(sentEmails); await setPressure('50:2') })
+
+  it('trims the oldest sent_emails first when over budget', async () => {
+    for (let i = 0; i < 3; i++) {
+      await db.insert(sentEmails).values({ id: `m${i}`, toEmail: 'a@x.com', template: 't', status: 'sent', createdAt: new Date(2020 + i, 0, 1) })
+    }
+    process.env.SENT_EMAIL_PURGE_BATCH = '2'
+    const r = await relieveStoragePressureIfNeeded(OVER) // 100 MB > 48 MB target
+    expect(r.sentEmailsDeleted).toBe(2)
+    expect(await sentRepo.count()).toBe(1)
+    delete process.env.SENT_EMAIL_PURGE_BATCH
+  })
+
+  it('does not trim when under budget', async () => {
+    await db.insert(sentEmails).values({ id: 'm0', toEmail: 'a@x.com', template: 't', status: 'sent', createdAt: new Date() })
+    const r = await relieveStoragePressureIfNeeded(UNDER) // 1 MB < 48 MB target
+    expect(r.sentEmailsDeleted).toBe(0)
+    expect(await sentRepo.count()).toBe(1)
   })
 })

@@ -10,7 +10,7 @@ import { sendEmailsThrottled, type SendArgs } from './email'
 import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
-import { purgeOrphansIfNeeded } from './storage-manager'
+import { relieveStoragePressureIfNeeded } from './storage-manager'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
 import type { CommitteeSession } from '../../src/types'
@@ -210,7 +210,7 @@ export async function runPollCycle(): Promise<boolean> {
   // Reclaim storage by shedding the stalest orphan entities (tracked by no one) when the
   // DB is over budget. Isolated and not counted toward cycle success/backoff.
   try {
-    await purgeOrphansIfNeeded(getDatabaseSizeBytes)
+    await relieveStoragePressureIfNeeded(getDatabaseSizeBytes)
   } catch (err) {
     console.error('Poller: orphan purge failed:', err)
   }
