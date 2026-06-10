@@ -782,47 +782,63 @@ describe('PATCH /api/auth/me email_alerts', () => {
 Run: `npx vitest run tests/server/auth-me-email-alerts.test.ts`
 Expected: FAIL — `PATCH /me` 404 and `emailAlerts` absent.
 
-- [ ] **Step 3: Add `setEmailAlerts` to UsersRepository**
+> **Auth model (verified):** the auth user is `AuthUser = { id, email, name, role }`, built by `toUser()` in `server/repositories/auth-repository.ts` and surfaced through `publicUser()` in `server/routes/auth.ts`. `GET /me` loads via `authRepo.findUserById`. The preference threads through these, NOT `UsersRepository`.
 
-In `server/repositories/users-repository.ts` add:
+- [ ] **Step 3: Thread `emailAlerts` through `AuthUser` + `toUser` + add `setEmailAlerts`**
+
+In `server/repositories/auth-repository.ts`:
+- Add to the `AuthUser` interface: `emailAlerts: boolean`.
+- Update `toUser` to include it:
 ```ts
-async setEmailAlerts(userId: number, value: boolean): Promise<void> {
-  await db.update(users).set({ emailAlerts: value }).where(eq(users.id, userId))
+function toUser(row: typeof users.$inferSelect): AuthUser {
+  return { id: row.id, email: row.email, name: row.name, role: row.role, emailAlerts: row.emailAlerts }
 }
 ```
-(Ensure `eq` and `users` are imported — they already are for `getSharedUserId`.)
+- Add a setter method to the `AuthRepository` class:
+```ts
+async setEmailAlerts(id: number, value: boolean): Promise<void> {
+  await db.update(users).set({ emailAlerts: value }).where(eq(users.id, id))
+}
+```
+(`eq` and `users` are already imported.) This propagates `emailAlerts` to every `AuthUser` (`findUserById`, `upsertUserFromGoogle`, `findUserByEmail`, `listUsers`, and `rotateRefreshToken().user`). `issueAccessToken` only reads `userId`/`role`, so the JWT is unaffected.
 
-- [ ] **Step 4: Include `emailAlerts` in auth payloads + add PATCH /me**
+- [ ] **Step 4: Include `emailAlerts` in `publicUser` + add `PATCH /me`**
 
-In `server/routes/auth.ts`, extend `publicUser` to carry `emailAlerts` (read it from the user row the handlers already load; add `emailAlerts: u.emailAlerts ?? true` to the returned object and widen its param type). Then add the route:
+In `server/routes/auth.ts`, widen `publicUser`:
+```ts
+function publicUser(u: { id: number; email: string | null; name: string | null; role: string; emailAlerts: boolean }) {
+  return { id: u.id, email: u.email, name: u.name, role: u.role, emailAlerts: u.emailAlerts }
+}
+```
+Then add the route (after `GET /me`):
 ```ts
 router.patch('/me', requireAuth, async (req, res) => {
   const { emailAlerts } = req.body ?? {}
-  if (typeof emailAlerts !== 'boolean') { res.status(400).json({ error: 'emailAlerts must be boolean' }); return }
-  await usersRepo.setEmailAlerts(req.user!.id, emailAlerts)
-  const u = await usersRepo.getById(req.user!.id) // use the existing fetch-by-id used by GET /me
-  res.json({ user: publicUser(u) })
+  if (typeof emailAlerts !== 'boolean') return res.status(400).json({ error: 'emailAlerts must be boolean' })
+  await authRepo.setEmailAlerts(req.user!.id, emailAlerts)
+  const user = await authRepo.findUserById(req.user!.id)
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  res.json({ user: publicUser(user) })
 })
 ```
-Match the actual repository accessor `GET /me` already uses to load the user; if `GET /me` builds its user object differently, mirror that exact path so `publicUser` receives the same shape.
 
-- [ ] **Step 5: Add `emailAlerts` to the `User` type**
+- [ ] **Step 5: Add `emailAlerts` to the frontend `User` type**
 
-In `src/types.ts`, in the `User` interface (around line 96 where `email` lives), add:
+In `src/types.ts`, in the `User` interface (around line 96, where `email` lives), add:
 ```ts
   emailAlerts?: boolean
 ```
 
-- [ ] **Step 6: Run the test to verify it passes**
+- [ ] **Step 6: Run the new test + auth regression suite**
 
-Run: `npx vitest run tests/server/auth-me-email-alerts.test.ts`
-Expected: PASS (3 tests).
+Run: `npx vitest run tests/server/auth-me-email-alerts.test.ts tests/server/auth-route.test.ts tests/server/auth-repository.test.ts`
+Expected: the new test PASSES (3 tests). If `auth-route`/`auth-repository` assert an exact user-object shape, update those assertions to include `emailAlerts` (the field is now always returned).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add server/repositories/users-repository.ts server/routes/auth.ts src/types.ts tests/server/auth-me-email-alerts.test.ts
-git commit -m "feat(email): email-alerts preference — setEmailAlerts + PATCH /auth/me"
+git add server/repositories/auth-repository.ts server/routes/auth.ts src/types.ts tests/server/auth-me-email-alerts.test.ts tests/server/auth-route.test.ts tests/server/auth-repository.test.ts
+git commit -m "feat(email): email-alerts preference — AuthRepository.setEmailAlerts + PATCH /auth/me"
 ```
 
 ---
@@ -854,7 +870,7 @@ describe('findAlertRecipients', () => {
     const [u1] = await db.insert(users).values({ label: 'a', createdAt: now, email: 'a@x.c', name: 'A', role: 'member', emailAlerts: true }).returning()
     const [u2] = await db.insert(users).values({ label: 'b', createdAt: now, email: 'b@x.c', name: 'B', role: 'member', emailAlerts: false }).returning()
     await db.insert(users).values({ label: 'g', createdAt: now, email: null, name: 'G', role: 'group', emailAlerts: true })
-    const [b] = await db.insert(bills).values({ /* minimal required bill cols */ } as never).returning()
+    const [b] = await db.insert(bills).values({ number: '1', title: 'Test Bill', status: 'בוועדה', sourceUrl: 'http://x', knessetNumber: 25 }).returning()
     await db.insert(trackedBills).values([
       { userId: u1.id, billId: b.id, position: 'עוקבים', notes: '', createdAt: now },
       { userId: u2.id, billId: b.id, position: 'עוקבים', notes: '', createdAt: now },
@@ -869,7 +885,7 @@ describe('findAlertRecipients', () => {
 })
 ```
 
-> When writing the bill insert, fill the minimal NOT-NULL columns the `bills` table requires (check `server/db/schema/bills.ts`). Reuse the exact insert shape from an existing bills-related repository test if one exists.
+> The `bills` NOT-NULL columns without defaults are `number, title, status, sourceUrl, knessetNumber` (verified in `server/db/schema/bills.ts`); the insert above satisfies them.
 
 - [ ] **Step 2: Run it to verify failure**
 
@@ -928,11 +944,22 @@ vi.mock('../../server/services/knesset-bills', () => ({ fetchBillStatusById: vi.
 // ...mock the committee + MK fetchers the poller imports, mirroring tests/server/poller.test.ts
 
 import { setupTestDb } from './db-harness'
+import { EmailTemplatesRepository } from '../../server/repositories/email-templates-repository'
 // seed helpers + import the poll entry point used by poller.test.ts
+
+const templates = new EmailTemplatesRepository()
 
 describe('poller bill digests', () => {
   beforeAll(async () => { await setupTestDb() })
-  beforeEach(async () => { vi.clearAllMocks() /* + reset tables, seed users/bills/tracking */ })
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    // reset tables, then seed users/bills/tracking (one user alerts-on, one alerts-off)
+    // Self-seed the templates the digest renders so the test does not depend on migration 0013:
+    templates._resetCache()
+    await templates.update('_layout', { subject: '', html: '<x>{{subject}}|{{content}}</x>' })
+    await templates.update('bill_digest', { subject: 'D {{count}}', html: '<p>{{name}}{{bills}}</p>' })
+    await templates.update('bill_digest_item', { subject: '', html: '<i>{{title}}:{{oldStatus}}->{{newStatus}}</i>' })
+  })
 
   it('queues exactly one digest for an eligible user with their changed bills grouped', async () => {
     // seed: user A (alerts on) tracks bill X whose status will change; user B (alerts off) tracks X
@@ -1395,4 +1422,7 @@ git commit -m "docs(backlog): mark email alerts (#3b) complete"
 - **Spec coverage:** Tasks map 1:1 to spec components 1–14 (schema→1/2, repos→3/4, render→5, send→6, invite→7, preference→8, recipients→9, poller→10, webhook→11, admin editor→12, toggle→13, type cleanup→14, env→15). Operational Resend/domain setup (spec §"Operational notes") is manual/one-time and intentionally not a code task.
 - **YAGNI honored:** no unsubscribe links, no template versioning, no send-retry queue, no committee/MK alerts — matching the spec's "Out of scope."
 - **Type consistency:** `SendArgs` (Task 6) is reused by the poller (Task 10); `renderTemplate(name, params, { raw })` signature is identical across Tasks 5/6/10; `findAlertRecipients` shape (Task 9) matches its consumer in Task 10; `sent_emails` columns (Task 1) match `record`/`updateStatus` (Task 4) and the webhook (Task 11).
+- **Auth model (verified):** the user preference threads through `AuthUser` + `toUser()` + `publicUser()` and a new `AuthRepository.setEmailAlerts` (Task 8) — `UsersRepository` is NOT the auth store. `GET /me` uses `authRepo.findUserById`. Existing `auth-route`/`auth-repository` tests may assert the user shape and are re-run in Task 8 Step 6.
+- **Migrations in tests (verified):** `db-harness.setupTestDb()` calls `runMigrations()`, applying the full migration set (incl. custom INSERT migrations) to per-file pglite. 0013 templates are therefore present in tests; Task 10 additionally self-seeds its templates to stay decoupled.
+- **`bills` insert (verified):** NOT-NULL-without-default columns are `number, title, status, sourceUrl, knessetNumber` — Task 9's seed insert satisfies them.
 - **Test harness:** verified against the worktree — route tests build the app inline (`express()` + `express.json()` + the router) and mint JWTs via `issueAccessToken({ id, email, name, role })`, seeding users with `db.insert(users)` (pattern from `tests/server/admin-route.test.ts` / `auth-route.test.ts`). `supertest` is already a dependency. The admin router applies `requireAdmin` internally, so mounting it bare is sufficient. No shared harness file needed.
