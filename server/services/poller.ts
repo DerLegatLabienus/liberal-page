@@ -1,9 +1,12 @@
 import { Summarizer } from './summarizer'
 import { fetchMkActivity } from './knesset-scraper'
-import { fetchBillStatusById } from './knesset-bills'
+import { fetchBillStatusById, knessetBillUrl } from './knesset-bills'
 import { BillsRepository } from '../repositories/bills-repository'
 import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
+import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
+import { renderFragment } from './email-render'
+import { sendEmailsThrottled, type SendArgs } from './email'
 import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
@@ -22,12 +25,49 @@ const summarizer = new Summarizer()
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()
 const mksRepo = new MksRepository()
+const trackedBillsRepo = new TrackedBillsRepository()
+
+export interface BillChange { billId: number; title: string; oldStatus: string | null; newStatus: string; knessetUrl: string }
+
+/** Build and send one grouped digest per member tracking any of the changed bills. */
+export async function sendBillAlerts(changes: BillChange[]): Promise<void> {
+  if (changes.length === 0) return
+  const recipients = await trackedBillsRepo.findAlertRecipients(changes.map((c) => c.billId))
+  if (recipients.length === 0) return
+
+  const changeById = new Map(changes.map((c) => [c.billId, c]))
+  const byUser = new Map<number, { email: string; name: string | null; bills: BillChange[] }>()
+  for (const r of recipients) {
+    const change = changeById.get(r.billId)
+    if (!change) continue
+    const group = byUser.get(r.userId) ?? { email: r.email, name: r.name, bills: [] }
+    group.bills.push(change)
+    byUser.set(r.userId, group)
+  }
+
+  const messages: SendArgs[] = []
+  for (const group of byUser.values()) {
+    const items = await Promise.all(
+      group.bills.map((b) => renderFragment('bill_digest_item', {
+        title: b.title, oldStatus: b.oldStatus ?? '', newStatus: b.newStatus, knessetUrl: b.knessetUrl,
+      })),
+    )
+    messages.push({
+      to: group.email,
+      template: 'bill_digest',
+      params: { name: group.name ?? '', count: String(group.bills.length), bills: items.join('') },
+      raw: ['bills'],
+    })
+  }
+  await sendEmailsThrottled(messages)
+}
 
 async function pollBills(): Promise<boolean> {
   const bills = await billsRepo.getAll(getCurrentKnesset())
   if (bills.filter((b) => b.oknesset_id).length === 0) return true
 
   let anySuccess = false
+  const changes: BillChange[] = []
 
   for (const bill of bills) {
     if (!bill.oknesset_id || !bill.id) continue
@@ -37,6 +77,14 @@ async function pollBills(): Promise<boolean> {
       // for these ids, which broke res.json().
       const newStatus = await fetchBillStatusById(Number(bill.oknesset_id))
       const changed = newStatus !== null && newStatus !== bill.status
+      if (changed) {
+        changes.push({
+          billId: bill.id, title: bill.title ?? '', oldStatus: bill.status ?? null,
+          newStatus: newStatus as string,
+          // knessetUrl column is often null; build from the BillID (oknesset_id) as fallback.
+          knessetUrl: bill.knessetUrl || knessetBillUrl(Number(bill.oknesset_id)),
+        })
+      }
       if (bill.documentUrl) {
         await summarizer.summarizeUrl(bill.documentUrl)
       }
@@ -50,6 +98,12 @@ async function pollBills(): Promise<boolean> {
     } catch (err) {
       console.error(`Poller: error polling bill ${bill.oknesset_id}:`, err)
     }
+  }
+
+  try {
+    await sendBillAlerts(changes)
+  } catch (err) {
+    console.error('Poller: bill alert dispatch failed:', err)
   }
 
   return anySuccess

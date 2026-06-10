@@ -131,6 +131,11 @@ export async function fetchPolicyAlignedBills(limit: number): Promise<KnessetBil
   return [...byId.values()].sort((a, b) => b.billId - a.billId).slice(0, limit)
 }
 
+/** Public bill page URL for a Knesset BillID (a bill's oknesset_id is a BillID). */
+export function knessetBillUrl(billId: number): string {
+  return knessetUrl(billId)
+}
+
 const DATA_DIR = path.join(process.cwd(), 'src/data')
 
 async function fetchBillsByIds(ids: number[]): Promise<Map<number, KnessetBillOverviewItem>> {

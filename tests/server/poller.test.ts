@@ -9,6 +9,7 @@ const { mockFetchBillStatus, mockEnrichCommitteeSessions } = vi.hoisted(() => ({
 // Bill status comes from Knesset OData (not oknesset.org).
 vi.mock('../../server/services/knesset-bills', () => ({
   fetchBillStatusById: mockFetchBillStatus,
+  knessetBillUrl: (billId: number) => `https://mock-knesset.gov.il/bill/${billId}`,
 }))
 
 // Committee sessions are polled via the Knesset-OData enricher (not oknesset.org).
@@ -24,6 +25,20 @@ vi.mock('../../server/services/summarizer', () => ({
   Summarizer: vi.fn().mockImplementation(() => ({
     summarizeUrl: vi.fn().mockRejectedValue(new Error('network error')),
   })),
+}))
+
+vi.mock('../../server/repositories/tracked-bills-repository', () => ({
+  TrackedBillsRepository: vi.fn().mockImplementation(() => ({
+    findAlertRecipients: vi.fn().mockResolvedValue([]),
+  })),
+}))
+
+vi.mock('../../server/services/email-render', () => ({
+  renderFragment: vi.fn().mockResolvedValue('<li>item</li>'),
+}))
+
+vi.mock('../../server/services/email', () => ({
+  sendEmailsThrottled: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Import AFTER mocks are set up
