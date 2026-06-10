@@ -47,7 +47,7 @@ describe('AuthControl sign-in toasts', () => {
 
   it('shows a success toast when sign-in succeeds', async () => {
     vi.mocked(api.auth.google).mockResolvedValue({
-      accessToken: 'a', refreshToken: 'r', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member' },
+      accessToken: 'a', refreshToken: 'r', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: true },
     })
     renderControl()
     await userEvent.click(await screen.findByText('google-signin'))

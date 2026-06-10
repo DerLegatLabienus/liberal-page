@@ -109,6 +109,8 @@ export const api = {
     logout: (refreshToken: string) =>
       apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     me: () => apiFetch<{ user: AuthUser }>('/auth/me'),
+    updateMe: (emailAlerts: boolean) =>
+      apiFetch<{ user: AuthUser }>(`/auth/me`, { method: 'PATCH', body: JSON.stringify({ emailAlerts }) }),
   },
   admin: {
     listInvites: () => apiFetch<{ invites: Invite[] }>('/admin/invites'),
@@ -119,9 +121,15 @@ export const api = {
     listUsers: () => apiFetch<{ users: AuthUser[] }>('/admin/users'),
     setRole: (id: number, role: 'admin' | 'member') =>
       apiFetch<{ ok: boolean }>(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+    emailTemplates: {
+      list: () => apiFetch<{ templates: EmailTemplate[] }>(`/admin/email-templates`),
+      update: (name: string, body: { subject: string; html: string }) =>
+        apiFetch<{ ok: boolean }>(`/admin/email-templates/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(body) }),
+    },
   },
 }
 
-export interface AuthUser { id: number; email: string | null; name: string | null; role: string }
+export interface AuthUser { id: number; email: string | null; name: string | null; role: string; emailAlerts: boolean }
+export interface EmailTemplate { name: string; subject: string; html: string }
 export interface AuthResponse { accessToken: string; refreshToken: string; user: AuthUser }
 export interface Invite { email: string; role: string; createdAt: string }

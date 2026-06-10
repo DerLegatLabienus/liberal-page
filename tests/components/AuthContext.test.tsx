@@ -12,7 +12,7 @@ import { api } from '@/lib/api-client'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 const REFRESH_KEY = 'liberal.refreshToken'
-const RESP = { accessToken: 'acc', refreshToken: 'ref', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member' } }
+const RESP = { accessToken: 'acc', refreshToken: 'ref', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: true } }
 
 function Harness() {
   const { user, ready, signIn, signOut } = useAuth()
