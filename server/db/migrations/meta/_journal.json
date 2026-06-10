@@ -92,6 +92,13 @@
       "when": 1781077332387,
       "tag": "0012_lyrical_ezekiel",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781077423330,
+      "tag": "0013_seed_email_templates",
+      "breakpoints": true
     }
   ]
 }
