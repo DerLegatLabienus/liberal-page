@@ -29,6 +29,20 @@ Render against Neon. Specs: `docs/superpowers/specs/2026-05-30-database-migratio
 Member login, personalized tracking lists, email alerts on bill status changes.
 Requires database (item 2 above) and an email service.
 
+### ✅ Email — Invitations + Bill-Status Alert Digests (#3b) — 2026-06-04
+
+Transactional email via **Resend**. Invitation emails fire (fire-and-forget) when an admin
+adds an allowlist email. Bill-status **alert digests** are sent by the poller once per cycle
+to personal trackers (one grouped email per member), gated by a per-user `email_alerts`
+opt-out toggle. Templates are **stored in the DB** (`email_templates`) and editable in the
+admin panel via one generalized `renderTemplate(name, params)`. The delivery webhook
+(`POST /api/webhooks/resend`, svix-verified) is **log-only** — it stores nothing, logging a
+redacted recipient (local part only) + the Resend message id. A minimal `sent_emails` ledger
+records each send and is the first table trimmed by the generalized storage-pressure
+**reclaimer pipeline** (`relieveStoragePressureIfNeeded`). Email is a no-op without
+`RESEND_API_KEY`, so dev/test never send. Spec: `docs/superpowers/specs/2026-06-04-email-resend-design.md`;
+plan: `docs/superpowers/plans/2026-06-04-email-resend.md`.
+
 ### ✅ API Layer — Centralized API Access (frontend + backend) — 2026-06-02
 
 **Frontend:** all calls go through `src/lib/api-client.ts` (single base URL, headers, error

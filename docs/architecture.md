@@ -166,11 +166,17 @@ The poller:
 - Checks committee sessions and summarizes protocol files when available.
 - Checks MK activity through the Knesset website API (`GetParlamentayActivity`), which returns private bills, plenary votes, and parliamentary questions in the same order the Knesset website displays them. Uses `knesset_site_id` (e.g. 1116) as the MK identifier.
 - Updates `lastPolledAt`.
-- Reclaims storage via `purgeOrphansIfNeeded` (`server/services/storage-manager.ts`): when
-  `pg_database_size` exceeds `limit − slack`, deletes up to `ORPHAN_PURGE_BATCH` (default 5,
-  env-overridable) of the **stalest orphan entities** — bills/committees/MKs that no user
-  tracks (anti-join on the tracking tables, multi-user safe) — plus their children and an
-  orphaned committee's session summary. Config is the **`storagePressure` feature flag**
+- Sends **bill-status alert digests** (`sendBillAlerts`): bills whose status changed this cycle
+  are grouped per member into one email per member (personal trackers only, `email_alerts` on),
+  sent throttled via `sendEmailsThrottled`. Isolated in try/catch so email never affects poll
+  success. See **Email** below.
+- Reclaims storage via `relieveStoragePressureIfNeeded` (`server/services/storage-manager.ts`):
+  when `pg_database_size` exceeds `limit − slack`, runs a **reclaimer pipeline** cheapest-first,
+  re-measuring between reclaimers and stopping once back under budget. Reclaimer 1 trims the
+  oldest `SENT_EMAIL_PURGE_BATCH` (default 500) `sent_emails` ledger rows; Reclaimer 2 deletes up
+  to `ORPHAN_PURGE_BATCH` (default 5) of the **stalest orphan entities** — bills/committees/MKs
+  that no user tracks (anti-join on the tracking tables, multi-user safe) — plus their children
+  and an orphaned committee's session summary. Config is the **`storagePressure` feature flag**
   (DB-seeded, **on by default**): value `"limitMb:slackMb"` (e.g. `"450:2"`); value `"-1"`
   disables; when the flag row is absent the default `"450:2"` keeps it on. (Note: `untrack`
   only removes the tracking row, so entities become orphans that this step later reclaims.)
@@ -178,13 +184,23 @@ The poller:
 
 The header badge is derived from `hasNewData` values. The current implementation does not clear those flags when the drawer opens.
 
+## Email (Resend)
+
+Transactional email over [Resend](https://resend.com). Server-side only; a no-op without `RESEND_API_KEY` so dev/test never send.
+
+- **`server/services/email.ts`** — lazy `getResend()` client; `sendEmail({ to, template, params, raw? })` renders the template, sends, and records a minimal `sent_emails` ledger row (`sent`/`failed`); never throws. `sendEmailsThrottled` spaces sends (~2/s). Every log line redacts the address (`redactEmail`, local part only) and carries the Resend message id.
+- **Templates** live in the DB (`email_templates`, rows `_layout`/`invite`/`bill_digest`/`bill_digest_item`), edited by admins via `GET/PUT /api/admin/email-templates`. `email-render.ts` exposes `renderTemplate` (wraps the body in `_layout`) and `renderFragment` (body only, for digest items) with `{{placeholder}}` substitution; values are HTML-escaped except those marked `raw`.
+- **Use cases:** invitation emails fire from `POST /api/admin/invites` (fire-and-forget); bill-status alert digests are built by the poller (`sendBillAlerts`) for personal trackers with `users.email_alerts` on (toggle in `AuthControl`).
+- **Delivery webhook** — `POST /api/webhooks/resend` (mounted before `express.json()`, raw body, svix-verified with `RESEND_WEBHOOK_SECRET`) is **log-only**: it stores nothing, logging `event/redacted-recipient/msgId`. Full delivery detail lives in the Resend dashboard, keyed by the message id.
+- **Env:** `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL`, `RESEND_WEBHOOK_SECRET`, optional `SENT_EMAIL_PURGE_BATCH`. Domain verification (SPF/DKIM/DMARC) and webhook registration are one-time manual operator steps. Design: `docs/superpowers/specs/2026-06-04-email-resend-design.md`.
+
 ## DB Module (`server/db/`)
 
 Phase 2 of the JSON → Postgres migration is complete. All routes, poller, and services read/write Postgres.
 
 - **`client.ts`** — driver-selecting factory. Under `NODE_ENV=test` it loads `@electric-sql/pglite` via `createRequire` (so the dev-only dep is never bundled) and returns a `drizzle-orm/pglite` instance. In all other environments it creates a `@neondatabase/serverless` `Pool` from `DATABASE_URL` and returns a `drizzle-orm/neon-serverless` instance.
 - **`migrate.ts`** — runs Drizzle migrations from `server/db/migrations/` on server startup. Idempotent (Drizzle tracks applied migrations in `__drizzle_migrations`). Uses the matching migrator for the active driver (pglite or neon).
-- **`schema/`** — per-domain schema files re-exported from `schema/index.ts`: `config.ts`, `bills.ts`, `committees.ts`, `mks.ts`, `caches.ts`, `annotations.ts`.
+- **`schema/`** — per-domain schema files re-exported from `schema/index.ts`: `config.ts`, `bills.ts`, `committees.ts`, `mks.ts`, `caches.ts`, `annotations.ts`, `tracking.ts`, `auth.ts`, `analytics.ts`, `email.ts`.
 - **`server/repositories/`** — one class per domain. Each repository owns insert, upsert, and read. Reads reassemble normalized rows into typed aggregates (e.g. `MksRepository.getById` joins `mks` + `mk_knesset_terms` + `mk_roles` + `mk_activity` + `mk_votes` and derives `party` and `inactive`).
 
 The migration design spec is in `docs/superpowers/specs/`.
