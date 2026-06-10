@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { AuthRepository } from '../repositories/auth-repository'
 import { requireAdmin } from '../middleware/auth'
+import { sendEmail } from '../services/email'
 
 const router = Router()
 const authRepo = new AuthRepository()
@@ -17,7 +18,16 @@ router.post('/invites', async (req, res) => {
   const { email, role } = req.body as { email?: string; role?: string }
   if (!email) return res.status(400).json({ error: 'email required' })
   const grantRole = role === 'admin' ? 'admin' : 'member'
-  await authRepo.addInvite(email.trim().toLowerCase(), grantRole, req.user!.id)
+  const normalized = email.trim().toLowerCase()
+  await authRepo.addInvite(normalized, grantRole, req.user!.id)
+  void sendEmail({
+    to: normalized,
+    template: 'invite',
+    params: {
+      siteUrl: process.env.PUBLIC_SITE_URL ?? '',
+      roleLine: grantRole === 'admin' ? ' הוקצתה לך הרשאת מנהל.' : '',
+    },
+  }).catch((e) => console.error('[email] invite send failed:', e))
   res.json({ ok: true })
 })
 
