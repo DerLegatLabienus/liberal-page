@@ -8,8 +8,8 @@ import {
 const router = Router()
 const authRepo = new AuthRepository()
 
-function publicUser(u: { id: number; email: string | null; name: string | null; role: string }) {
-  return { id: u.id, email: u.email, name: u.name, role: u.role }
+function publicUser(u: { id: number; email: string | null; name: string | null; role: string; emailAlerts: boolean }) {
+  return { id: u.id, email: u.email, name: u.name, role: u.role, emailAlerts: u.emailAlerts }
 }
 
 // Exchange a verified Google ID token for our session tokens. Gated by the invite allowlist.
@@ -54,6 +54,15 @@ router.post('/logout', async (req, res) => {
 })
 
 router.get('/me', requireAuth, async (req, res) => {
+  const user = await authRepo.findUserById(req.user!.id)
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  res.json({ user: publicUser(user) })
+})
+
+router.patch('/me', requireAuth, async (req, res) => {
+  const { emailAlerts } = req.body as { emailAlerts?: unknown }
+  if (typeof emailAlerts !== 'boolean') return res.status(400).json({ error: 'emailAlerts must be boolean' })
+  await authRepo.setEmailAlerts(req.user!.id, emailAlerts)
   const user = await authRepo.findUserById(req.user!.id)
   if (!user) return res.status(404).json({ error: 'User not found' })
   res.json({ user: publicUser(user) })

@@ -7,10 +7,11 @@ export interface AuthUser {
   email: string | null
   name: string | null
   role: string
+  emailAlerts: boolean
 }
 
 function toUser(row: typeof users.$inferSelect): AuthUser {
-  return { id: row.id, email: row.email, name: row.name, role: row.role }
+  return { id: row.id, email: row.email, name: row.name, role: row.role, emailAlerts: row.emailAlerts }
 }
 
 export class AuthRepository {
@@ -109,5 +110,9 @@ export class AuthRepository {
 
   async setUserRole(id: number, role: string): Promise<void> {
     await db.update(users).set({ role }).where(eq(users.id, id))
+  }
+
+  async setEmailAlerts(id: number, value: boolean): Promise<void> {
+    await db.update(users).set({ emailAlerts: value }).where(eq(users.id, id))
   }
 }

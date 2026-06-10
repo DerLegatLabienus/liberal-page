@@ -18,13 +18,13 @@ describe('auth-service', () => {
   beforeEach(async () => { await db.delete(refreshTokens); await db.delete(allowedEmails); await db.delete(users) })
 
   it('issues and verifies an access token round-trip', () => {
-    const token = issueAccessToken({ id: 7, email: 'a@x.com', name: 'A', role: 'admin' })
+    const token = issueAccessToken({ id: 7, email: 'a@x.com', name: 'A', role: 'admin', emailAlerts: false })
     expect(verifyAccessToken(token)).toEqual({ userId: 7, role: 'admin' })
   })
 
   it('rejects a tampered/garbage access token', () => {
     expect(verifyAccessToken('not.a.jwt')).toBeNull()
-    const token = issueAccessToken({ id: 1, email: null, name: null, role: 'member' })
+    const token = issueAccessToken({ id: 1, email: null, name: null, role: 'member', emailAlerts: false })
     expect(verifyAccessToken(token + 'x')).toBeNull()
   })
 

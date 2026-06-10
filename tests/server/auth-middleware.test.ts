@@ -9,8 +9,8 @@ app.get('/auth', requireAuth, (req, res) => res.json({ user: req.user }))
 app.get('/admin', requireAdmin, (req, res) => res.json({ user: req.user }))
 app.get('/maybe', optionalAuth, (req, res) => res.json({ user: req.user ?? null }))
 
-const memberToken = issueAccessToken({ id: 5, email: 'm@x.com', name: 'M', role: 'member' })
-const adminToken = issueAccessToken({ id: 1, email: 'a@x.com', name: 'A', role: 'admin' })
+const memberToken = issueAccessToken({ id: 5, email: 'm@x.com', name: 'M', role: 'member', emailAlerts: false })
+const adminToken = issueAccessToken({ id: 1, email: 'a@x.com', name: 'A', role: 'admin', emailAlerts: false })
 
 describe('auth middleware', () => {
   it('requireAuth: 401 without a token, 200 with a valid one', async () => {
