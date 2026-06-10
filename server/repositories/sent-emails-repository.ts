@@ -1,34 +1,34 @@
-import { eq } from 'drizzle-orm'
+import { asc, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { sentEmails } from '../db/schema'
 
-export interface SentEmailRow {
-  id: string; toEmail: string; template: string; subject: string
-  status: string; error: string | null; createdAt: Date; updatedAt: Date
-}
+export interface SentEmailRow { id: string; toEmail: string; template: string; status: string; error: string | null }
 
+// Minimal send ledger. Rows are written once at send time and never updated (delivery
+// lifecycle is logged only). deleteOldest is used by the storage-pressure reclaimer.
 export class SentEmailsRepository {
-  async record(input: { id: string; toEmail: string; template: string; subject: string; status: string; error?: string | null }): Promise<void> {
-    const now = new Date()
+  async record(r: { id: string; toEmail: string; template: string; status: 'sent' | 'failed'; error: string | null }): Promise<void> {
     await db
       .insert(sentEmails)
-      .values({ ...input, error: input.error ?? null, createdAt: now, updatedAt: now })
-      .onConflictDoUpdate({ target: sentEmails.id, set: { status: input.status, error: input.error ?? null, updatedAt: now } })
+      .values({ id: r.id, toEmail: r.toEmail, template: r.template, status: r.status, error: r.error, createdAt: new Date() })
+      .onConflictDoNothing()
   }
 
-  async updateStatus(id: string, status: string, error?: string | null): Promise<void> {
-    await db
-      .update(sentEmails)
-      .set({ status, error: error ?? null, updatedAt: new Date() })
-      .where(eq(sentEmails.id, id))
+  async deleteOldest(limit: number): Promise<number> {
+    if (limit <= 0) return 0
+    const rows = await db.select({ id: sentEmails.id }).from(sentEmails).orderBy(asc(sentEmails.createdAt)).limit(limit)
+    if (rows.length === 0) return 0
+    await db.delete(sentEmails).where(inArray(sentEmails.id, rows.map((r) => r.id)))
+    return rows.length
   }
 
-  async get(id: string): Promise<SentEmailRow | null> {
-    const [row] = await db.select().from(sentEmails).where(eq(sentEmails.id, id))
-    return (row as SentEmailRow) ?? null
+  async count(): Promise<number> {
+    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(sentEmails)
+    return row?.n ?? 0
   }
 
-  async list(limit = 50): Promise<SentEmailRow[]> {
-    return db.select().from(sentEmails).limit(limit) as Promise<SentEmailRow[]>
+  async list(limit: number): Promise<SentEmailRow[]> {
+    const rows = await db.select().from(sentEmails).orderBy(asc(sentEmails.createdAt)).limit(limit)
+    return rows.map((r) => ({ id: r.id, toEmail: r.toEmail, template: r.template, status: r.status, error: r.error }))
   }
 }

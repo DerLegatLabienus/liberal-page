@@ -99,6 +99,13 @@
       "when": 1781077423330,
       "tag": "0013_seed_email_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781093266549,
+      "tag": "0014_glossy_silver_fox",
+      "breakpoints": true
     }
   ]
 }

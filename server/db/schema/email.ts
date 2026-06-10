@@ -8,15 +8,13 @@ export const emailTemplates = pgTable('email_templates', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-// One row per attempted send; status updated by the Resend webhook.
+// Minimal send ledger: recorded once at send time, never updated. Delivery lifecycle is
+// logged only (the webhook stores nothing). First table trimmed under storage pressure.
 export const sentEmails = pgTable('sent_emails', {
-  id: text('id').primaryKey(),              // Resend message id, or `failed:<uuid>`
+  id: text('id').primaryKey(),              // Resend message id, or `failed:<uuid>` on send error
   toEmail: text('to_email').notNull(),
   template: text('template').notNull(),
-  // Resolved subject captured at send time (templates are editable; preserve what was actually sent).
-  subject: text('subject').notNull().default(''),
-  status: text('status').notNull().default('sent'), // sent|delivered|bounced|complained|delivery_delayed|failed
+  status: text('status').notNull().default('sent'), // 'sent' | 'failed' (set once, at send time)
   error: text('error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

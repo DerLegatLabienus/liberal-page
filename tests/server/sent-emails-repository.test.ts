@@ -4,24 +4,36 @@ import { db } from '../../server/db/client'
 import { sentEmails } from '../../server/db/schema'
 import { SentEmailsRepository } from '../../server/repositories/sent-emails-repository'
 
+const repo = new SentEmailsRepository()
+
 describe('SentEmailsRepository', () => {
-  const repo = new SentEmailsRepository()
   beforeAll(async () => { await setupTestDb() })
   beforeEach(async () => { await db.delete(sentEmails) })
 
-  it('record() + get() round-trips', async () => {
-    await repo.record({ id: 'm1', toEmail: 'a@b.c', template: 'invite', subject: 'S', status: 'sent' })
-    expect(await repo.get('m1')).toMatchObject({ id: 'm1', status: 'sent', toEmail: 'a@b.c' })
+  it('records a send and counts it', async () => {
+    await repo.record({ id: 're_1', toEmail: 'a@x.com', template: 'invite', status: 'sent', error: null })
+    expect(await repo.count()).toBe(1)
   })
 
-  it('updateStatus() updates an existing row', async () => {
-    await repo.record({ id: 'm1', toEmail: 'a@b.c', template: 'invite', subject: 'S', status: 'sent' })
-    await repo.updateStatus('m1', 'delivered')
-    expect((await repo.get('m1'))?.status).toBe('delivered')
+  it('record is idempotent on id', async () => {
+    await repo.record({ id: 're_1', toEmail: 'a@x.com', template: 'invite', status: 'sent', error: null })
+    await repo.record({ id: 're_1', toEmail: 'a@x.com', template: 'invite', status: 'sent', error: null })
+    expect(await repo.count()).toBe(1)
   })
 
-  it('updateStatus() on unknown id is a no-op (does not throw)', async () => {
-    await expect(repo.updateStatus('ghost', 'bounced')).resolves.toBeUndefined()
-    expect(await repo.get('ghost')).toBeNull()
+  it('deleteOldest removes the oldest N by createdAt and returns the count', async () => {
+    await db.insert(sentEmails).values([
+      { id: 'a', toEmail: 'a@x.com', template: 't', status: 'sent', createdAt: new Date('2020-01-01') },
+      { id: 'b', toEmail: 'b@x.com', template: 't', status: 'sent', createdAt: new Date('2021-01-01') },
+      { id: 'c', toEmail: 'c@x.com', template: 't', status: 'sent', createdAt: new Date('2022-01-01') },
+    ])
+    const deleted = await repo.deleteOldest(2)
+    expect(deleted).toBe(2)
+    const remaining = await repo.list(10)
+    expect(remaining.map((r) => r.id)).toEqual(['c'])
+  })
+
+  it('deleteOldest on empty table returns 0', async () => {
+    expect(await repo.deleteOldest(5)).toBe(0)
   })
 })
