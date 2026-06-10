@@ -4,7 +4,7 @@ import { XIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { api, type AuthUser, type Invite } from '@/lib/api-client'
+import { api, type AuthUser, type Invite, type EmailTemplate } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AdminPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -12,15 +12,17 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   const { user } = useAuth()
   const [invites, setInvites] = useState<Invite[]>([])
   const [users, setUsers] = useState<AuthUser[]>([])
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'admin' | 'member'>('member')
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const [inv, usr] = await Promise.all([api.admin.listInvites(), api.admin.listUsers()])
+      const [inv, usr, tpl] = await Promise.all([api.admin.listInvites(), api.admin.listUsers(), api.admin.emailTemplates.list()])
       setInvites(inv.invites)
       setUsers(usr.users)
+      setTemplates(tpl.templates)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
     }
@@ -36,6 +38,13 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   }
 
   const removeInvite = async (e: string) => { await api.admin.removeInvite(e); await load() }
+
+  const saveTemplate = async (tpl: EmailTemplate) => {
+    try { await api.admin.emailTemplates.update(tpl.name, { subject: tpl.subject, html: tpl.html }); await load() }
+    catch { setError('Failed to save template') }
+  }
+  const editTemplate = (name: string, patch: Partial<EmailTemplate>) =>
+    setTemplates((prev) => prev.map((tpl) => (tpl.name === name ? { ...tpl, ...patch } : tpl)))
 
   const toggleRole = async (u: AuthUser) => {
     setError(null)
@@ -90,6 +99,30 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="mt-6">
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.email_templates')}</h3>
+            <div className="space-y-4">
+              {templates.map((tpl) => (
+                <div key={tpl.name} className="rounded border border-border p-3">
+                  <p className="mb-1 font-mono text-xs text-muted-foreground">{tpl.name}</p>
+                  <input
+                    className="mb-2 w-full rounded border px-2 py-1 text-sm"
+                    value={tpl.subject}
+                    onChange={(e) => editTemplate(tpl.name, { subject: e.target.value })}
+                    placeholder="subject"
+                  />
+                  <textarea
+                    className="mb-2 w-full rounded border px-2 py-1 font-mono text-xs"
+                    rows={5}
+                    value={tpl.html}
+                    onChange={(e) => editTemplate(tpl.name, { html: e.target.value })}
+                  />
+                  <Button size="sm" onClick={() => saveTemplate(tpl)}>{t('admin.save')}</Button>
+                </div>
+              ))}
+            </div>
           </section>
         </div>
       </DialogContent>

@@ -143,7 +143,9 @@
     "no_invites": "אין הזמנות",
     "users": "משתמשים",
     "make_admin": "הפוך למנהל",
-    "make_member": "הפוך לחבר"
+    "make_member": "הפוך לחבר",
+    "email_templates": "תבניות מייל",
+    "save": "שמירה"
   },
   "site": {
     "party_name": "הליברלים בליכוד",

@@ -143,7 +143,9 @@
     "no_invites": "No invites",
     "users": "Users",
     "make_admin": "Make admin",
-    "make_member": "Make member"
+    "make_member": "Make member",
+    "email_templates": "Email templates",
+    "save": "Save"
   },
   "site": {
     "party_name": "Liberals in Likud",

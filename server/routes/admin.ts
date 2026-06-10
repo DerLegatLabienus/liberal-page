@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { AuthRepository } from '../repositories/auth-repository'
+import { EmailTemplatesRepository } from '../repositories/email-templates-repository'
 import { requireAdmin } from '../middleware/auth'
 import { sendEmail } from '../services/email'
 
 const router = Router()
 const authRepo = new AuthRepository()
+const emailTemplatesRepo = new EmailTemplatesRepository()
 
 // All admin endpoints require an admin bearer token.
 router.use(requireAdmin)
@@ -55,6 +57,20 @@ router.patch('/users/:id/role', async (req, res) => {
   }
 
   await authRepo.setUserRole(id, role)
+  res.json({ ok: true })
+})
+
+// --- Email templates ---
+router.get('/email-templates', async (_req, res) => {
+  res.json({ templates: await emailTemplatesRepo.getAll() })
+})
+
+router.put('/email-templates/:name', async (req, res) => {
+  const { subject, html } = req.body as { subject?: unknown; html?: unknown }
+  if (typeof subject !== 'string' || typeof html !== 'string') {
+    return res.status(400).json({ error: 'subject and html are required strings' })
+  }
+  await emailTemplatesRepo.update(req.params.name, { subject, html })
   res.json({ ok: true })
 })
 
