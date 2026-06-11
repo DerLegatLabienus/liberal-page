@@ -12,7 +12,6 @@ import featureFlagsRouter from './routes/feature-flags'
 import analyticsRouter from './routes/analytics'
 import authRouter from './routes/auth'
 import adminRouter from './routes/admin'
-import webhooksRouter from './routes/webhooks'
 import { startPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
 
@@ -34,9 +33,6 @@ app.use(cors({
     }
   },
 }))
-
-// Webhooks need the raw body for signature verification, so mount before the JSON parser.
-app.use('/api/webhooks', webhooksRouter)
 
 app.use(express.json())
 
