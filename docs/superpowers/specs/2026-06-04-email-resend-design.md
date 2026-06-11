@@ -1,8 +1,20 @@
 # Email via Resend — Invitation Emails + Bill-Status Alerts
 
 **Date:** 2026-06-04
-**Status:** Approved design
+**Status:** Approved design — implemented, with one revision (see note)
 **Backlog:** #3 (multi-user accounts) — alerts half (#3b)
+
+> **Update (2026-06-11) — delivery tracking changed from webhook to polling.** Resend gates
+> webhooks behind a paid plan, so the log-only webhook (component 9 below) was reverted. Delivery
+> status is now **pulled** each poll cycle by `server/services/email-delivery-poll.ts`: it fetches
+> Resend's `last_event` (via `resend.emails.get(id)`) for non-terminal `sent_emails` rows (status
+> not in `delivered/bounced/failed/suppressed/canceled/complained`; sent within the 30-day
+> retention window; oldest-first; capped at `EMAIL_STATUS_POLL_CAP`=100 with an over-sampling
+> warning), advances the row's `status` + new `last_status_at` column, and logs a redacted
+> recipient + msgId on change. The `sent_emails.status` column is therefore **evolving** (not
+> "set once"), and `RESEND_WEBHOOK_SECRET` is replaced by `EMAIL_STATUS_POLL_CAP`. Sections 9, the
+> `sent_emails` schema, env, and testing below describe the original webhook design; the webhook
+> approach is preserved as an open BACKLOG item for if the account is upgraded.
 
 ## Goal
 

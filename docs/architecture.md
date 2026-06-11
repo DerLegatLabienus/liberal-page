@@ -180,6 +180,7 @@ The poller:
   (DB-seeded, **on by default**): value `"limitMb:slackMb"` (e.g. `"450:2"`); value `"-1"`
   disables; when the flag row is absent the default `"450:2"` keeps it on. (Note: `untrack`
   only removes the tracking row, so entities become orphans that this step later reclaims.)
+- Pulls **email delivery status** (`pollDeliveryStatus`) for in-flight `sent_emails` rows — see **Email** below. Isolated; best-effort.
 - All writes go through `BillsRepository`, `CommitteesRepository`, and `MksRepository` (Postgres). There is no JSON file writing.
 
 The header badge is derived from `hasNewData` values. The current implementation does not clear those flags when the drawer opens.
@@ -191,8 +192,8 @@ Transactional email over [Resend](https://resend.com). Server-side only; a no-op
 - **`server/services/email.ts`** — lazy `getResend()` client; `sendEmail({ to, template, params, raw? })` renders the template, sends, and records a minimal `sent_emails` ledger row (`sent`/`failed`); never throws. `sendEmailsThrottled` spaces sends (~2/s). Every log line redacts the address (`redactEmail`, local part only) and carries the Resend message id.
 - **Templates** live in the DB (`email_templates`, rows `_layout`/`invite`/`bill_digest`/`bill_digest_item`), edited by admins via `GET/PUT /api/admin/email-templates`. `email-render.ts` exposes `renderTemplate` (wraps the body in `_layout`) and `renderFragment` (body only, for digest items) with `{{placeholder}}` substitution; values are HTML-escaped except those marked `raw`.
 - **Use cases:** invitation emails fire from `POST /api/admin/invites` (fire-and-forget); bill-status alert digests are built by the poller (`sendBillAlerts`) for personal trackers with `users.email_alerts` on (toggle in `AuthControl`).
-- **Delivery webhook** — `POST /api/webhooks/resend` (mounted before `express.json()`, raw body, svix-verified with `RESEND_WEBHOOK_SECRET`) is **log-only**: it stores nothing, logging `event/redacted-recipient/msgId`. Full delivery detail lives in the Resend dashboard, keyed by the message id.
-- **Env:** `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL`, `RESEND_WEBHOOK_SECRET`, optional `SENT_EMAIL_PURGE_BATCH`. Domain verification (SPF/DKIM/DMARC) and webhook registration are one-time manual operator steps. Design: `docs/superpowers/specs/2026-06-04-email-resend-design.md`.
+- **Delivery status (pull)** — `email-delivery-poll.ts` runs each poll cycle: it fetches Resend's `last_event` for non-terminal `sent_emails` rows (status not in `delivered/bounced/failed/suppressed/canceled/complained`, sent within the 30-day retention window, oldest-first, capped at `EMAIL_STATUS_POLL_CAP`=100 — exceeding the cap logs an over-sampling warning). On a change it advances `sent_emails.status` + `last_status_at` and logs `event/redacted-recipient/msgId`. Best-effort, isolated in the poller. (A near-real-time **webhook** alternative was reverted because Resend gates webhooks behind a paid plan — see BACKLOG.)
+- **Env:** `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL`, optional `EMAIL_STATUS_POLL_CAP` (default 100) and `SENT_EMAIL_PURGE_BATCH`. Domain verification (SPF/DKIM/DMARC) is a one-time manual operator step. Design: `docs/superpowers/specs/2026-06-04-email-resend-design.md`.
 
 ## DB Module (`server/db/`)
 

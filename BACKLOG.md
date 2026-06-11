@@ -35,13 +35,26 @@ Transactional email via **Resend**. Invitation emails fire (fire-and-forget) whe
 adds an allowlist email. Bill-status **alert digests** are sent by the poller once per cycle
 to personal trackers (one grouped email per member), gated by a per-user `email_alerts`
 opt-out toggle. Templates are **stored in the DB** (`email_templates`) and editable in the
-admin panel via one generalized `renderTemplate(name, params)`. The delivery webhook
-(`POST /api/webhooks/resend`, svix-verified) is **log-only** — it stores nothing, logging a
-redacted recipient (local part only) + the Resend message id. A minimal `sent_emails` ledger
-records each send and is the first table trimmed by the generalized storage-pressure
-**reclaimer pipeline** (`relieveStoragePressureIfNeeded`). Email is a no-op without
-`RESEND_API_KEY`, so dev/test never send. Spec: `docs/superpowers/specs/2026-06-04-email-resend-design.md`;
+admin panel via one generalized `renderTemplate(name, params)`. Delivery status is **pulled**
+by the poller each cycle (`email-delivery-poll.ts`): it fetches Resend's `last_event` for
+non-terminal `sent_emails` rows (within the 30-day retention window, oldest-first, capped at
+`EMAIL_STATUS_POLL_CAP`=100 with an over-sampling warning), advancing `status` + `last_status_at`
+and logging a redacted recipient + Resend message id on change. The `sent_emails` ledger is the
+first table trimmed by the generalized storage-pressure **reclaimer pipeline**
+(`relieveStoragePressureIfNeeded`). Email is a no-op without `RESEND_API_KEY`, so dev/test never
+send. Spec: `docs/superpowers/specs/2026-06-04-email-resend-design.md`;
 plan: `docs/superpowers/plans/2026-06-04-email-resend.md`.
+
+### 🔲 Open — Webhook-based real-time delivery status (requires paid Resend plan)
+
+We initially built a log-only delivery webhook (`POST /api/webhooks/resend`, svix-verified) but
+**reverted it** because Resend gates webhooks behind a paid plan; delivery status is pulled
+instead (see above). If/when the account is upgraded, the webhook gives near-real-time status
+(vs. the up-to-6h polling lag) and removes the per-cycle retrieve calls. The implementation is
+preserved in git at commit `caaa8f9` (revert) — restore `server/routes/webhooks.ts`, its test,
+the `svix` dep, the `express.json()`-ordering mount in `server/index.ts`, and the
+`RESEND_WEBHOOK_SECRET` env var; then register the endpoint in the Resend dashboard. Polling and
+the webhook can also coexist (webhook for freshness, poll as backfill).
 
 ### ✅ API Layer — Centralized API Access (frontend + backend) — 2026-06-02
 
