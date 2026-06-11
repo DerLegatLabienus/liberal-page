@@ -17,24 +17,27 @@ import { sendEmail, sendEmailsThrottled, _resetResend } from '../../server/servi
 describe('sendEmail', () => {
   beforeEach(() => { vi.clearAllMocks(); _resetResend(); delete process.env.RESEND_API_KEY; process.env.EMAIL_FROM = 'F <f@x.com>' })
 
-  it('no-ops when RESEND_API_KEY is unset (no client, no record)', async () => {
-    await sendEmail({ to: 'a@x.com', template: 'invite', params: {} })
+  it('returns skipped (and no client/record) when RESEND_API_KEY is unset', async () => {
+    const result = await sendEmail({ to: 'a@x.com', template: 'invite', params: {} })
+    expect(result).toEqual({ status: 'skipped' })
     expect(sendMock).not.toHaveBeenCalled()
     expect(recordMock).not.toHaveBeenCalled()
   })
 
-  it('sends and records "sent" with the Resend id when keyed', async () => {
+  it('sends, records "sent", and returns the Resend id when keyed', async () => {
     process.env.RESEND_API_KEY = 're_test'
     sendMock.mockResolvedValue({ data: { id: 're_123' }, error: null })
-    await sendEmail({ to: 'a@x.com', template: 'invite', params: {} })
+    const result = await sendEmail({ to: 'a@x.com', template: 'invite', params: {} })
+    expect(result).toEqual({ status: 'sent', id: 're_123' })
     expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ from: 'F <f@x.com>', to: 'a@x.com', subject: 'S', html: '<p>H</p>' }))
     expect(recordMock).toHaveBeenCalledWith(expect.objectContaining({ id: 're_123', toEmail: 'a@x.com', template: 'invite', status: 'sent' }))
   })
 
-  it('records "failed" and does not throw when send rejects', async () => {
+  it('returns failed (and records "failed") without throwing when send rejects', async () => {
     process.env.RESEND_API_KEY = 're_test'
     sendMock.mockRejectedValue(new Error('boom'))
-    await expect(sendEmail({ to: 'a@x.com', template: 'invite', params: {} })).resolves.toBeUndefined()
+    const result = await sendEmail({ to: 'a@x.com', template: 'invite', params: {} })
+    expect(result).toMatchObject({ status: 'failed' })
     expect(recordMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed', template: 'invite' }))
   })
 

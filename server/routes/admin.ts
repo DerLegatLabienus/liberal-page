@@ -21,15 +21,21 @@ router.post('/invites', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'email required' })
   const grantRole = role === 'admin' ? 'admin' : 'member'
   const normalized = email.trim().toLowerCase()
-  await authRepo.addInvite(normalized, grantRole, req.user!.id)
-  void sendEmail({
+  // Atomic: attempt the invite email FIRST and only persist the allowlist entry if the send
+  // did not fail. A `skipped` result (email not configured) is not a failure; a genuine send
+  // failure returns 502 and records no invite.
+  const result = await sendEmail({
     to: normalized,
     template: 'invite',
     params: {
       siteUrl: process.env.PUBLIC_SITE_URL ?? '',
       roleLine: grantRole === 'admin' ? ' הוקצתה לך הרשאת מנהל.' : '',
     },
-  }).catch((e) => console.error('[email] invite send failed:', e))
+  })
+  if (result.status === 'failed') {
+    return res.status(502).json({ error: 'Invitation email failed to send; invite not created' })
+  }
+  await authRepo.addInvite(normalized, grantRole, req.user!.id)
   res.json({ ok: true })
 })
 
