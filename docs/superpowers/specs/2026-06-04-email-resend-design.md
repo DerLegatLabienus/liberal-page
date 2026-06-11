@@ -31,7 +31,7 @@ Email is a best-effort side channel: a send failure must never break the API cal
 - **Alert recipients:** personal trackers only. Group-list-only bills do not generate alerts (the group account has no email).
 - **Opt-out:** per-user toggle `users.email_alerts`, **default on**.
 - **Batching:** **one digest email per member per poll cycle**, grouping all of that member's changed bills.
-- **Delivery semantics:** fire-and-forget toward the trigger. Sends are recorded in a **minimal `sent_emails` ledger** (`sent`/`failed`, set once). Delivery lifecycle (delivered/bounced/…) is **logged only** via the webhook — never stored.
+- **Delivery semantics:** fire-and-forget toward the trigger, **except invites** — `sendEmail` returns `sent`/`skipped`/`failed`, and `POST /api/admin/invites` is atomic: it sends first and only records the allowlist entry if the send did not fail (`failed` → `502`, no invite; `skipped` = unconfigured, treated as success). Digests stay fire-and-forget. Sends are recorded in the **`sent_emails` ledger**; delivery lifecycle is pulled by the poller (see the 2026-06-11 update note).
 - **Logging/privacy:** every email log line redacts the address to its local part (`avivavitan63@…`, domain dropped) and carries the Resend message id for full lookup in the Resend dashboard. No other PII logged.
 - **Storage pressure:** the `sent_emails` ledger is wired into a generalized reclaimer pipeline and is the **first thing trimmed** when the DB is over budget.
 - **Invite re-sends:** the invite email fires on **every** `POST /api/admin/invites`, including re-invites.
