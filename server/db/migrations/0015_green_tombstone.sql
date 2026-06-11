@@ -1,0 +1,1 @@
+ALTER TABLE "sent_emails" ADD COLUMN "last_status_at" timestamp with time zone DEFAULT now() NOT NULL;

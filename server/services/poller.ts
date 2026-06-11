@@ -11,6 +11,7 @@ import { getCurrentKnesset } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
 import { relieveStoragePressureIfNeeded } from './storage-manager'
+import { pollDeliveryStatus } from './email-delivery-poll'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
 import type { CommitteeSession } from '../../src/types'
@@ -213,6 +214,13 @@ export async function runPollCycle(): Promise<boolean> {
     await relieveStoragePressureIfNeeded(getDatabaseSizeBytes)
   } catch (err) {
     console.error('Poller: orphan purge failed:', err)
+  }
+
+  // Pull Resend delivery status for in-flight emails (log on change). Isolated; best-effort.
+  try {
+    await pollDeliveryStatus()
+  } catch (err) {
+    console.error('Poller: email delivery-status poll failed:', err)
   }
 
   // Delete expired refresh tokens so the table holds only currently-valid sessions.

@@ -41,6 +41,10 @@ vi.mock('../../server/services/email', () => ({
   sendEmailsThrottled: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('../../server/services/email-delivery-poll', () => ({
+  pollDeliveryStatus: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Import AFTER mocks are set up
 import { runPollCycle } from '../../server/services/poller'
 import { fetchMkActivity } from '../../server/services/knesset-scraper'
