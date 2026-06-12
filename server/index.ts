@@ -1,3 +1,4 @@
+import './lib/fetch-logger'
 import express from 'express'
 import cors from 'cors'
 import trackingRouter from './routes/tracking'
