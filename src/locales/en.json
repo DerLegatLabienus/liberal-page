@@ -148,7 +148,8 @@
     "make_admin": "Make admin",
     "make_member": "Make member",
     "email_templates": "Email templates",
-    "save": "Save"
+    "save": "Save",
+    "feature_flags": "Feature flags"
   },
   "meetus": {
     "title": "Want to meet us?",

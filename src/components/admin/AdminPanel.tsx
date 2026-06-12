@@ -13,16 +13,20 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   const [invites, setInvites] = useState<Invite[]>([])
   const [users, setUsers] = useState<AuthUser[]>([])
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [flags, setFlags] = useState<Record<string, { enabled: boolean; value: string | null }>>({})
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'admin' | 'member'>('member')
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const [inv, usr, tpl] = await Promise.all([api.admin.listInvites(), api.admin.listUsers(), api.admin.emailTemplates.list()])
+      const [inv, usr, tpl, flg] = await Promise.all([
+        api.admin.listInvites(), api.admin.listUsers(), api.admin.emailTemplates.list(), api.featureFlags.get(),
+      ])
       setInvites(inv.invites)
       setUsers(usr.users)
       setTemplates(tpl.templates)
+      setFlags(flg)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
     }
@@ -38,6 +42,14 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   }
 
   const removeInvite = async (e: string) => { await api.admin.removeInvite(e); await load() }
+
+  const editFlag = (name: string, patch: Partial<{ enabled: boolean; value: string | null }>) =>
+    setFlags((prev) => ({ ...prev, [name]: { ...prev[name], ...patch } }))
+  const saveFlag = async (name: string) => {
+    const f = flags[name]
+    try { await api.admin.featureFlags.update(name, { enabled: f.enabled, value: f.value }); await load() }
+    catch { setError('Failed to save flag') }
+  }
 
   const saveTemplate = async (tpl: EmailTemplate) => {
     try { await api.admin.emailTemplates.update(tpl.name, { subject: tpl.subject, html: tpl.html }); await load() }
@@ -120,6 +132,28 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                     onChange={(e) => editTemplate(tpl.name, { html: e.target.value })}
                   />
                   <Button size="sm" onClick={() => saveTemplate(tpl)}>{t('admin.save')}</Button>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="mt-6">
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.feature_flags')}</h3>
+            <div className="space-y-2">
+              {Object.entries(flags).map(([name, f]) => (
+                <div key={name} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    aria-label={name}
+                    checked={f.enabled}
+                    onChange={(e) => editFlag(name, { enabled: e.target.checked })}
+                  />
+                  <span className="w-40 truncate font-mono text-xs">{name}</span>
+                  <input
+                    className="flex-1 rounded border px-2 py-1 text-xs"
+                    value={f.value ?? ''}
+                    onChange={(e) => editFlag(name, { value: e.target.value || null })}
+                  />
+                  <Button size="sm" onClick={() => saveFlag(name)}>{t('admin.save')}</Button>
                 </div>
               ))}
             </div>

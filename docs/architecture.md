@@ -94,6 +94,8 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 | `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result via `SummariesRepository` (DB) |
 | `GET` | `/api/feature-flags` | Returns all feature flags as a flat map `Record<string, { enabled, value }>` from the DB |
 | `POST` | `/api/analytics/join` | Records a Join-section click-through (`{ status, mode }`) via `JoinAnalyticsRepository`. Returns `200 { ok: true }`, `400` on invalid combo. Fire-and-forget from the client; no read endpoint (data is DB-only) |
+| `POST` | `/api/meetings/booking-link` | **Public.** Verifies a Google ID token per request (no allowlist/session), live-checks Calendly for an active meeting on the verified email, returns a single-use booking link — or `409` carrying the existing meeting. Rate-limited (10/min/IP, 5/min/email) |
+| `PUT` | `/api/admin/feature-flags/:name` | Admin: upsert a feature flag (`{ enabled, value }`) — e.g. the `meetUs` event-type URI, live without restart |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
@@ -194,6 +196,15 @@ Transactional email over [Resend](https://resend.com). Server-side only; a no-op
 - **Use cases:** invitation emails send from `POST /api/admin/invites` **atomically** — `sendEmail` returns `sent`/`skipped`/`failed`; the route sends first and only writes the allowlist entry when the send did not fail (a `failed` send → `502`, no invite recorded; `skipped` = email unconfigured, treated as success). Bill-status alert digests are built by the poller (`sendBillAlerts`) for personal trackers with `users.email_alerts` on (toggle in `AuthControl`), and remain fire-and-forget relative to the poll cycle.
 - **Delivery status (pull)** — `email-delivery-poll.ts` runs each poll cycle: it fetches Resend's `last_event` for non-terminal `sent_emails` rows (status not in `delivered/bounced/failed/suppressed/canceled/complained`, sent within the 30-day retention window, oldest-first, capped at `EMAIL_STATUS_POLL_CAP`=100 — exceeding the cap logs an over-sampling warning). On a change it advances `sent_emails.status` + `last_status_at` and logs `event/redacted-recipient/msgId`. Best-effort, isolated in the poller. (A near-real-time **webhook** alternative was reverted because Resend gates webhooks behind a paid plan — see BACKLOG.)
 - **Env:** `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL`, optional `EMAIL_STATUS_POLL_CAP` (default 100) and `SENT_EMAIL_PURGE_BATCH`. Domain verification (SPF/DKIM/DMARC) is a one-time manual operator step. Design: `docs/superpowers/specs/2026-06-04-email-resend-design.md`.
+
+## Meet Us (Calendly)
+
+Outreach booking for **external visitors** (e.g. politicians) — they verify a Google identity but are never members. Fully stateless: **no lock table, no webhooks, no DB rows**; Calendly is the single source of truth.
+
+- **`server/services/calendly.ts`** — lazy client (`CALENDLY_API_TOKEN` unset ⇒ unconfigured, no-op): `findActiveMeeting(email)` live-queries scheduled events (the one-active-booking gate; fail-closed on Calendly errors), `createSingleUseLink()` issues a `max_event_count: 1` scheduling link for the configured event type.
+- **`server/routes/meetings.ts`** — public `POST /booking-link`: rate limit (`SlidingWindowLimiter`, 10/min/IP + 5/min/email) → `verifyGoogleIdToken` (no allowlist; identity used once, discarded) → gate → single-use link, or `409` with the existing meeting (start time + Calendly cancel/reschedule URLs, surfaced transiently).
+- **`MeetUsSection`** — homepage, **anonymous visitors only** (signed-in members are the hosts; hidden for them and when the `meetUs` flag is off). Google button → booking link → Calendly popup embed prefilled with the verified name/email; confirmation on the embed's `event_scheduled` message.
+- **Config:** the Calendly **event-type URI** lives in the `meetUs` feature flag value (admin panel, live — switching 1-on-1 / round-robin / panel is a config edit); only the API token is an env var.
 
 ## DB Module (`server/db/`)
 

@@ -148,7 +148,8 @@
     "make_admin": "הפוך למנהל",
     "make_member": "הפוך לחבר",
     "email_templates": "תבניות מייל",
-    "save": "שמירה"
+    "save": "שמירה",
+    "feature_flags": "דגלי תכונות"
   },
   "meetus": {
     "title": "רוצים לפגוש אותנו?",

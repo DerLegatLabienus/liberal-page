@@ -243,6 +243,23 @@ the enricher always returns empty) — remove the dead prop or wire the feature.
 
 ## 15. "Meet Us" — Scheduled Meetings with Cell Members (Priority: Low)
 
+### ✅ Meet Us — External Visitors Book via Calendly — 2026-06-12
+
+Shipped with a **revised audience**: the section is for **external visitors** (politicians),
+shown to **anonymous visitors only** — signed-in members are the hosts and don't see it.
+Visitors verify a **Google identity per request** (no allowlist, no user row, no session) at
+the public `POST /api/meetings/booking-link`, which live-queries Calendly to enforce **one
+active booking per verified email** (stateless pull — the lock-table + webhook sketch below
+was rejected; no DB rows at all) and issues a single-use, prefilled Calendly link opened in a
+popup embed. Repeat attempts get a `409` carrying the existing meeting + Calendly
+cancel/reschedule links. Rate-limited (10/min/IP, 5/min/email); fail-closed on Calendly
+errors. The event-type URI (1-on-1 / round-robin / panel — tension #4's swappable seam) lives
+in the `meetUs` feature-flag value, editable live in the admin panel; only
+`CALENDLY_API_TOKEN` is an env var. Spec: `docs/superpowers/specs/2026-06-12-meet-us-design.md`;
+plan: `docs/superpowers/plans/2026-06-12-meet-us.md`.
+
+**Original item (historical):**
+
 A **"Meet Us"** section on the home page that lets a **registered** user book an
 automatic meeting with people from the political cell. Meetings are conducted
 externally — an auto-generated **Zoom** link (via Calendly) or an **in-person**
