@@ -21,12 +21,10 @@ async function fetchPage<T>(
   pathAndQuery: string,
   opts: OdataOptions | undefined,
 ): Promise<{ rows: T[]; nextLink: string | null }> {
-  const url = `${ODATA_BASE}/${pathAndQuery}`
-  const res = await fetch(url, {
+  const res = await fetch(`${ODATA_BASE}/${pathAndQuery}`, {
     headers: { Accept: 'application/json', ...opts?.headers },
     signal: opts?.signal,
   })
-  console.info(`[api] GET ${url} → ${res.status}`)
   if (!res.ok) {
     const prefix = opts?.errorContext ? `${opts.errorContext} ` : ''
     throw new Error(`${prefix}error ${res.status}: ${pathAndQuery}`)

@@ -32,11 +32,9 @@ export async function isConfigured(): Promise<boolean> {
 }
 
 async function calendlyGet<T>(path: string): Promise<T> {
-  const url = `${API_BASE}${path}`
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
   })
-  console.info(`[api] GET ${url} → ${res.status}`)
   if (!res.ok) throw new CalendlyError(`Calendly GET ${path} failed: ${res.status}`, res.status)
   return res.json() as Promise<T>
 }
@@ -82,13 +80,11 @@ export async function findActiveMeeting(email: string): Promise<ActiveMeeting | 
 export async function createSingleUseLink(): Promise<string> {
   const owner = await eventTypeUri()
   if (!owner) throw new CalendlyError('meetUs event type not configured')
-  const schedulingUrl = `${API_BASE}/scheduling_links`
-  const res = await fetch(schedulingUrl, {
+  const res = await fetch(`${API_BASE}/scheduling_links`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ max_event_count: 1, owner, owner_type: 'EventType' }),
   })
-  console.info(`[api] POST ${schedulingUrl} → ${res.status}`)
   if (!res.ok) throw new CalendlyError(`Calendly POST /scheduling_links failed: ${res.status}`, res.status)
   const body = (await res.json()) as { resource: { booking_url: string } }
   return body.resource.booking_url

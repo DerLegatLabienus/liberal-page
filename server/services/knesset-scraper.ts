@@ -38,7 +38,6 @@ export async function fetchMkActivity(siteId: number, limit = 10): Promise<MkAct
   const res = await fetch(url, {
     headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
   })
-  console.info(`[api] GET ${url} → ${res.status}`)
   if (!res.ok) throw new Error(`Knesset Website API error ${res.status}`)
   // The Knesset site can answer 200 with an HTML bot/maintenance page; parsing that as
   // JSON would throw "Unexpected token '<'". Treat a non-JSON body as "no activity".

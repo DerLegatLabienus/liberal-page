@@ -25,11 +25,9 @@ export interface OknessetMk {
 
 export class OknessetClient {
   private async get<T>(path: string): Promise<T> {
-    const url = `${BASE}${path}`
-    const res = await fetch(url, {
+    const res = await fetch(`${BASE}${path}`, {
       headers: { Accept: 'application/json' },
     })
-    console.info(`[api] GET ${url} → ${res.status}`)
     if (!res.ok) throw new Error(`oknesset API error: ${res.status}`)
     return res.json() as Promise<T>
   }
