@@ -1,12 +1,14 @@
 import { Router } from 'express'
 import { AuthRepository } from '../repositories/auth-repository'
 import { EmailTemplatesRepository } from '../repositories/email-templates-repository'
+import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { requireAdmin } from '../middleware/auth'
 import { sendEmail } from '../services/email'
 
 const router = Router()
 const authRepo = new AuthRepository()
 const emailTemplatesRepo = new EmailTemplatesRepository()
+const flagsRepo = new FeatureFlagsRepository()
 
 // All admin endpoints require an admin bearer token.
 router.use(requireAdmin)
@@ -77,6 +79,16 @@ router.put('/email-templates/:name', async (req, res) => {
     return res.status(400).json({ error: 'subject and html are required strings' })
   }
   await emailTemplatesRepo.update(req.params.name, { subject, html })
+  res.json({ ok: true })
+})
+
+// --- Feature flags ---
+router.put('/feature-flags/:name', async (req, res) => {
+  const { enabled, value } = req.body as { enabled?: unknown; value?: unknown }
+  if (typeof enabled !== 'boolean' || (value !== null && typeof value !== 'string')) {
+    return res.status(400).json({ error: 'enabled must be boolean; value must be string or null' })
+  }
+  await flagsRepo.setFlag(req.params.name, enabled, value)
   res.json({ ok: true })
 })
 
