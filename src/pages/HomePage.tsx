@@ -13,6 +13,7 @@ import AboutSection from '@/components/sections/AboutSection'
 import LiberalsShowcase from '@/components/sections/LiberalsShowcase'
 import GallerySection from '@/components/sections/GallerySection'
 import FaqSection from '@/components/sections/FaqSection'
+import MeetUsSection from '@/components/sections/MeetUsSection'
 import JoinSection from '@/components/sections/JoinSection'
 
 export default function HomePage() {
@@ -66,6 +67,7 @@ export default function HomePage() {
         )}
         <GallerySection />
         <FaqSection />
+        <MeetUsSection />
         <JoinSection />
       </main>
       <Footer />

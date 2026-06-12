@@ -150,6 +150,17 @@
     "email_templates": "Email templates",
     "save": "Save"
   },
+  "meetus": {
+    "title": "Want to meet us?",
+    "blurb": "Public representatives and politicians — book a meeting with cell members. Verify your identity with a Google account and pick a time.",
+    "existing": "You already have a meeting on {{date}}",
+    "cancel": "Cancel meeting",
+    "reschedule": "Reschedule",
+    "cancel_note": "Cancellation happens on Calendly's page and frees you to book a new meeting.",
+    "booked": "Your meeting is booked! Details were sent to your email.",
+    "rate_limited": "Too many attempts — try again in a minute.",
+    "failed": "Booking failed. Please try again later."
+  },
   "site": {
     "party_name": "Liberals in Likud",
     "cell_subtitle": "A liberal movement within Likud",
