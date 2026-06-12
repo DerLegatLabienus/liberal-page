@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
@@ -42,8 +42,15 @@ export default function MeetUsSection() {
   const flags = useFeatureFlags()
   const [existing, setExisting] = useState<ActiveMeeting | null>(null)
   const [booked, setBooked] = useState(false)
+  const messageHandler = useRef<((e: MessageEvent) => void) | null>(null)
 
   const enabled = flags['meetUs']?.enabled ?? false
+
+  // Drop any pending embed listener on unmount (and on re-book, below).
+  useEffect(() => () => {
+    if (messageHandler.current) window.removeEventListener('message', messageHandler.current)
+  }, [])
+
   if (!enabled || auth?.user) return null
 
   const handleVerified = async (idToken: string) => {
@@ -54,14 +61,18 @@ export default function MeetUsSection() {
           await loadCalendlyWidget()
           const sep = body.bookingUrl.includes('?') ? '&' : '?'
           const url = `${body.bookingUrl}${sep}name=${encodeURIComponent(body.name)}&email=${encodeURIComponent(body.email)}`
-          // Confirmation state when Calendly's embed reports the booking.
+          // Confirmation state when Calendly's embed reports the booking. One live
+          // listener at most: replace any handler left by an abandoned popup.
+          if (messageHandler.current) window.removeEventListener('message', messageHandler.current)
           const onMessage = (e: MessageEvent) => {
             if (typeof e.origin === 'string' && e.origin.includes('calendly.com')
               && (e.data as { event?: string })?.event === 'calendly.event_scheduled') {
               setBooked(true)
               window.removeEventListener('message', onMessage)
+              messageHandler.current = null
             }
           }
+          messageHandler.current = onMessage
           window.addEventListener('message', onMessage)
           window.Calendly?.initPopupWidget({ url })
         } catch {
