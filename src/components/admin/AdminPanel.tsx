@@ -4,6 +4,8 @@ import { XIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { api, type AuthUser, type Invite, type EmailTemplate } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -17,6 +19,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'admin' | 'member'>('member')
   const [error, setError] = useState<string | null>(null)
+  const [selectedFlag, setSelectedFlag] = useState<string>('')
 
   const load = useCallback(async () => {
     try {
@@ -27,6 +30,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
       setUsers(usr.users)
       setTemplates(tpl.templates)
       setFlags(flg)
+      setSelectedFlag((prev) => prev || Object.keys(flg)[0] || '')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
     }
@@ -63,6 +67,9 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
     try { await api.admin.setRole(u.id, u.role === 'admin' ? 'member' : 'admin'); await load() }
     catch (e) { setError(e instanceof Error ? e.message : 'Error') }
   }
+
+  const flagNames = Object.keys(flags)
+  const currentFlag = selectedFlag ? flags[selectedFlag] : null
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
@@ -115,48 +122,81 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
 
           <section className="mt-6">
             <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.email_templates')}</h3>
-            <div className="space-y-4">
+            <Accordion>
               {templates.map((tpl) => (
-                <div key={tpl.name} className="rounded border border-border p-3">
-                  <p className="mb-1 font-mono text-xs text-muted-foreground">{tpl.name}</p>
-                  <input
-                    className="mb-2 w-full rounded border px-2 py-1 text-sm"
-                    value={tpl.subject}
-                    onChange={(e) => editTemplate(tpl.name, { subject: e.target.value })}
-                    placeholder="subject"
-                  />
-                  <textarea
-                    className="mb-2 w-full rounded border px-2 py-1 font-mono text-xs"
-                    rows={5}
-                    value={tpl.html}
-                    onChange={(e) => editTemplate(tpl.name, { html: e.target.value })}
-                  />
-                  <Button size="sm" onClick={() => saveTemplate(tpl)}>{t('admin.save')}</Button>
-                </div>
+                <AccordionItem key={tpl.name} value={tpl.name}>
+                  <AccordionTrigger className="font-mono text-xs">{tpl.name}</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 pb-1">
+                      <input
+                        className="w-full rounded border px-2 py-1 text-sm"
+                        value={tpl.subject}
+                        onChange={(e) => editTemplate(tpl.name, { subject: e.target.value })}
+                        placeholder="subject"
+                      />
+                      <Tabs defaultValue="source">
+                        <TabsList>
+                          <TabsTrigger value="source">Source</TabsTrigger>
+                          <TabsTrigger value="preview">Preview</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="source">
+                          <textarea
+                            className="mt-1 w-full rounded border px-2 py-1 font-mono text-xs"
+                            rows={6}
+                            value={tpl.html}
+                            onChange={(e) => editTemplate(tpl.name, { html: e.target.value })}
+                          />
+                        </TabsContent>
+                        <TabsContent value="preview">
+                          <iframe
+                            srcDoc={tpl.html}
+                            className="mt-1 h-52 w-full rounded border bg-white"
+                            sandbox="allow-same-origin"
+                            title={`${tpl.name} preview`}
+                          />
+                        </TabsContent>
+                      </Tabs>
+                      <Button size="sm" onClick={() => saveTemplate(tpl)}>{t('admin.save')}</Button>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </section>
+
           <section className="mt-6">
             <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.feature_flags')}</h3>
-            <div className="space-y-2">
-              {Object.entries(flags).map(([name, f]) => (
-                <div key={name} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    aria-label={name}
-                    checked={f.enabled}
-                    onChange={(e) => editFlag(name, { enabled: e.target.checked })}
-                  />
-                  <span className="w-40 truncate font-mono text-xs">{name}</span>
-                  <input
-                    className="flex-1 rounded border px-2 py-1 text-xs"
-                    value={f.value ?? ''}
-                    onChange={(e) => editFlag(name, { value: e.target.value || null })}
-                  />
-                  <Button size="sm" onClick={() => saveFlag(name)}>{t('admin.save')}</Button>
-                </div>
-              ))}
-            </div>
+            {flagNames.length > 0 && (
+              <div className="space-y-2">
+                <select
+                  value={selectedFlag}
+                  onChange={(e) => setSelectedFlag(e.target.value)}
+                  className="w-full rounded-md border border-border px-2 py-1.5 font-mono text-xs"
+                >
+                  {flagNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                {currentFlag && (
+                  <div className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={selectedFlag}
+                      checked={currentFlag.enabled}
+                      onChange={(e) => editFlag(selectedFlag, { enabled: e.target.checked })}
+                    />
+                    <span className="text-xs text-muted-foreground">enabled</span>
+                    <input
+                      className="flex-1 rounded border px-2 py-1 text-xs"
+                      value={currentFlag.value ?? ''}
+                      placeholder="value"
+                      onChange={(e) => editFlag(selectedFlag, { value: e.target.value || null })}
+                    />
+                    <Button size="sm" onClick={() => saveFlag(selectedFlag)}>{t('admin.save')}</Button>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </div>
       </DialogContent>
