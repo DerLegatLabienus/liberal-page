@@ -12,6 +12,7 @@ import featureFlagsRouter from './routes/feature-flags'
 import analyticsRouter from './routes/analytics'
 import authRouter from './routes/auth'
 import adminRouter from './routes/admin'
+import meetingsRouter from './routes/meetings'
 import { startPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
 
@@ -47,6 +48,7 @@ app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/summarize', summarizeRouter)
+app.use('/api/meetings', meetingsRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
