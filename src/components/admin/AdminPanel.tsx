@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
 import { XIcon } from 'lucide-react'
+import { useDirection } from '@/hooks/useDirection'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,8 +10,8 @@ import { api, type AuthUser, type Invite, type EmailTemplate } from '@/lib/api-c
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AdminPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation()
   const { user } = useAuth()
+  const direction = useDirection()
   const [invites, setInvites] = useState<Invite[]>([])
   const [users, setUsers] = useState<AuthUser[]>([])
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -74,36 +74,36 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent>
-        <div className="relative max-h-[85vh] overflow-y-auto rounded-xl bg-white p-5 text-slate-900 shadow-2xl" dir="rtl">
+        <div className="relative max-h-[85vh] overflow-y-auto rounded-xl bg-white p-5 text-slate-900 shadow-2xl" dir={direction}>
           <DialogClose className="absolute end-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-slate-100">
             <XIcon className="h-5 w-5" /><span className="sr-only">Close</span>
           </DialogClose>
-          <h2 className="mb-4 text-lg font-bold">{t('admin.title')}</h2>
+          <h2 className="mb-4 text-lg font-bold">{Admin}</h2>
           {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
           <section className="mb-6">
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.invites')}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{Invites}</h3>
             <div className="mb-3 flex gap-2">
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('admin.email_placeholder')} className="flex-1" />
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={Email to invite} className="flex-1" />
               <select value={role} onChange={(e) => setRole(e.target.value as 'admin' | 'member')} className="rounded-md border border-border px-2 text-sm">
-                <option value="member">{t('admin.role_member')}</option>
-                <option value="admin">{t('admin.role_admin')}</option>
+                <option value="member">{Member}</option>
+                <option value="admin">{Admin}</option>
               </select>
-              <Button size="sm" onClick={addInvite}>{t('admin.invite_add')}</Button>
+              <Button size="sm" onClick={addInvite}>{Add}</Button>
             </div>
             <ul className="space-y-1">
               {invites.map((inv) => (
                 <li key={inv.email} className="flex items-center justify-between rounded bg-slate-50 px-3 py-1.5 text-sm">
                   <span>{inv.email} <span className="text-xs text-muted-foreground">({inv.role})</span></span>
-                  <button onClick={() => removeInvite(inv.email)} className="text-xs text-red-400 hover:text-red-600">{t('admin.remove')}</button>
+                  <button onClick={() => removeInvite(inv.email)} className="text-xs text-red-400 hover:text-red-600">{Remove}</button>
                 </li>
               ))}
-              {invites.length === 0 && <li className="px-3 py-1.5 text-sm text-muted-foreground">{t('admin.no_invites')}</li>}
+              {invites.length === 0 && <li className="px-3 py-1.5 text-sm text-muted-foreground">{No invites}</li>}
             </ul>
           </section>
 
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.users')}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{Users}</h3>
             <ul className="space-y-1">
               {users.map((u) => (
                 <li key={u.id} className="flex items-center justify-between rounded bg-slate-50 px-3 py-1.5 text-sm">
@@ -113,7 +113,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                     disabled={u.id === user?.id}
                     className="text-xs text-primary hover:underline disabled:opacity-40"
                   >
-                    {u.role === 'admin' ? t('admin.make_member') : t('admin.make_admin')}
+                    {u.role === 'admin' ? Make member : Make admin}
                   </button>
                 </li>
               ))}
@@ -121,7 +121,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
           </section>
 
           <section className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.email_templates')}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{Email templates}</h3>
             <Accordion>
               {templates.map((tpl) => (
                 <AccordionItem key={tpl.name} value={tpl.name}>
@@ -156,7 +156,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                           />
                         </TabsContent>
                       </Tabs>
-                      <Button size="sm" onClick={() => saveTemplate(tpl)}>{t('admin.save')}</Button>
+                      <Button size="sm" onClick={() => saveTemplate(tpl)}>{Save}</Button>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -165,7 +165,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
           </section>
 
           <section className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{t('admin.feature_flags')}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{Feature flags}</h3>
             {flagNames.length > 0 && (
               <div className="space-y-2">
                 <select
@@ -192,7 +192,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                       placeholder="value"
                       onChange={(e) => editFlag(selectedFlag, { value: e.target.value || null })}
                     />
-                    <Button size="sm" onClick={() => saveFlag(selectedFlag)}>{t('admin.save')}</Button>
+                    <Button size="sm" onClick={() => saveFlag(selectedFlag)}>{Save}</Button>
                   </div>
                 )}
               </div>
