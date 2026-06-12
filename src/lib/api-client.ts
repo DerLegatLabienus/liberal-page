@@ -41,6 +41,16 @@ export function errorStatus(e: unknown): number | undefined {
   return (e as { status?: number } | null)?.status
 }
 
+/** Like apiFetch but returns non-OK JSON bodies instead of throwing (used where 409 carries data). */
+export async function apiFetchRaw<T>(path: string, options?: RequestInit): Promise<{ status: number; body: T }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options?.headers as Record<string, string> | undefined) },
+  })
+  const body = (await res.json().catch(() => ({}))) as T
+  return { status: res.status, body }
+}
+
 export type TrackScope = 'group' | 'personal'
 // Reads default to the group list; pass 'personal' to read the caller's list.
 const readQ = (scope?: TrackScope) => (scope === 'personal' ? '?scope=personal' : '')
@@ -93,6 +103,12 @@ export const api = {
   featureFlags: {
     get: () => apiFetch<FeatureFlags>('/feature-flags'),
   },
+  meetings: {
+    // Public endpoint; 409 carries the visitor's existing meeting, so use the raw helper.
+    bookingLink: (idToken: string) =>
+      apiFetchRaw<BookingLinkResponse & { error?: string; meeting?: ActiveMeeting }>(
+        `/meetings/booking-link`, { method: 'POST', body: JSON.stringify({ idToken }) }),
+  },
   analytics: {
     // Fire-and-forget Join click-through. Callers should not await/block on this.
     joinClick: (status: string, mode: string) =>
@@ -126,6 +142,10 @@ export const api = {
       update: (name: string, body: { subject: string; html: string }) =>
         apiFetch<{ ok: boolean }>(`/admin/email-templates/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(body) }),
     },
+    featureFlags: {
+      update: (name: string, body: { enabled: boolean; value: string | null }) =>
+        apiFetch<{ ok: boolean }>(`/admin/feature-flags/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(body) }),
+    },
   },
 }
 
@@ -133,3 +153,5 @@ export interface AuthUser { id: number; email: string | null; name: string | nul
 export interface EmailTemplate { name: string; subject: string; html: string }
 export interface AuthResponse { accessToken: string; refreshToken: string; user: AuthUser }
 export interface Invite { email: string; role: string; createdAt: string }
+export interface ActiveMeeting { startTime: string; cancelUrl: string; rescheduleUrl: string }
+export interface BookingLinkResponse { bookingUrl: string; name: string; email: string }
