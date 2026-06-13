@@ -27,6 +27,8 @@ Reads `site.json` for logo and party name. The nav links are currently `#about`,
 
 The "מעקב כנסת" button opens the drawer. If any bill, committee, or MK has `hasNewData: true`, the button shows a blue dot badge. The current implementation computes the badge but does not clear `hasNewData` when the drawer opens.
 
+`AuthControl` is embedded in the header (right side on desktop, bottom of the mobile menu). See the "Admin & Auth Components" section below.
+
 ### `ParliamentDrawer`
 
 Full-height side sheet. It opens from the right in RTL and left in LTR using `useDirection()`.
@@ -81,6 +83,28 @@ Outreach section for **anonymous visitors** (e.g. politicians wanting to meet th
 Flow: visitor clicks "Continue with Google" → Google One Tap verifies identity → `POST /api/meetings/booking-link` checks for an existing active meeting → returns a single-use Calendly link → Calendly popup opens prefilled with the visitor's name/email → on `calendly.event_scheduled` message, shows a confirmation state. Repeat attempts before the meeting passes surface cancel/reschedule links from the 409 response.
 
 No data is persisted on our side. Configuration: `CALENDLY_API_TOKEN` env var + `meetUs` feature flag value = Calendly event-type URI (set via admin panel).
+
+## Admin & Auth Components
+
+### `AuthControl`
+
+Lives in the sticky header (right side). Renders nothing until the auth session is restored (`ready = true`).
+
+- **Logged out:** Google sign-in button (`@react-oauth/google`). `VITE_GOOGLE_CLIENT_ID` must be set for the button to function; sign-in errors report invite-gate (`403`) vs. generic failure via toast.
+- **Logged in:** user name/email, email-alerts checkbox, sign-out button. Admins additionally see the "Admin" link that opens `AdminPanel`.
+
+### `AdminPanel`
+
+Modal dialog for admin-only site management. Opened from `AuthControl`; always `dir="rtl"` (internal Hebrew-first tool). All labels are in English regardless of the active site language.
+
+Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.list`, `featureFlags.get`). Has four sections:
+
+| Section | What it does |
+|---------|-------------|
+| **Invites** | Add an email + role to the allowlist; list and remove existing invites. Adding fires an invitation email via Resend. |
+| **Users** | List all registered users; toggle admin ↔ member (self-toggle disabled). |
+| **Email templates** | Accordion — one item per template (`invite`, `bill_digest`, etc.). Each item has a subject field and a Source / Preview tab. The Preview tab renders the raw Handlebars HTML in a sandboxed `<iframe>`. Save commits to DB via `PUT /api/admin/email-templates/:name`. |
+| **Feature flags** | Combobox (select) chooses the flag; checkbox for `enabled`; text input for `value` (e.g. Calendly event-type URI for `meetUs`). Save commits to DB via `PUT /api/admin/feature-flags/:name`. |
 
 ## Parliament Components
 
