@@ -16,3 +16,21 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      # Auth (Google OAuth + JWT) — required for sign-in to work
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Email (Resend) — optional; unset = email is a no-op
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: PUBLIC_SITE_URL
+        value: https://derlegatlabienus.github.io
+      # Meet Us (Calendly) — optional; unset = feature reports unconfigured
+      - key: CALENDLY_API_TOKEN
+        sync: false
+      # AI committee summaries — optional; unset = summaries disabled
+      - key: COMMITTEE_AI
+        value: "false"
