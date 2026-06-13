@@ -100,15 +100,9 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 
 Playwright script crawls likudliberal.org, downloads 11 images to `public/images/gallery/`, rewrites `src/data/gallery.json` to use local paths. Extension whitelist prevents non-image assets from being captured. Script at `scripts/migrate-media.ts` — run with `npx tsx scripts/migrate-media.ts`.
 
-## 8. Upgrade Node.js Version (Priority: Low)
+### ✅ Upgrade Node.js Version — 2026-06-13
 
-The current runtime is Node v21.7.3 (an odd/non-LTS release). Upgrade to the latest LTS version.
-
-**Requirements:**
-- Upgrade to the latest Node LTS (v22.x at time of writing)
-- Add an `.nvmrc` or `engines` field in `package.json` to pin the expected version
-- Verify all dependencies (Vite, tsx, Express) are compatible after the upgrade
-- Update CI/CD pipeline to use the same LTS version
+Added `.nvmrc` (22), `engines: { "node": ">=22" }` in `package.json`, and bumped both CI/deploy workflows from Node 20 → 22 LTS. Type-check clean; pre-existing test failures unrelated.
 
 ## 9. Live Parliamentary Content Translation (Priority: Low)
 
@@ -239,7 +233,7 @@ dedup path at all.)
 `upsert`s real (`onConflictDoUpdate`), so `tracking/add` becomes idempotent for all
 three types. **Minor cleanup also noted:** `CommitteeCard`'s `trackedMks` prop is
 currently unused (the attending-MK-name lookup depended on `attendingSiteIds`, which
-the enricher always returns empty) — remove the dead prop or wire the feature.
+the enricher always returns empty) — ~~remove the dead prop or wire the feature~~ ✅ prop removed 2026-06-13.
 
 ## 15. "Meet Us" — Scheduled Meetings with Cell Members (Priority: Low)
 
@@ -257,6 +251,10 @@ errors. The event-type URI (1-on-1 / round-robin / panel — tension #4's swappa
 in the `meetUs` feature-flag value, editable live in the admin panel; only
 `CALENDLY_API_TOKEN` is an env var. Spec: `docs/superpowers/specs/2026-06-12-meet-us-design.md`;
 plan: `docs/superpowers/plans/2026-06-12-meet-us.md`.
+
+### ✅ Meet Us — Seed gap fixed — 2026-06-13
+
+`meetUs` flag added to `scripts/seed-data/feature-flags.json` (enabled: false, value: null) and wired into `seed-db.ts`. Fresh `db:seed` now creates the flag row; operator sets the Calendly event-type URI value and enables it via the admin panel.
 
 **Original item (historical):**
 
