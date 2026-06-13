@@ -29,6 +29,16 @@ export class JoinAnalyticsRepository {
     return true
   }
 
+  /** Returns the lifetime row and daily rows newest-first, for admin reporting. */
+  async getAll(): Promise<{ lifetime: typeof joinAnalytics.$inferSelect | null; daily: (typeof joinAnalytics.$inferSelect)[] }> {
+    const rows = await db.select().from(joinAnalytics)
+    const lifetime = rows.find((r) => r.bucket === LIFETIME) ?? null
+    const daily = rows
+      .filter((r) => r.bucket !== LIFETIME)
+      .sort((a, b) => b.bucket.localeCompare(a.bucket))
+    return { lifetime, daily }
+  }
+
   /** Deletes day rows older than the sliding window; the lifetime row is never pruned. */
   async pruneOldDays(now: Date = new Date()): Promise<number> {
     const cutoff = new Date(now.getTime() - DAY_WINDOW_DAYS * 86_400_000)

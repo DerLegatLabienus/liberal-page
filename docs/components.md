@@ -104,6 +104,7 @@ Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.
 | **Invites** | Add an email + role to the allowlist; list and remove existing invites. Adding fires an invitation email via Resend. |
 | **Users** | List all registered users; toggle admin ↔ member (self-toggle disabled). |
 | **Email templates** | Accordion — one item per template (`invite`, `bill_digest`, etc.). Each item has a subject field and a Source / Preview tab. The Preview tab renders the raw Handlebars HTML in a sandboxed `<iframe>`. Save commits to DB via `PUT /api/admin/email-templates/:name`. |
+| **Join analytics** | All-time click count, per-combo breakdown sorted by count, and a collapsible last-14-days list. Read-only; sourced from `GET /api/admin/analytics/join`. |
 | **Feature flags** | Combobox (select) chooses the flag; checkbox for `enabled`; text input for `value` (e.g. Calendly event-type URI for `meetUs`). Save commits to DB via `PUT /api/admin/feature-flags/:name`. |
 
 ## Parliament Components

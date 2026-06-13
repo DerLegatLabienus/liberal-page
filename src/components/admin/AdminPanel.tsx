@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { api, type AuthUser, type Invite, type EmailTemplate } from '@/lib/api-client'
+import { api, type AuthUser, type Invite, type EmailTemplate, type JoinAnalyticsData } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AdminPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -14,6 +14,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   const [users, setUsers] = useState<AuthUser[]>([])
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [flags, setFlags] = useState<Record<string, { enabled: boolean; value: string | null }>>({})
+  const [joinAnalytics, setJoinAnalytics] = useState<JoinAnalyticsData | null>(null)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'admin' | 'member'>('member')
   const [error, setError] = useState<string | null>(null)
@@ -21,14 +22,16 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
 
   const load = useCallback(async () => {
     try {
-      const [inv, usr, tpl, flg] = await Promise.all([
-        api.admin.listInvites(), api.admin.listUsers(), api.admin.emailTemplates.list(), api.featureFlags.get(),
+      const [inv, usr, tpl, flg, analytics] = await Promise.all([
+        api.admin.listInvites(), api.admin.listUsers(), api.admin.emailTemplates.list(),
+        api.featureFlags.get(), api.admin.analytics.joinSummary(),
       ])
       setInvites(inv.invites)
       setUsers(usr.users)
       setTemplates(tpl.templates)
       setFlags(flg)
       setSelectedFlag((prev) => prev || Object.keys(flg)[0] || '')
+      setJoinAnalytics(analytics)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
     }
@@ -160,6 +163,45 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                 </AccordionItem>
               ))}
             </Accordion>
+          </section>
+
+          <section className="mt-6">
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Join analytics</h3>
+            {joinAnalytics ? (
+              <div className="space-y-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{joinAnalytics.lifetime?.total ?? 0}</span>
+                  <span className="text-xs text-muted-foreground">all-time clicks</span>
+                </div>
+                {joinAnalytics.lifetime && Object.keys(joinAnalytics.lifetime.breakdown).length > 0 && (
+                  <ul className="space-y-0.5">
+                    {Object.entries(joinAnalytics.lifetime.breakdown)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([combo, count]) => (
+                        <li key={combo} className="flex justify-between rounded bg-slate-50 px-3 py-1 text-xs">
+                          <span className="font-mono">{combo}</span>
+                          <span>{count}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+                {joinAnalytics.daily.slice(0, 14).length > 0 && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-muted-foreground">Last {Math.min(joinAnalytics.daily.length, 14)} days</summary>
+                    <ul className="mt-1 space-y-0.5">
+                      {joinAnalytics.daily.slice(0, 14).map((row) => (
+                        <li key={row.bucket} className="flex justify-between rounded bg-slate-50 px-3 py-1">
+                          <span>{row.bucket}</span>
+                          <span>{row.total}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No data yet</p>
+            )}
           </section>
 
           <section className="mt-6">

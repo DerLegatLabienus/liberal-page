@@ -146,6 +146,9 @@ export const api = {
       update: (name: string, body: { enabled: boolean; value: string | null }) =>
         apiFetch<{ ok: boolean }>(`/admin/feature-flags/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(body) }),
     },
+    analytics: {
+      joinSummary: () => apiFetch<JoinAnalyticsData>('/admin/analytics/join'),
+    },
   },
 }
 
@@ -155,3 +158,5 @@ export interface AuthResponse { accessToken: string; refreshToken: string; user:
 export interface Invite { email: string; role: string; createdAt: string }
 export interface ActiveMeeting { startTime: string; cancelUrl: string; rescheduleUrl: string }
 export interface BookingLinkResponse { bookingUrl: string; name: string; email: string }
+export interface JoinAnalyticsRow { bucket: string; total: number; breakdown: Record<string, number>; createdAt: string | null }
+export interface JoinAnalyticsData { lifetime: JoinAnalyticsRow | null; daily: JoinAnalyticsRow[] }

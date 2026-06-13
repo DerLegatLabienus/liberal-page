@@ -309,20 +309,13 @@ location — the app never hosts them.
 DB + per-user model (item 2, shipped) already provides a place for the minimal lock
 (a new `meeting_locks`-style table keyed by `user_id`).
 
-## 16. Expose Join Analytics — Admin-Panel Read View (Priority: Low)
+### ✅ Expose Join Analytics — Admin-Panel Read View — 2026-06-13
 
-The Join-section click-through analytics (see ✅ Join Analytics) are collected and
-stored in the `join_analytics` table but **deliberately not exposed** by any endpoint.
-When an admin panel exists, surface this data behind it.
-
-**Requirements:**
-- A read endpoint (e.g. `GET /api/analytics/join`) returning the lifetime row plus the
-  ≤365-day daily series with per-combination breakdowns — gated behind admin auth.
-- An admin-panel view rendering the daily trend and the all-time total/breakdown.
-- Until the admin panel and its auth gate exist, the data stays DB-only (query
-  `join_analytics` directly via SQL).
-
-**Depends on:** an admin panel + auth (related to item 3, User Accounts).
+`JoinAnalyticsRepository.getAll()` added. `GET /api/admin/analytics/join` (requireAdmin) returns
+`{ lifetime, daily }` — the all-time row and daily rows newest-first. The AdminPanel loads
+this alongside its other data on open and shows: all-time total click count, per-combo breakdown
+sorted by count, and a collapsible last-14-days list. TypeScript types added to `api-client.ts`
+(`JoinAnalyticsRow`, `JoinAnalyticsData`).
 
 ## 17. Site-Wide Product Analytics (Priority: Low — Advanced)
 

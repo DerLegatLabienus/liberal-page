@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { AuthRepository } from '../repositories/auth-repository'
 import { EmailTemplatesRepository } from '../repositories/email-templates-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
+import { JoinAnalyticsRepository } from '../repositories/join-analytics-repository'
 import { requireAdmin } from '../middleware/auth'
 import { sendEmail } from '../services/email'
 
@@ -9,6 +10,7 @@ const router = Router()
 const authRepo = new AuthRepository()
 const emailTemplatesRepo = new EmailTemplatesRepository()
 const flagsRepo = new FeatureFlagsRepository()
+const analyticsRepo = new JoinAnalyticsRepository()
 
 // All admin endpoints require an admin bearer token.
 router.use(requireAdmin)
@@ -80,6 +82,15 @@ router.put('/email-templates/:name', async (req, res) => {
   }
   await emailTemplatesRepo.update(req.params.name, { subject, html })
   res.json({ ok: true })
+})
+
+// --- Join analytics (read-only) ---
+router.get('/analytics/join', async (_req, res) => {
+  try {
+    res.json(await analyticsRepo.getAll())
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
+  }
 })
 
 // --- Feature flags ---

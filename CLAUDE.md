@@ -128,6 +128,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `GET`    | `/api/admin/email-templates`  | list email templates (admin) |
 | `PUT`    | `/api/admin/email-templates/:name` | update email template (admin) |
 | `PUT`    | `/api/admin/feature-flags/:name`   | update feature flag enabled/value (admin) |
+| `GET`    | `/api/admin/analytics/join`        | join click-through summary: lifetime + daily rows (admin) |
 
 `type` is one of `bill`, `committee`, or `mk`.
 

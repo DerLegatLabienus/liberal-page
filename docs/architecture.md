@@ -138,6 +138,7 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 | `GET` | `/api/admin/email-templates` | list email templates (admin) |
 | `PUT` | `/api/admin/email-templates/:name` | update email template (admin) |
 | `PUT` | `/api/admin/feature-flags/:name` | update feature flag `{ enabled, value }` (admin) |
+| `GET` | `/api/admin/analytics/join` | join click-through summary: `{ lifetime, daily[] }` (admin) |
 
 ## Auth & multi-user
 
