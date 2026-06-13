@@ -82,19 +82,17 @@ decision logic in `server/services/committee-status.ts`; refresh+reconcile in
 
 ## 6. Knesset Transition — Handle Dispersal and New Knesset Election (Priority: Medium)
 
+✅ **Fully implemented** across several sub-items (see below). All requirements satisfied.
+
 When the Knesset is dispersed or a new Knesset is elected, MKs and committees must be updated or removed to reflect the new composition.
 
-**Requirements:**
-- Track the current Knesset number (e.g. "כנסת 25") in the data layer
-- When a dispersal or election is detected (via the Knesset API or a manual config flag):
-  - MKs who did not win a seat in the new Knesset are marked inactive and removed from active views
-  - Committees are re-fetched and stale/dissolved ones removed
-  - Historical data (past protocols, bills) retains the MK/committee name as a non-interactive label
-- The backend poller should detect Knesset transitions and trigger a full refresh of MK and committee data
-- An admin/config mechanism to manually trigger the transition in case the API is slow to reflect results
-
-**Notes:**
-- Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
+**Requirements (all met):**
+- ✅ Track the current Knesset number — `knesset_config` table + `KnessetConfigRepository`
+- ✅ MKs who did not win a seat marked inactive — `runTransition` adds terms only for MKs where `isCurrent`, so those without a new term derive `inactive: true` from the repository
+- ✅ Committees re-fetched and stale/dissolved ones removed — transition clears committee list cache; next `refreshCommitteeListIfStale` + closed-committee reconciliation handles removal
+- ✅ Historical data preserved — `inactive` flag keeps entities with their history; removed only by explicit untrack
+- ✅ Poller detects transitions automatically — `detectKnessetTransition()` runs once per poll cycle
+- ✅ Manual admin trigger — `POST /api/knesset/transition` for API-lag cases
 
 ### ✅ Auto-detect Knesset Transition in Poller — 2026-06-13
 
