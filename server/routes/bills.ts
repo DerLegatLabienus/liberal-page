@@ -54,7 +54,9 @@ function parseLimit(q: unknown): number {
 
 router.get('/recent', async (req, res) => {
   try {
-    res.json(await fetchRecentBills(parseLimit(req.query.limit)))
+    const flags = await new FeatureFlagsRepository().getAll()
+    const ranking = flags['recentRanking']?.value ?? 'newest'
+    res.json(await fetchRecentBills(parseLimit(req.query.limit), ranking))
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }

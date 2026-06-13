@@ -4,7 +4,7 @@ import type { KnessetBillOverviewItem, TrendingBillEntry, BillSearchResult } fro
 import { getBillStatusMap } from './bill-status-map'
 import { getCurrentKnesset } from './knesset-config'
 import { CommitteeListRepository } from '../repositories/committee-list-repository'
-import { odataGet } from './odata'
+import { odataGet, odataGetAllPages } from './odata'
 
 const TTL_MS = 5 * 60 * 1000
 
@@ -45,6 +45,33 @@ export function _resetBillsCache() {
 
 export function _resetCommitteeMapCache() {
   committeeMapCache = null
+}
+
+// --- Progress ranking cache (maps billId → max CommitteeSessionID seen) ---
+const PROGRESS_POOL = 200
+const PROGRESS_TTL = 30 * 60 * 1000
+
+interface ProgressCache { map: Map<number, number>; at: number; knesset: number }
+let progressCache: ProgressCache | null = null
+
+export function _resetProgressCache() { progressCache = null }
+
+async function getProgressScoreMap(knesset: number, billIds: number[]): Promise<Map<number, number>> {
+  if (progressCache && progressCache.knesset === knesset && Date.now() - progressCache.at < PROGRESS_TTL) {
+    return progressCache.map
+  }
+  const ors = billIds.map((id) => `ItemID eq ${id}`).join(' or ')
+  const path =
+    `KNS_CmtSessionItem?$filter=ItemTypeID eq 2 and (${ors})` +
+    `&$select=ItemID,CommitteeSessionID&$format=json`
+  const rows = await odataGetAllPages<{ ItemID: number; CommitteeSessionID: number }>(path)
+  const map = new Map<number, number>()
+  for (const row of rows) {
+    const prev = map.get(row.ItemID) ?? 0
+    if (row.CommitteeSessionID > prev) map.set(row.ItemID, row.CommitteeSessionID)
+  }
+  progressCache = { map, at: Date.now(), knesset }
+  return map
 }
 
 const committeeListRepo = new CommitteeListRepository()
@@ -97,8 +124,16 @@ export async function searchBills(query: string, knesset: number): Promise<BillS
   }))
 }
 
-export async function fetchRecentBills(limit: number): Promise<KnessetBillOverviewItem[]> {
+export async function fetchRecentBills(limit: number, ranking = 'newest'): Promise<KnessetBillOverviewItem[]> {
   const k = getCurrentKnesset()
+  if (ranking === 'progress') {
+    const poolPath = `KNS_Bill?$filter=KnessetNum%20eq%20${k}&$orderby=BillID%20desc&$top=${PROGRESS_POOL}&$select=${SELECT}&$format=json`
+    const pool = await cachedQuery(`recent:${k}:${PROGRESS_POOL}`, poolPath)
+    const scoreMap = await getProgressScoreMap(k, pool.map((b) => b.billId))
+    return [...pool]
+      .sort((a, b) => (scoreMap.get(b.billId) ?? 0) - (scoreMap.get(a.billId) ?? 0))
+      .slice(0, limit)
+  }
   const path = `KNS_Bill?$filter=KnessetNum%20eq%20${k}&$orderby=BillID%20desc&$top=${limit}&$select=${SELECT}&$format=json`
   return cachedQuery(`recent:${k}:${limit}`, path)
 }

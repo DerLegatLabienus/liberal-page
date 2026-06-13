@@ -18,7 +18,7 @@ vi.mock('../../server/repositories/committee-list-repository', () => ({
   })),
 }))
 
-import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, _resetProgressCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -81,6 +81,52 @@ describe('fetchRecentBills', () => {
     await fetchRecentBills(10)
     await fetchRecentBills(10)
     expect(fetch).toHaveBeenCalledOnce()
+  })
+})
+
+describe('fetchRecentBills (progress ranking)', () => {
+  const POOL = [
+    { BillID: 300, Name: 'ג', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+    { BillID: 200, Name: 'ב', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+    { BillID: 100, Name: 'א', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+  ]
+
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset()
+    mockCommitteeListGet.mockReset()
+    mockCommitteeListGet.mockResolvedValue(null)
+    _resetBillsCache()
+    _resetCommitteeMapCache()
+    _resetProgressCache()
+  })
+
+  it('re-sorts bills by max CommitteeSessionID descending', async () => {
+    // First fetch: bill pool (top 200 by BillID desc)
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL))
+    // Second fetch: KNS_CmtSessionItem — bill 100 has the most-recent session, bill 300 has an older one
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([
+      { ItemID: 100, CommitteeSessionID: 9000 },
+      { ItemID: 300, CommitteeSessionID: 5000 },
+    ]))
+
+    const items = await fetchRecentBills(3, 'progress')
+    expect(items[0].billId).toBe(100) // highest session ID
+    expect(items[1].billId).toBe(300) // second highest
+    expect(items[2].billId).toBe(200) // no sessions → score 0, sorts last
+  })
+
+  it('returns at most limit items', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL))
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([]))
+    const items = await fetchRecentBills(2, 'progress')
+    expect(items).toHaveLength(2)
+  })
+
+  it('falls through to newest ordering for unknown ranking values', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL))
+    const items = await fetchRecentBills(3, 'newest')
+    expect(fetch).toHaveBeenCalledOnce() // no second call for CmtSessionItem
+    expect(items[0].billId).toBe(300) // BillID desc order preserved
   })
 })
 

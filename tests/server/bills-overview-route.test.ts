@@ -32,12 +32,20 @@ const ITEM = {
 
 describe('GET /api/bills/recent', () => {
   beforeEach(() => vi.clearAllMocks())
-  it('returns mapped recent bills', async () => {
+  it('returns mapped recent bills with default newest ranking', async () => {
     vi.mocked(fetchRecentBills).mockResolvedValue([ITEM])
     const res = await request(app).get('/api/bills/recent')
     expect(res.status).toBe(200)
     expect(res.body[0].billId).toBe(1)
-    expect(vi.mocked(fetchRecentBills).mock.calls[0][0]).toBe(10) // default limit
+    const [limit, ranking] = vi.mocked(fetchRecentBills).mock.calls[0]
+    expect(limit).toBe(10)
+    expect(ranking).toBe('newest') // flag absent → default
+  })
+  it('passes progress ranking when recentRanking flag is set', async () => {
+    mockGetAll.mockResolvedValueOnce({ recentRanking: { enabled: true, value: 'progress' } })
+    vi.mocked(fetchRecentBills).mockResolvedValue([ITEM])
+    await request(app).get('/api/bills/recent')
+    expect(vi.mocked(fetchRecentBills).mock.calls[0][1]).toBe('progress')
   })
   it('returns 500 with error message on failure', async () => {
     vi.mocked(fetchRecentBills).mockRejectedValue(new Error('boom'))
