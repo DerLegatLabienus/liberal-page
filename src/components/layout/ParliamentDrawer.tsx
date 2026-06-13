@@ -118,7 +118,7 @@ export default function ParliamentDrawer({
             <TabsContent value="committees" className="m-0 space-y-3 p-4">
               {canEdit && <CommitteeCombobox onAdd={onAdd} scope={scope} />}
               {committees.map((c) => (
-                <CommitteeCard key={c.id} committee={c} onRemove={canEdit ? onRemoveCommittee : undefined} trackedMks={mks} />
+                <CommitteeCard key={c.id} committee={c} onRemove={canEdit ? onRemoveCommittee : undefined} />
               ))}
               {committees.length === 0 && (
                 <p className="py-8 text-right text-sm text-muted-foreground">{t('ui.drawer_empty_committees')}</p>

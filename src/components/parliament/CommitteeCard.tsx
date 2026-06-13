@@ -6,10 +6,9 @@ import type { Committee } from '@/types'
 interface CommitteeCardProps {
   committee: Committee
   onRemove?: (id: number) => void
-  trackedMks: { knesset_site_id?: string; name: string }[]
 }
 
-export default function CommitteeCard({ committee, onRemove, trackedMks: _trackedMks }: CommitteeCardProps) {
+export default function CommitteeCard({ committee, onRemove }: CommitteeCardProps) {
   const { t } = useTranslation()
   const direction = useDirection()
 

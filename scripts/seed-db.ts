@@ -53,12 +53,15 @@ async function main() {
   const flagsRaw = await readJson<{
     bills: { trendingAlgorithm: string; recentRanking: string; policyFilterEnabled: boolean }
     storage: { pressure: string }
+    meetings: { meetUsEnabled: boolean }
   }>('feature-flags.json')
   const ff = new FeatureFlagsRepository()
   await ff.setFlag('trendingAlgorithm', true, flagsRaw.bills.trendingAlgorithm, 'Trending tab ranking source')
   await ff.setFlag('recentRanking', true, flagsRaw.bills.recentRanking, 'Recent tab ordering')
   await ff.setFlag('policyFilter', flagsRaw.bills.policyFilterEnabled, null, 'Policy-aligned tab toggle')
   await ff.setFlag('storagePressure', true, flagsRaw.storage.pressure, 'Orphan-purge config "limitMb:slackMb"; "-1" disables')
+  // meetUs: disabled by default; set value to Calendly event-type URI and enable via admin panel
+  await ff.setFlag('meetUs', flagsRaw.meetings.meetUsEnabled, null, 'Calendly event-type URI for Meet Us booking')
 
   // Seed the public group list (the group account owns the default tracked items).
   const sharedUserId = await new UsersRepository().getGroupUserId()
