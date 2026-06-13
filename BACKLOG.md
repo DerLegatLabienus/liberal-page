@@ -138,7 +138,7 @@ Phase 1 shipped the three-tab "Knesset Bills Overview" section (Recent = newest 
 
 - **`recentRanking: "progress"`** — re-rank the Recent tab by the most recent *genuine legislative event* per bill (committee/plenum session dates), not creation order. Building blocks verified: `KNS_CmtSessionItem` (`ItemID`/`ItemTypeID` + `CommitteeSessionID`) and `KNS_PlmSessionItem` join bills to sessions, which carry reliable `StartDate`. This is a backend aggregation subsystem — needs its own spec. Do NOT use `KNS_Bill.LastUpdatedDate` (administrative-only; surfaced old bills as "recent" in a prior incident).
 - **`trendingAlgorithm: "amendments" | "sponsorship"`** — currently fall back to `manual`. Require OData entities not yet verified (per-bill amendment count; cross-party co-sponsor join). Research needed before implementing.
-- **Committee name on overview rows** — `KnessetBillOverviewItem.committee` is currently `''` (Phase 1). Resolve `KNS_Bill.CommitteeID` → name via `knesset-committees-cache.json` (note: that cache is runtime-generated and may be absent until the poller runs).
+- **Committee name on overview rows** — ✅ Already implemented: `mapRows` in `server/services/knesset-bills.ts` resolves `CommitteeID` → name via `CommitteeListRepository` (in-memory cache, 5 min TTL). Shows `''` only before the poller's first committee-cache refresh — best-effort, not a bug.
 
 Spec: `docs/superpowers/specs/2026-05-26-knesset-bills-overview-design.md`. Phase 1 plan: `docs/superpowers/plans/2026-05-26-knesset-bills-overview.md`.
 

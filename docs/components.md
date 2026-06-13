@@ -15,6 +15,7 @@ Current components live under `src/components/`. Styling is Tailwind-based, with
 | `sections/GallerySection` | Gallery grid from `gallery.json` |
 | `sections/FaqSection` | Accordion from `faq.json` |
 | `sections/JoinSection` | Join selector and secure handoff to effective-soft |
+| `sections/MeetUsSection` | Calendly booking for external visitors (anonymous only; hidden when `meetUs` flag off) |
 | `layout/Footer` | Footer content |
 | `layout/ParliamentDrawer` | Side drawer for tracked bills, committees, and MKs |
 
@@ -72,6 +73,14 @@ Reads `faq.json` and renders an accordion.
 Renders the local join selector and explains that the official form opens in effective-soft.
 
 The selector does not collect or submit personal data. It only chooses the correct external effective-soft URL.
+
+### `MeetUsSection`
+
+Outreach section for **anonymous visitors** (e.g. politicians wanting to meet the cell). Hidden for signed-in members (they are the hosts) and when the `meetUs` feature flag is disabled.
+
+Flow: visitor clicks "Continue with Google" → Google One Tap verifies identity → `POST /api/meetings/booking-link` checks for an existing active meeting → returns a single-use Calendly link → Calendly popup opens prefilled with the visitor's name/email → on `calendly.event_scheduled` message, shows a confirmation state. Repeat attempts before the meeting passes surface cancel/reschedule links from the 409 response.
+
+No data is persisted on our side. Configuration: `CALENDLY_API_TOKEN` env var + `meetUs` feature flag value = Calendly event-type URI (set via admin panel).
 
 ## Parliament Components
 
