@@ -85,19 +85,42 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 
 ## Backend API
 
-| Method | Path | Behavior |
-|--------|------|----------|
-| `GET` | `/api/health` | Returns server health and timestamp |
-| `GET` | `/api/parliament/:type` | Reads tracked entities from DB via `TrackedBills/Committees/MksRepository`, returns data |
-| `POST` | `/api/tracking/add` | Parses URL or raw ID, fetches metadata, upserts entity + tracking row in DB |
-| `DELETE` | `/api/tracking/:type/:id` | Removes a tracking row from DB by entity `id` |
-| `POST` | `/api/summarize` | Downloads a PDF/DOCX, summarizes it, and stores the result via `SummariesRepository` (DB) |
-| `GET` | `/api/feature-flags` | Returns all feature flags as a flat map `Record<string, { enabled, value }>` from the DB |
-| `POST` | `/api/analytics/join` | Records a Join-section click-through (`{ status, mode }`) via `JoinAnalyticsRepository`. Returns `200 { ok: true }`, `400` on invalid combo. Fire-and-forget from the client; no read endpoint (data is DB-only) |
-| `POST` | `/api/meetings/booking-link` | **Public.** Verifies a Google ID token per request (no allowlist/session), live-checks Calendly for an active meeting on the verified email, returns a single-use booking link — or `409` carrying the existing meeting. Rate-limited (10/min/IP, 5/min/email) |
-| `PUT` | `/api/admin/feature-flags/:name` | Admin: upsert a feature flag (`{ enabled, value }`) — e.g. the `meetUs` event-type URI, live without restart |
-
 `type` is one of `bill`, `committee`, or `mk`.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `/api/health` | health check |
+| `GET` | `/api/parliament/:type` | reads tracked entities from DB, returns typed data |
+| `POST` | `/api/tracking/add` | parse URL → fetch metadata → upsert entity + tracking row in DB |
+| `DELETE` | `/api/tracking/:type/:id` | remove tracking row from DB by entity `id` |
+| `POST` | `/api/summarize` | download PDF/DOCX → Claude → cache in DB (`summaries_cache`) |
+| `GET` | `/api/feature-flags` | all feature flags as `Record<string, { enabled, value }>` |
+| `GET` | `/api/bills/search` | search Knesset OData API |
+| `POST` | `/api/bills/track` | add bill by Knesset bill ID |
+| `GET` | `/api/bills/recent` | Bills Overview Recent tab (ordered by `BillID desc` or progress date) |
+| `GET` | `/api/bills/trending` | Bills Overview Trending tab (curated list hydrated from OData) |
+| `GET` | `/api/bills/policy-aligned` | Bills Overview Policy tab (keyword filter; hidden when flag off) |
+| `GET` | `/api/committees/list` | list committees from Knesset API |
+| `POST` | `/api/committees/track` | add committee by Knesset committee ID |
+| `GET` | `/api/committees/info/:id` | fetch committee detail from Knesset OData |
+| `GET` | `/api/mks/list` | list all Knesset members (cached 6 h) |
+| `GET` | `/api/mks/activity` | fetch MK activity by `siteId` |
+| `POST` | `/api/analytics/join` | fire-and-forget join click-through event |
+| `POST` | `/api/meetings/booking-link` | **Public.** Verify Google identity, check Calendly for active booking, return single-use link. Rate-limited 10/min/IP + 5/min/email; `409` with existing meeting on repeat |
+| `POST` | `/api/knesset/transition` | trigger Knesset transition (bump current number, re-stamp MK terms) |
+| `POST` | `/api/auth/google` | exchange Google ID token for access + refresh tokens |
+| `POST` | `/api/auth/refresh` | refresh access token |
+| `POST` | `/api/auth/logout` | revoke refresh token |
+| `GET` | `/api/auth/me` | current user profile (`requireAuth`) |
+| `PATCH` | `/api/auth/me` | update display name or `emailAlerts` preference (`requireAuth`) |
+| `GET` | `/api/admin/invites` | list allowlist emails (admin) |
+| `POST` | `/api/admin/invites` | add allowlist email + send invitation email (admin) |
+| `DELETE` | `/api/admin/invites/:email` | remove allowlist email (admin) |
+| `GET` | `/api/admin/users` | list all users (admin) |
+| `PATCH` | `/api/admin/users/:id/role` | update user role (admin) |
+| `GET` | `/api/admin/email-templates` | list email templates (admin) |
+| `PUT` | `/api/admin/email-templates/:name` | update email template (admin) |
+| `PUT` | `/api/admin/feature-flags/:name` | update feature flag `{ enabled, value }` (admin) |
 
 ## Auth & multi-user
 
@@ -108,13 +131,7 @@ sha256 hash is stored in `refresh_tokens` (invalidation = row deletion; reuse of
 token revokes all of a user's sessions). Roles: `admin`, `member`, and an internal `group`
 account that owns the public list. Middleware: `requireAuth` / `requireAdmin` / `optionalAuth`.
 
-| Method | Path | Notes |
-|---|---|---|
-| `POST` | `/api/auth/google` | verify Google ID token + allowlist → issue tokens |
-| `POST` | `/api/auth/refresh` | rotate refresh token → new access token |
-| `POST` | `/api/auth/logout` | delete the refresh token |
-| `GET` | `/api/auth/me` | current user |
-| `*` | `/api/admin/*` | invites (allowlist) + user role management (admin only) |
+Auth and admin API routes are listed in the Backend API table above.
 
 **Tracking scopes.** `GET /api/parliament/:type` returns the public **group** list by default;
 `?scope=personal` returns the caller's list. Writes (`/tracking/add`, `DELETE`,
