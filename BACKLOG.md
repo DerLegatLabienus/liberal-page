@@ -134,7 +134,7 @@ revisit. `server/services/storage-manager.ts`, `server/db/size.ts`; spec
 
 ## 18. Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms) (Priority: Medium)
 
-Phase 1 shipped the three-tab "Knesset Bills Overview" section (Recent = newest by `BillID desc`, Trending = manual curation, Policy-aligned = keyword match). Phase 2 enhancements, gated behind feature flags that already exist in `src/data/feature-flags.json`:
+Phase 1 shipped the three-tab "Knesset Bills Overview" section (Recent = newest by `BillID desc`, Trending = manual curation, Policy-aligned = keyword match). Phase 2 enhancements, gated behind feature flags stored in the DB (`FeatureFlagsRepository` / `useFeatureFlags`):
 
 - **`recentRanking: "progress"`** — re-rank the Recent tab by the most recent *genuine legislative event* per bill (committee/plenum session dates), not creation order. Building blocks verified: `KNS_CmtSessionItem` (`ItemID`/`ItemTypeID` + `CommitteeSessionID`) and `KNS_PlmSessionItem` join bills to sessions, which carry reliable `StartDate`. This is a backend aggregation subsystem — needs its own spec. Do NOT use `KNS_Bill.LastUpdatedDate` (administrative-only; surfaced old bills as "recent" in a prior incident).
 - **`trendingAlgorithm: "amendments" | "sponsorship"`** — currently fall back to `manual`. Require OData entities not yet verified (per-bill amendment count; cross-party co-sponsor join). Research needed before implementing.
