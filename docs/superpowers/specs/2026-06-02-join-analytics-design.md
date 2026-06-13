@@ -25,8 +25,7 @@ separated from business logic.
   own the outbound link, and the privacy stance forbids storing submission/identity data.
   Knowing completion would require the provider to support a webhook or a redirect-back
   "thank-you" URL — neither is confirmed. Deferred (see Out of Scope / backlog #16).
-- **Not exposed:** no read endpoint or UI. Data lives in the DB only, inspected via SQL.
-  A future admin-gated read view is backlog #16.
+- **Read endpoint:** `GET /api/admin/analytics/join` (admin only) returns `{ lifetime, daily[] }`. Displayed in the AdminPanel "Join analytics" section (✅ shipped 2026-06-13, backlog #16).
 
 ## Storage — single table
 
@@ -171,8 +170,7 @@ by the backend tests (the frontend call is a one-line fire-and-forget).
 
 ## Out of scope (tracked in backlog)
 
-- **#16 — Admin read view:** a `GET /api/analytics/join` + admin-panel UI, gated behind
-  auth, when an admin panel exists.
+- **#16 — Admin read view:** ✅ shipped 2026-06-13. `GET /api/admin/analytics/join` + AdminPanel "Join analytics" section.
 - **#17 — Site-wide product analytics:** a general per-feature analytics layer; large,
   someday/maybe.
 - **Completion tracking:** depends on the form provider offering a webhook or
