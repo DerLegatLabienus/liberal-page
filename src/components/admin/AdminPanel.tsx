@@ -75,7 +75,7 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent>
-        <div className="relative max-h-[85vh] overflow-y-auto rounded-xl bg-white p-5 text-slate-900 shadow-2xl" dir="rtl">
+        <div className="relative max-h-[85vh] overflow-y-auto rounded-xl bg-white p-5 text-slate-900 shadow-2xl" dir="ltr">
           <DialogClose className="absolute end-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-slate-100">
             <XIcon className="h-5 w-5" /><span className="sr-only">Close</span>
           </DialogClose>
