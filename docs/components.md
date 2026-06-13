@@ -97,7 +97,7 @@ Lives in the sticky header (right side). Renders nothing until the auth session 
 
 Modal dialog for admin-only site management. Opened from `AuthControl`; always `dir="rtl"` (internal Hebrew-first tool). All labels are in English regardless of the active site language.
 
-Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.list`, `featureFlags.get`). Has four sections:
+Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.list`, `featureFlags.get`, `analytics.joinSummary`). Has five sections:
 
 | Section | What it does |
 |---------|-------------|

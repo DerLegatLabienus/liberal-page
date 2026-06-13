@@ -222,8 +222,7 @@ totals; every other row is one day within a 1-year sliding window (pruned on wri
 | `breakdown` | jsonb | per-combination counts, keyed `'<status>:<mode>'` e.g. `{ "new:individual": 12 }` (default `{}`) |
 | `created_at` | timestamptz | set once on insert; on the `'lifetime'` row this is "since inception" |
 
-Written only by `JoinAnalyticsRepository` (`POST /api/analytics/join`). No read endpoint
-yet — inspected directly via SQL (admin read view is backlog #16).
+Written only by `JoinAnalyticsRepository` (`POST /api/analytics/join`). Read via `GET /api/admin/analytics/join` (admin only) — returns `{ lifetime, daily }` with daily rows sorted newest-first. Displayed in the AdminPanel "Join analytics" section.
 
 ### `bills`
 
