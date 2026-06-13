@@ -3,7 +3,7 @@ import express from 'express'
 import request from 'supertest'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
-import { users, allowedEmails, refreshTokens } from '../../server/db/schema'
+import { users, allowedEmails, refreshTokens, joinAnalytics } from '../../server/db/schema'
 import { issueAccessToken } from '../../server/services/auth-service'
 import adminRouter from '../../server/routes/admin'
 
@@ -75,5 +75,37 @@ describe('admin routes', () => {
     const other = await mkUser('admin2@x.com', 'admin')
     const res = await asAdmin('patch', `/api/admin/users/${other}/role`).send({ role: 'member' })
     expect(res.status).toBe(200)
+  })
+
+  describe('GET /analytics/join', () => {
+    beforeEach(async () => { await db.delete(joinAnalytics) })
+
+    it('returns 401 for anonymous, 403 for member', async () => {
+      expect((await request(app).get('/api/admin/analytics/join')).status).toBe(401)
+      expect((await asMember('get', '/api/admin/analytics/join')).status).toBe(403)
+    })
+
+    it('returns empty state when no data exists', async () => {
+      const res = await asAdmin('get', '/api/admin/analytics/join')
+      expect(res.status).toBe(200)
+      expect(res.body.lifetime).toBeNull()
+      expect(res.body.daily).toEqual([])
+    })
+
+    it('returns lifetime and daily rows newest-first', async () => {
+      const now = new Date()
+      await db.insert(joinAnalytics).values([
+        { bucket: 'lifetime', total: 5, breakdown: { 'new:individual': 3, 'renewal:couple': 2 }, createdAt: now },
+        { bucket: '2026-06-10', total: 2, breakdown: { 'new:individual': 2 }, createdAt: now },
+        { bucket: '2026-06-12', total: 3, breakdown: { 'new:individual': 1, 'renewal:couple': 2 }, createdAt: now },
+      ])
+      const res = await asAdmin('get', '/api/admin/analytics/join')
+      expect(res.status).toBe(200)
+      expect(res.body.lifetime.total).toBe(5)
+      expect(res.body.lifetime.breakdown['new:individual']).toBe(3)
+      expect(res.body.daily).toHaveLength(2)
+      expect(res.body.daily[0].bucket).toBe('2026-06-12') // newest first
+      expect(res.body.daily[1].bucket).toBe('2026-06-10')
+    })
   })
 })
