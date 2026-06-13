@@ -200,6 +200,16 @@ One row per flag.
 | `description` | text | |
 | `updated_at` | timestamptz | |
 
+Seeded flags (via `scripts/seed-db.ts`):
+
+| `name` | `enabled` | `value` | Purpose |
+|--------|-----------|---------|---------|
+| `trendingAlgorithm` | true | `"manual"` | Bills Overview trending tab source (`"manual"` \| `"amendments"` \| `"sponsorship"`) |
+| `recentRanking` | true | `"newest"` | Bills Overview recent tab order (`"newest"` \| `"progress"`) |
+| `policyFilter` | true | null | Bills Overview policy-aligned tab toggle |
+| `storagePressure` | true | `"450:2"` | Orphan-purge config `"limitMb:slackMb"`; `"-1"` disables |
+| `meetUs` | false | null | Calendly event-type URI for Meet Us booking; set value + enable via admin panel |
+
 ### `join_analytics`
 
 Single-table Join-section click-through analytics. One reserved row holds all-time
