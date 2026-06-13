@@ -8,9 +8,8 @@
 | Build/dev server | Vite 5.4 on `http://localhost:5173` |
 | Styling | Tailwind CSS + shadcn-style UI primitives in `src/components/ui/` |
 | Backend | Express 5 + `tsx`, running on `http://localhost:3001` |
-| Data | Postgres via Neon/Docker (entity, tracking, cache, config, feature flags) + `src/data/*.json` for static content only |
-| External data | oknesset.org REST API + Knesset OData API |
-| Summaries | Anthropic SDK, PDF/DOCX text extraction, MD5 cache |
+| Data | Postgres via Neon/Docker — Drizzle ORM + `node-postgres`; pglite in tests. Entity, tracking, cache, config, feature flags, auth, email. `src/data/*.json` for static content only |
+| External data | oknesset.org REST API, Knesset OData API (bills/committees/MKs), Knesset website (MK activity), Calendly API (Meet Us booking), Resend (email), Anthropic API (committee summaries) |
 | Tests | Vitest + Testing Library |
 | Linting | ESLint 9 with react-hooks + react-refresh plugins |
 
