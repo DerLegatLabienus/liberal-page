@@ -103,10 +103,31 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `POST`   | `/api/summarize`              | download PDF/DOCX → Claude → cache in DB (summaries_cache) |
 | `GET`    | `/api/bills/search`           | search Knesset OData API |
 | `POST`   | `/api/bills/track`            | add bill by Knesset bill ID |
+| `GET`    | `/api/bills/recent`           | Bills Overview Recent tab (ordered by BillID desc or progress date) |
+| `GET`    | `/api/bills/trending`         | Bills Overview Trending tab (curated list hydrated from OData) |
+| `GET`    | `/api/bills/policy-aligned`   | Bills Overview Policy tab (keyword filter; hidden when flag off) |
 | `GET`    | `/api/committees/list`        | list committees from Knesset API |
 | `POST`   | `/api/committees/track`       | add committee by Knesset committee ID |
+| `GET`    | `/api/committees/info/:id`    | fetch committee detail from Knesset OData |
 | `GET`    | `/api/mks/list`               | list all Knesset members (cached 6 h) |
 | `GET`    | `/api/mks/activity`           | fetch MK activity by `siteId` |
+| `GET`    | `/api/feature-flags`          | all feature flags for the frontend |
+| `POST`   | `/api/analytics/join`         | fire-and-forget join click-through event |
+| `POST`   | `/api/auth/google`            | exchange Google ID token for access + refresh tokens |
+| `POST`   | `/api/auth/refresh`           | refresh access token |
+| `POST`   | `/api/auth/logout`            | revoke refresh token |
+| `GET`    | `/api/auth/me`                | current user profile (requireAuth) |
+| `PATCH`  | `/api/auth/me`                | update display name (requireAuth) |
+| `POST`   | `/api/meetings/booking-link`  | **Public.** Verify Google identity, check Calendly for active booking, return single-use link |
+| `POST`   | `/api/knesset/transition`     | trigger Knesset transition (bump current number, re-stamp MK terms) |
+| `GET`    | `/api/admin/invites`          | list allowlist emails (admin) |
+| `POST`   | `/api/admin/invites`          | add allowlist email + send invitation (admin) |
+| `DELETE` | `/api/admin/invites/:email`   | remove allowlist email (admin) |
+| `GET`    | `/api/admin/users`            | list all users (admin) |
+| `PATCH`  | `/api/admin/users/:id/role`   | update user role (admin) |
+| `GET`    | `/api/admin/email-templates`  | list email templates (admin) |
+| `PUT`    | `/api/admin/email-templates/:name` | update email template (admin) |
+| `PUT`    | `/api/admin/feature-flags/:name`   | update feature flag enabled/value (admin) |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
