@@ -6,13 +6,13 @@ The site combines public movement content with a practical Knesset tracking tool
 
 ## What This Project Includes
 
-- A responsive public homepage with movement messaging, gallery content, FAQ, and join calls to action.
+- A responsive public homepage with movement messaging, gallery content, FAQ, join calls to action, and a Calendly-backed "Meet Us" section for external visitors.
 - Hebrew/English UI support, with the parliamentary tracker currently enabled for Hebrew users.
 - A Knesset tracker drawer for monitored bills, committees, and MKs.
-- Search and tracking flows for Knesset bills, committees, and members.
-- Local JSON-backed content and tracking data under `src/data/`.
-- An Express API for tracking actions, Knesset data refreshes, summaries, and cache-backed lookup routes.
-- Polling services that refresh tracked parliamentary data and mark new updates.
+- Search and tracking flows for Knesset bills, committees, and members via OData comboboxes.
+- Invite-only Google sign-in with JWT sessions, per-user personal tracking lists, email alerts on bill status changes, and an admin panel for managing invites, users, email templates, and feature flags.
+- A background poller that refreshes tracked parliamentary data, sends digest emails, and reclaims storage automatically.
+- An Express API for tracking actions, Knesset data refreshes, AI-backed protocol summaries, and analytics.
 
 ## Tech Stack
 
@@ -21,8 +21,8 @@ The site combines public movement content with a practical Knesset tracking tool
 | Frontend | React 18, TypeScript, Vite |
 | Styling | Tailwind CSS, shadcn-style local UI primitives |
 | Backend | Express 5, `tsx` |
-| Data | JSON files in `src/data/` |
-| External sources | Knesset OData API, Knesset website APIs, oknesset.org |
+| Database | Postgres (Drizzle ORM + `node-postgres`; pglite in tests) |
+| External sources | Knesset OData API, Knesset website APIs, oknesset.org, Calendly |
 | Tests | Vitest, Testing Library |
 
 ## Local Development
@@ -33,10 +33,12 @@ Install dependencies:
 npm install
 ```
 
-Run the frontend and backend together:
+Copy `.env.example` → `.env`, then start the database:
 
 ```bash
-npm run dev
+npm run db:up      # start local Postgres (Docker)
+npm run db:seed    # load test data (one-time)
+npm run dev        # frontend + backend together
 ```
 
 The frontend runs at `http://localhost:5173` and proxies `/api/*` requests to the Express backend at `http://localhost:3001`.
@@ -51,22 +53,28 @@ npm run lint
 npm test
 ```
 
+See `CLAUDE.md` for the full command reference.
+
 ## Project Structure
 
 ```text
 src/
   components/
-    layout/       Header, footer, Knesset tracker drawer
-    sections/     Homepage sections
+    admin/        Admin panel (invites, users, templates, flags)
+    layout/       Header, footer, auth control, Knesset tracker drawer
+    sections/     Homepage sections (Hero, About, Gallery, FAQ, Join, MeetUs)
     parliament/   Bill, committee, MK, and tracking UI
     ui/           Local UI primitives
-  data/           JSON content and local datastore
-  hooks/          Direction, parliament, and lookup hooks
-  lib/            API client helpers
+  data/           Static JSON content (about, faq, gallery, site — not tracking data)
+  hooks/          Direction, parliament, feature flags, and lookup hooks
+  lib/            API client, auth context, toast context
 server/
   routes/         Express API routes
-  services/       Knesset integrations, polling, summarization
-  repositories/   JSON cache repositories
+  services/       Knesset integrations, polling, email, Calendly, summarization
+  repositories/   Postgres repositories (one per domain)
+  db/             Drizzle schema, migrations, client factory
+scripts/
+  seed-data/      Curated baseline (bills, MKs, committees, feature flags)
 tests/            Component, unit, and server tests
 docs/             Architecture and project documentation
 ```
@@ -81,4 +89,4 @@ docs/             Architecture and project documentation
 
 ## Notes
 
-This repository is the application code for the movement website and tracker. It is not an official Knesset service. Parliamentary data is fetched from public sources and cached locally for the site experience.
+This repository is the application code for the movement website and tracker. It is not an official Knesset service. Parliamentary data is fetched from public sources and cached in Postgres for the site experience.
