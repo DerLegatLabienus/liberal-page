@@ -38,29 +38,46 @@ Starting the backend also starts the poller. The poller updates Postgres via rep
 ```text
 liberal-page/
 ├── src/
-│   ├── App.tsx                  # Entry: public page + ParliamentDrawer
+│   ├── App.tsx                  # Root: public page + ParliamentDrawer
 │   ├── main.tsx
 │   ├── index.css                # Tailwind, shadcn imports, theme tokens, fonts
 │   ├── types.ts                 # Shared frontend/server TypeScript interfaces
 │   ├── components/
-│   │   ├── layout/              # Header, Footer, ParliamentDrawer
-│   │   ├── sections/            # Hero, ParliamentStrip, About, Gallery, FAQ, Join
-│   │   ├── parliament/          # tracking input and bill/committee/MK cards
-│   │   └── ui/                  # shadcn-style primitives
+│   │   ├── admin/               # AdminPanel (invites, users, templates, flags)
+│   │   ├── layout/              # Header (+ AuthControl), Footer, ParliamentDrawer
+│   │   ├── sections/            # Hero, ParliamentStrip, About, Gallery, FAQ, Join, MeetUs
+│   │   ├── parliament/          # AddTrackingInput, Bill/Committee/MkCard, comboboxes, BillOverviewRow
+│   │   └── ui/                  # shadcn-style primitives (button, card, sheet, tabs, accordion…)
+│   ├── contexts/
+│   │   ├── AuthContext.tsx      # Google sign-in state, token refresh, useAuth / useAuthOptional
+│   │   └── ToastContext.tsx     # transient toast notifications
 │   ├── hooks/
-│   │   ├── useDirection.ts      # reads document.documentElement.dir
-│   │   └── useParliament.ts     # fetches /api/parliament/:type
+│   │   ├── useDirection.ts      # reads document.documentElement.dir → 'rtl' | 'ltr'
+│   │   ├── useParliament.ts     # fetches /api/parliament/:type (tracked entities)
+│   │   ├── useFeatureFlags.ts   # fetches /api/feature-flags
+│   │   └── useBillsOverview.ts  # drives the three bills overview tabs
 │   ├── lib/
-│   │   └── api-client.ts        # typed wrappers around /api routes
-│   └── data/                    # JSON datastore and static content
+│   │   └── api-client.ts        # typed wrappers around all /api routes
+│   └── data/                    # Static JSON content only (about, faq, gallery, site; not tracking data)
 ├── server/
-│   ├── index.ts                 # Express app, routes, poller startup
-│   ├── routes/                  # tracking, parliament, summarize
-│   └── services/                # oknesset, Knesset OData, summarizer, poller, URL parser
+│   ├── index.ts                 # Express app, middleware, routes, poller startup, fetch-logger
+│   ├── lib/
+│   │   └── fetch-logger.ts      # globalThis.fetch interceptor → [api] outbound request logs
+│   ├── middleware/
+│   │   └── auth.ts              # requireAuth / requireAdmin / optionalAuth JWT middleware
+│   ├── routes/                  # bills, committees, mks, tracking, parliament, auth, admin, analytics, meetings, knesset
+│   ├── services/                # knesset-bills, knesset-committees, poller, email, calendly, summarizer, odata, url-parser, …
+│   ├── repositories/            # one class per domain (Bills, Committees, Mks, Tracked*, Users, FeatureFlags, …)
+│   └── db/
+│       ├── client.ts            # driver-selecting factory (pglite in tests, node-postgres in prod)
+│       ├── migrate.ts           # Drizzle migration runner on server startup
+│       └── schema/              # per-domain Drizzle schema files
+├── scripts/
+│   └── seed-data/               # curated baseline JSON loaded by db:seed
 ├── tests/
 ├── docs/
 ├── BACKLOG.md
-├── package.json
+├── render.yaml                  # Render deployment config
 └── vite.config.ts               # alias + /api proxy
 ```
 
@@ -69,7 +86,7 @@ liberal-page/
 `App.tsx` renders a single scrolling Hebrew homepage:
 
 ```text
-Header
+Header (includes AuthControl — Google sign-in / user menu / admin link)
 main
   HeroSection
   ParliamentStrip
@@ -77,6 +94,7 @@ main
   GallerySection
   FaqSection
   JoinSection
+  MeetUsSection (anonymous visitors only; hidden when meetUs flag off)
 Footer
 ParliamentDrawer
 ```
