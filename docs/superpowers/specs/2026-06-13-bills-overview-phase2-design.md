@@ -1,10 +1,28 @@
 # Design: Knesset Bills Overview — Phase 2 (recentRanking: "progress")
 
+✅ **Implemented 2026-06-13.** `recentRanking: "progress"` is live in `server/services/knesset-bills.ts`. Activate via admin panel (set `recentRanking` flag value to `"progress"`).
+
 ## Context
 
 Phase 1 shipped the three-tab Bills Overview with `recentRanking: "newest"` (order by `BillID desc`). The `recentRanking` flag exists in the DB but the backend ignores it — `fetchRecentBills` always uses `BillID desc`. This spec covers switching to `"progress"`: re-rank the Recent tab by the most recent *genuine legislative event* per bill (committee session appearance), so politically active bills surface over newly-introduced but dormant ones.
 
-**Out of scope:** `trendingAlgorithm: "amendments" | "sponsorship"` — those require unverified OData entities and are not addressed here.
+**Out of scope:** `trendingAlgorithm: "amendments" | "sponsorship"` — those require OData entities verified below (2026-06-13). See "Trending Algorithm Research" section.
+
+## Trending Algorithm Research (live-verified 2026-06-13)
+
+Two OData entities are available for future trending algorithms:
+
+### `KNS_BillUnion` — merged bills
+Fields: `BillUnionID`, `MainBillID`, `UnionBillID`, `LastUpdatedDate`. A row means `UnionBillID` was merged INTO `MainBillID`. Count of `MainBillID` appearances = number of bills unified into this bill — a proxy for legislative prominence. Filter: `$filter=MainBillID eq X or MainBillID eq Y or ...`.
+
+**Caveat:** Recent Knesset 25 bills (BillIDs ~1044xxx) return empty results — the unification process takes months; newly-introduced bills have no unions yet. Not useful for trending in the current Knesset until more bills advance.
+
+### `KNS_BillInitiator` — bill initiators / co-sponsors
+Fields: `BillInitiatorID`, `BillID`, `PersonID`, `IsInitiator`, `Ordinal`, `LastUpdatedDate`. All entries observed with `IsInitiator=true` (all co-sponsors marked as initiators). Count of `PersonID` per `BillID` = number of co-sponsors. Cross-party sponsorship requires joining `PersonID` to faction data (`KNS_PersonToPosition` or `KNS_MkSiteCode`). Filter: `$filter=BillID eq X or BillID eq Y or ...`.
+
+**Caveat:** Knesset 25 bills may have sparse data depending on how recently the bill was introduced. Verified on historical bills (e.g. BillID=29803 had 7 initiators).
+
+**Implementation note:** both follow the same `or`-filter / pool pattern as `KNS_CmtSessionItem` in the progress-ranking implementation. No architectural surprises.
 
 ## OData Schema (live-verified 2026-06-13)
 
