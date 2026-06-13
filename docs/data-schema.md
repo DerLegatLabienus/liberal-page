@@ -420,6 +420,31 @@ Active sessions. Only the sha256 hash is stored; validity = row exists and not e
 | `expires_at` | timestamptz | |
 | `created_at` | timestamptz | |
 
+### `email_templates`
+
+DB-stored transactional email templates, editable via the admin panel without redeploy.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `name` | text PK | `'invite'`, `'bill_digest'`, `'bill_digest_item'`, `'_layout'` |
+| `subject` | text | |
+| `html` | text | Handlebars template |
+| `updated_at` | timestamptz | |
+
+### `sent_emails`
+
+Send ledger; polled each cycle to advance delivery status from Resend's `last_event`. First table trimmed under storage pressure.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | text PK | Resend message id, or `failed:<uuid>` on send error |
+| `to_email` | text | redacted in logs |
+| `template` | text | |
+| `status` | text | last known Resend status: `sent`, `delivered`, `bounced`, `failed`, … |
+| `last_status_at` | timestamptz | when `status` was last observed |
+| `error` | text | nullable; set on send failure |
+| `created_at` | timestamptz | send date |
+
 ### `tracked_bills`
 
 | Column | Type | Notes |
