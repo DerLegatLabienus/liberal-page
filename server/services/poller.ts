@@ -7,7 +7,7 @@ import { MksRepository } from '../repositories/mks-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 import { renderFragment } from './email-render'
 import { sendEmailsThrottled, type SendArgs } from './email'
-import { getCurrentKnesset } from './knesset-config'
+import { getCurrentKnesset, detectKnessetTransition } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
 import { relieveStoragePressureIfNeeded } from './storage-manager'
@@ -193,6 +193,15 @@ async function pollMks(): Promise<boolean> {
 
 export async function runPollCycle(): Promise<boolean> {
   console.log('Poller: starting poll cycle', new Date().toISOString())
+
+  // Check for Knesset transition before entity polls so getCurrentKnesset() reflects the
+  // new number in the same cycle. Isolated — a failed check never aborts entity polls.
+  try {
+    const transitioned = await detectKnessetTransition()
+    if (transitioned) console.log('Poller: Knesset transition detected and applied')
+  } catch (err) {
+    console.error('Poller: Knesset transition check failed:', err)
+  }
 
   // Refresh the active-committee list and reconcile closure status. Isolated so a
   // committee-list failure never aborts the entity polls below, and not counted

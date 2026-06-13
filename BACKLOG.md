@@ -96,6 +96,10 @@ When the Knesset is dispersed or a new Knesset is elected, MKs and committees mu
 **Notes:**
 - Israeli elections can be called with little notice — this should be treated as a supported runtime event, not a manual migration
 
+### ✅ Auto-detect Knesset Transition in Poller — 2026-06-13
+
+`detectKnessetTransition()` was already implemented in `server/services/knesset-config.ts` (queries `KNS_PersonToPosition?PositionID=43` for the current Speaker's `KnessetNum`; runs `runTransition()` if it exceeds `config.currentKnesset`). The poller now calls it once per cycle, isolated, **before** entity polls so `getCurrentKnesset()` reflects the new number in the same cycle. A detected transition is logged. A failed check never aborts entity polling. Manual trigger via `POST /api/knesset/transition` remains available for API-lag cases.
+
 ### ✅ Media Migration — Fetch Event Photos from likudliberal.org — 2026-05-25
 
 Playwright script crawls likudliberal.org, downloads 11 images to `public/images/gallery/`, rewrites `src/data/gallery.json` to use local paths. Extension whitelist prevents non-image assets from being captured. Script at `scripts/migrate-media.ts` — run with `npx tsx scripts/migrate-media.ts`.
