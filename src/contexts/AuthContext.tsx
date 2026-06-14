@@ -28,6 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [ready, setReady] = useState(false)
   const refreshToken = useRef<string | null>(localStorage.getItem(REFRESH_KEY))
+  // Deduplicates concurrent refresh calls: if multiple 401s fire at the same time they all
+  // await the same in-flight promise instead of each rotating the token (which triggers the
+  // server's reuse-detection and wipes all sessions).
+  const refreshInFlight = useRef<Promise<string | null> | null>(null)
 
   const updateUser = useCallback((patch: Partial<AuthUser>) => {
     setUser((u) => (u ? { ...u, ...patch } : u))
@@ -48,16 +52,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Feed api-client's 401 retry: refresh and return a fresh access token, else sign out.
-  const refresh = useCallback(async (): Promise<string | null> => {
-    if (!refreshToken.current) return null
-    try {
-      const res = await api.auth.refresh(refreshToken.current)
-      apply(res.accessToken, res.refreshToken, res.user)
-      return res.accessToken
-    } catch {
-      clear()
-      return null
-    }
+  // Concurrent callers share a single in-flight request so the refresh token is only
+  // rotated once — multiple simultaneous 401s would otherwise each attempt rotation,
+  // triggering server-side reuse detection and wiping all sessions.
+  const refresh = useCallback((): Promise<string | null> => {
+    if (!refreshToken.current) return Promise.resolve(null)
+    if (refreshInFlight.current) return refreshInFlight.current
+    refreshInFlight.current = (async () => {
+      try {
+        const res = await api.auth.refresh(refreshToken.current!)
+        apply(res.accessToken, res.refreshToken, res.user)
+        return res.accessToken
+      } catch {
+        clear()
+        return null
+      } finally {
+        refreshInFlight.current = null
+      }
+    })()
+    return refreshInFlight.current
   }, [apply, clear])
 
   const signIn = useCallback(async (googleIdToken: string) => {
