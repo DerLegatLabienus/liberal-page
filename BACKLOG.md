@@ -483,6 +483,31 @@ are therefore unindexed (sequential scans):
 Suggested single migration: add the indexes above (`CREATE INDEX CONCURRENTLY` in prod) — small,
 high-leverage, no app changes.
 
+### 2026-06-14 — Review pass 6: email / notifications subsystem
+
+The email service (`server/services/email.ts`) is solid — lazy client, address redaction in
+logs, a `sent_emails` ledger, never-throws contract. Findings are about broadcast scale and
+crash-safety:
+
+- **[Performance] Broadcasts send sequentially with a 500 ms gap.** `sendEmailsThrottled`
+  (`email.ts`) loops one `sendEmail` at a time spaced 500 ms apart, so a notification to N
+  members takes ~N×500 ms (100 members ≈ 50 s) — and it runs inside the poll cycle
+  (`notifyPinnedLetters`, `sendBillAlerts`), blocking it. Switch broadcasts to Resend's batch
+  API (`resend.batch.send`, up to 100/call with per-message html) to cut wall-clock and
+  round-trips.
+- **[Correctness/UX] Broadcasts aren't crash-safe → duplicate emails.** `notifyPinnedLetters`
+  (`server/services/letter-notifier.ts`) calls `sendEmailsThrottled(...)` and only then
+  `markPinNotified(...)`. If the process dies mid-broadcast, the next cycle re-sends to
+  *everyone*, including those already emailed. Bill alerts have the same shape. Track
+  per-recipient delivery, or stamp state before sending and reconcile, to make re-runs
+  idempotent.
+- **[Resilience] No retry on transient send failure.** A failed `resend.emails.send` is recorded
+  `failed` and dropped — a blip loses an invite/alert permanently. Add a bounded retry
+  (exponential backoff) or a small retry queue drained by the poller off the `sent_emails`
+  ledger.
+- *(Checked, OK: `sent_emails` ledger is pruned under storage pressure via `SENT_EMAIL_PURGE_BATCH`
+  (§10); delivery-status polling is capped by `EMAIL_STATUS_POLL_CAP`.)*
+
 ---
 
 ## Completed
