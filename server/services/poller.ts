@@ -12,6 +12,7 @@ import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
 import { relieveStoragePressureIfNeeded } from './storage-manager'
 import { pollDeliveryStatus } from './email-delivery-poll'
+import { notifyPinnedLetters } from './letter-notifier'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
 import type { CommitteeSession } from '../../src/types'
@@ -223,6 +224,13 @@ export async function runPollCycle(): Promise<boolean> {
     await relieveStoragePressureIfNeeded(getDatabaseSizeBytes)
   } catch (err) {
     console.error('Poller: orphan purge failed:', err)
+  }
+
+  // Notify members of newly pinned letters. Isolated; best-effort.
+  try {
+    await notifyPinnedLetters()
+  } catch (err) {
+    console.error('Poller: letter pin notification failed:', err)
   }
 
   // Pull Resend delivery status for in-flight emails (log on change). Isolated; best-effort.

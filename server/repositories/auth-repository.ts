@@ -1,4 +1,4 @@
-import { eq, lt, ne, count } from 'drizzle-orm'
+import { eq, lt, ne, count, and } from 'drizzle-orm'
 import { db } from '../db/client'
 import { users, allowedEmails, refreshTokens } from '../db/schema'
 
@@ -114,5 +114,14 @@ export class AuthRepository {
 
   async setEmailAlerts(id: number, value: boolean): Promise<void> {
     await db.update(users).set({ emailAlerts: value }).where(eq(users.id, id))
+  }
+
+  /** Members with email alerts enabled — excludes group and admin accounts. */
+  async listMembersForAlerts(): Promise<{ email: string; name: string | null }[]> {
+    const rows = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(and(eq(users.role, 'member'), eq(users.emailAlerts, true)))
+    return rows.filter((r): r is { email: string; name: string | null } => r.email != null)
   }
 }
