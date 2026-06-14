@@ -7,7 +7,8 @@ import type { LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate } f
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
 
 export default function AdminLettersPage() {
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  const isAdmin = ready && user?.role === 'admin'
   const [tab, setTab] = useState<Tab>('letters')
   const [letters, setLetters] = useState<LetterWithStats[]>([])
   const [tags, setTags] = useState<LetterIssueTag[]>([])
@@ -15,7 +16,9 @@ export default function AdminLettersPage() {
   const [templates, setTemplates] = useState<LetterTemplate[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { refresh() }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Only fetch once the session is restored and confirmed admin — otherwise the request
+  // fires before there's an access token and 401s on a fresh page load / deep link.
+  useEffect(() => { if (isAdmin) refresh() }, [tab, isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refresh() {
     setLoading(true)
@@ -29,7 +32,13 @@ export default function AdminLettersPage() {
     }
   }
 
-  if (!user || user.role !== 'admin') {
+  // Wait for session restore before deciding access — a fresh load starts with user=null
+  // until the refresh token is exchanged, which would otherwise flash "access required".
+  if (!ready) {
+    return <div className="p-8 text-center text-muted-foreground">Loading…</div>
+  }
+
+  if (!isAdmin) {
     return <div className="p-8 text-center text-muted-foreground">Admin access required.</div>
   }
 

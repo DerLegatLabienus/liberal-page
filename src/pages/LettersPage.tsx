@@ -11,23 +11,42 @@ const PRIORITY_LABELS: Record<string, string> = { urgent: 'דחוף', high: 'ג�
 
 export default function LettersPage() {
   const flags = useFeatureFlags()
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  const authed = ready && !!user
   const [letters, setLetters] = useState<Letter[]>([])
   const [tags, setTags] = useState<LetterIssueTag[]>([])
   const [selectedTags, setSelectedTags] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!authed) return
     api.letters.tags().then((r) => setTags(r.tags)).catch(() => {})
-  }, [])
+  }, [authed])
 
+  // Only fetch once the session is restored — these endpoints require auth, so firing
+  // before the access token exists would 401 on a fresh page load / deep link.
   useEffect(() => {
+    if (!authed) return
     setLoading(true)
     api.letters.list(selectedTags.length ? selectedTags : undefined)
       .then((r) => setLetters(r.letters))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [selectedTags])
+  }, [selectedTags, authed])
+
+  // Wait for session restore before deciding access, otherwise a fresh load flashes the
+  // "members only" message while the refresh token is still being exchanged.
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
+        <main className="flex min-h-[60vh] items-center justify-center">
+          <p className="text-muted-foreground">טוען…</p>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   if (!flags?.lettersEnabled?.enabled || !user) {
     return (

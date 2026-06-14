@@ -3,23 +3,28 @@ import { useParams, Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { api } from '@/lib/api-client'
+import { useAuth } from '@/contexts/AuthContext'
 import type { LetterDetailResponse } from '@/types'
 
 export default function LetterDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { user, ready } = useAuth()
+  const authed = ready && !!user
   const [data, setData] = useState<LetterDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<'html' | 'addresses' | null>(null)
 
+  // Wait for session restore — the detail endpoint requires auth, so fetching before the
+  // access token exists would 401 on a fresh load and flash "letter not found".
   useEffect(() => {
-    if (!id) return
+    if (!id || !authed) return
     setLoading(true)
     api.letters.detail(Number(id))
       .then(setData)
       .catch(() => setError('המכתב לא נמצא'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, authed])
 
   const handleMailto = useCallback(() => {
     if (!data || !id) return
@@ -62,8 +67,9 @@ export default function LetterDetailPage() {
           ← חזרה למכתבים
         </Link>
 
-        {loading && <p className="text-muted-foreground">טוען...</p>}
-        {error && <p className="text-destructive">{error}</p>}
+        {ready && !user && <p className="text-muted-foreground">הגישה לדף זה מוגבלת לחברים מורשים.</p>}
+        {(!ready || (authed && loading)) && <p className="text-muted-foreground">טוען...</p>}
+        {authed && error && <p className="text-destructive">{error}</p>}
 
         {data && (
           <div className="grid gap-8 md:grid-cols-[350px_1fr]">
