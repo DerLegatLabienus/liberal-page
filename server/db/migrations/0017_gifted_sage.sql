@@ -58,18 +58,11 @@ CREATE TABLE "letters" (
 ALTER TABLE "letter_analytics" ADD CONSTRAINT "letter_analytics_letter_id_letters_id_fk" FOREIGN KEY ("letter_id") REFERENCES "public"."letters"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "letters" ADD CONSTRAINT "letters_template_id_letter_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."letter_templates"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "letters" ADD CONSTRAINT "letters_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
-
--- Seed the lettersEnabled feature flag (default off until feature is ready)
+--> statement-breakpoint
 INSERT INTO "feature_flags" ("name", "enabled", "value", "description", "updated_at")
 VALUES ('lettersEnabled', false, '', 'Enables the member-facing /letters page', now())
 ON CONFLICT ("name") DO NOTHING;
-
--- Seed a default letter_pin email template for pin notifications
+--> statement-breakpoint
 INSERT INTO "email_templates" ("name", "subject", "html", "updated_at")
-VALUES (
-  'letter_pin',
-  'מכתב חדש ממוקד ממתין לשליחה שלך',
-  '<p>שלום {{name}},</p><p>המכתבים הבאים ממוקדים ודורשים תשומת לבך:</p>{{lettersList}}',
-  now()
-)
+VALUES ('letter_pin', 'מכתב חדש ממוקד ממתין לשליחה שלך', '<p>שלום {{name}},</p><p>המכתבים הבאים ממוקדים ודורשים תשומת לבך:</p>{{lettersList}}', now())
 ON CONFLICT ("name") DO NOTHING;
