@@ -180,3 +180,62 @@ export interface TrendingBillEntry {
 
 export interface FeatureFlag { enabled: boolean; value: string | null }
 export type FeatureFlags = Record<string, FeatureFlag>
+
+export interface LetterAddress {
+  email: string
+  display_name: string
+  contact_id?: number
+}
+
+export interface LetterIssueTag {
+  id: number
+  name: string
+  slug: string
+  createdAt: string
+}
+
+export interface LetterContact {
+  id: number
+  displayName: string
+  email: string
+  category: string
+  createdAt: string
+}
+
+export interface LetterTemplate {
+  id: number
+  name: string
+  html: string
+  updatedAt: string
+}
+
+export interface Letter {
+  id: number
+  title: string
+  subject: string
+  bodyHtml: string
+  bodyPlain: string
+  templateId: number | null
+  toAddresses: LetterAddress[]
+  ccAddresses: LetterAddress[]
+  bccAddresses: LetterAddress[]
+  issueTagIds: number[]
+  status: 'draft' | 'published'
+  priority: 'normal' | 'high' | 'urgent'
+  pinnedAt: string | null
+  activityScore: number
+  publishedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LetterWithStats extends Letter {
+  totalSends: number
+  breakdown: Record<string, number>
+}
+
+export interface LetterDetailResponse {
+  letter: Letter
+  renderedHtml: string
+  mailtoUrl: string
+}

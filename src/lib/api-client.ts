@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags, Letter, LetterWithStats, LetterDetailResponse, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
@@ -149,6 +149,49 @@ export const api = {
     analytics: {
       joinSummary: () => apiFetch<JoinAnalyticsData>('/admin/analytics/join'),
     },
+    letters: {
+      list: () => apiFetch<{ letters: LetterWithStats[] }>('/admin/letters'),
+      create: (body: Partial<Letter>) =>
+        apiFetch<{ letter: Letter }>('/admin/letters', { method: 'POST', body: JSON.stringify(body) }),
+      update: (id: number, body: Partial<Letter>) =>
+        apiFetch<{ letter: Letter }>(`/admin/letters/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/${id}`, { method: 'DELETE' }),
+      togglePin: (id: number, pinned: boolean) =>
+        apiFetch<{ letter: Letter }>(`/admin/letters/${id}/pin`, { method: 'PATCH', body: JSON.stringify({ pinned }) }),
+      tags: {
+        list: () => apiFetch<{ tags: LetterIssueTag[] }>('/admin/letters/tags'),
+        create: (body: { name: string; slug: string }) =>
+          apiFetch<{ tag: LetterIssueTag }>('/admin/letters/tags', { method: 'POST', body: JSON.stringify(body) }),
+        update: (id: number, body: { name: string; slug: string }) =>
+          apiFetch<{ ok: boolean }>(`/admin/letters/tags/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+        delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/tags/${id}`, { method: 'DELETE' }),
+      },
+      contacts: {
+        list: (q?: string) =>
+          apiFetch<{ contacts: LetterContact[] }>(`/admin/letters/contacts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+        create: (body: { displayName: string; email: string; category: string }) =>
+          apiFetch<{ contact: LetterContact }>('/admin/letters/contacts', { method: 'POST', body: JSON.stringify(body) }),
+        update: (id: number, body: { displayName: string; email: string; category: string }) =>
+          apiFetch<{ ok: boolean }>(`/admin/letters/contacts/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+        delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/contacts/${id}`, { method: 'DELETE' }),
+      },
+      letterTemplates: {
+        list: () => apiFetch<{ templates: LetterTemplate[] }>('/admin/letters/templates'),
+        create: (body: { name: string; html: string }) =>
+          apiFetch<{ template: LetterTemplate }>('/admin/letters/templates', { method: 'POST', body: JSON.stringify(body) }),
+        update: (id: number, body: { name?: string; html?: string }) =>
+          apiFetch<{ ok: boolean }>(`/admin/letters/templates/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+        delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/templates/${id}`, { method: 'DELETE' }),
+      },
+    },
+  },
+  letters: {
+    list: (tags?: number[]) =>
+      apiFetch<{ letters: Letter[] }>(`/letters${tags && tags.length ? `?tags=${tags.join(',')}` : ''}`),
+    tags: () => apiFetch<{ tags: LetterIssueTag[] }>('/letters/tags'),
+    detail: (id: number) => apiFetch<LetterDetailResponse>(`/letters/${id}`),
+    recordSend: (id: number, action: 'mailto' | 'copy') =>
+      apiFetch<{ ok: boolean }>(`/letters/${id}/send`, { method: 'POST', body: JSON.stringify({ action }) }),
   },
 }
 
