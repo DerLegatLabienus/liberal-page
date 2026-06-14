@@ -319,7 +319,7 @@ this alongside its other data on open and shows: all-time total click count, per
 sorted by count, and a collapsible last-14-days list. TypeScript types added to `api-client.ts`
 (`JoinAnalyticsRow`, `JoinAnalyticsData`).
 
-## 19. Civic Letters — Member Letter-Sending System (Priority: Medium)
+## 19. Civic Letters — Member Letter-Sending System (Priority: Medium) ✅ SHIPPED 2026-06-14
 
 Admin-curated letters addressed to MKs, ministers, and committees. Authenticated members browse, preview, and send them from their own email clients. The platform provides the full content; the member provides the sender identity.
 
