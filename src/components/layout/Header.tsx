@@ -81,7 +81,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
               to="/letters"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              מכתבים
+              {t('ui.nav_letters')}
             </Link>
           )}
           <button
@@ -137,7 +137,7 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
                 className="text-sm text-muted-foreground"
                 onClick={() => setMobileOpen(false)}
               >
-                מכתבים
+                {t('ui.nav_letters')}
               </Link>
             )}
             <button
