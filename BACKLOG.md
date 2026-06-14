@@ -415,6 +415,27 @@ Each is small and independent; promote to its own numbered item if it grows.
   wall-clock time — but weigh against Knesset API politeness/rate-limits; keep concurrency low
   and jittered. Document the chosen limit.
 
+### 2026-06-14 — Review pass 3: auth & middleware / security surfaces
+
+- **[Security — SSRF, high] `POST /api/summarize` fetches an arbitrary caller-supplied URL,
+  unauthenticated.** The route (`server/routes/summarize.ts`) takes `{ url }` and calls
+  `summarizer.summarizeUrl(url)` → `fetch(url)` server-side with no auth, no host allowlist,
+  no private-IP guard, no rate limit. An attacker can point it at internal services or cloud
+  metadata (e.g. `http://169.254.169.254/…`) and also burn Claude/bandwidth. Fix: gate with
+  `requireAuth`; allowlist hosts (knesset.gov.il / oknesset / known doc hosts); reject
+  private/loopback/link-local targets after DNS resolution; add rate limiting. The poller's
+  own use passes trusted Knesset URLs, so locking the public route down is safe.
+- **[Security] Rate limiting is applied to only one route.** `SlidingWindowLimiter`
+  (`server/services/rate-limit.ts`) is used solely by the meetings booking-link endpoint.
+  `POST /api/auth/google` and `/api/auth/refresh` (brute-force / token-verification abuse),
+  `/api/summarize`, and `/api/admin/letters/beautify` (cost) have none. Apply the limiter to
+  auth endpoints (per-IP) and the expensive AI/download endpoints.
+- **[Security/auth — note] Access token carries `role` in the JWT.** `requireAdmin` trusts the
+  role claim (`server/middleware/auth.ts`), so a demoted admin keeps admin rights until the
+  15-min access token expires (refresh re-reads the DB role). Acceptable given short TTL, but if
+  instant revocation is ever needed, check the role against the DB in `requireAdmin` or shorten
+  the access TTL. Pairs with the quick-block idea in §20.
+
 ---
 
 ## Completed
