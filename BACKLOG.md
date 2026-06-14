@@ -457,6 +457,32 @@ Each is small and independent; promote to its own numbered item if it grows.
 - *(Checked, OK: all `<img>` have meaningful `alt`; combobox/icon buttons mostly have visible
   text or labels — no broad a11y gap found this pass.)*
 
+### 2026-06-14 — Review pass 5: database schema, indexes & storage
+
+Postgres auto-indexes only PKs and unique constraints — **not** foreign keys. The schema
+(`server/db/schema/*.ts`) defines no explicit secondary `index()`. Several hot lookup columns
+are therefore unindexed (sequential scans):
+
+- **[Performance, high] `refresh_tokens.token_hash` is unindexed.** Every `/api/auth/refresh`
+  runs `findRefreshToken(hash)` → `WHERE token_hash = …`, a full scan of `refresh_tokens` on the
+  hottest auth path (per active session, ~every 15 min), and the table accumulates rows from
+  rotation. Make it `.unique()` (also enforces no-collision) or add an index. Add indexes on
+  `user_id` (reuse-detection delete) and `expires_at` (poller cleanup) too.
+- **[Performance] `committee_sessions.committee_id` is unindexed.** Read per committee in
+  `CommitteesRepository.getById/getAll` and every poll cycle → seq scan of all sessions per
+  committee. Add an index.
+- **[Performance] MK child tables' `mk_id` is unindexed** — `mk_knesset_terms`, `mk_roles`,
+  `mk_activity`, `mk_votes` (`server/db/schema/mks.ts`). The MK read reassembles these per MK
+  (compounds with the N+1 from pass 1). Add a `mk_id` index on each.
+- **[Storage] `summaries_cache` has no prune/TTL.** Keyed by document MD5, it grows unbounded as
+  bills/committee docs change. Add an age- or size-based prune (the storage-pressure framework in
+  §10 could own it).
+- *(Checked, OK: tracking tables already carry composite `unique(user_id, …)` constraints, so the
+  per-user parliament read is index-covered — no gap there.)*
+
+Suggested single migration: add the indexes above (`CREATE INDEX CONCURRENTLY` in prod) — small,
+high-leverage, no app changes.
+
 ---
 
 ## Completed
