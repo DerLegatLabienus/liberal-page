@@ -319,6 +319,33 @@ this alongside its other data on open and shows: all-time total click count, per
 sorted by count, and a collapsible last-14-days list. TypeScript types added to `api-client.ts`
 (`JoinAnalyticsRow`, `JoinAnalyticsData`).
 
+## 19. Civic Letters — Member Letter-Sending System (Priority: Medium)
+
+Admin-curated letters addressed to MKs, ministers, and committees. Authenticated members browse, preview, and send them from their own email clients. The platform provides the full content; the member provides the sender identity.
+
+**Key design decisions (spec: `docs/superpowers/specs/2026-06-14-letters-design.md`):**
+- **Delivery:** hybrid — "Send from my email" opens a pre-filled `mailto:` link (plain text body) + "Copy rich text" / "Copy addresses" buttons for Gmail/Outlook web paste
+- **Data:** 5 new tables (`letter_issue_tags`, `letter_contacts`, `letter_templates`, `letters`, `letter_analytics`) — isolated from all existing schema
+- **Templates:** HTML layout wrappers with `{{CONTENT}}` placeholder; must use table layout + inline styles for email client compatibility (Gmail web/mobile, Outlook web/desktop)
+- **Issue tags:** admin-managed predefined taxonomy (name + slug); max 10 tags per letter; member filter uses OR semantics
+- **Contacts:** searchable database (`mk | minister | committee | custom`); autocomplete with free-form fallback; new contacts saved on submit
+- **Draft/publish:** drafts visible to all admins; `lettersEnabled` feature flag gates member view
+- **Sorting:** pinned letters always first; then `(priority_weight × 1000 + activity_score) DESC, published_at DESC`
+- **Analytics:** per-letter `(letter_id, bucket)` table — same daily+lifetime bucket pattern as `join_analytics`; `{mailto: N, copy: N}` breakdown; no PII
+- **Pin notifications:** when admin pins a letter, next poller cycle bundles notification into bill digest (for users getting one) or sends standalone `letter_pin` email to all other members; `pin_notified_at` prevents double-send
+- **Admin area:** separate `/admin/letters` route (not inside AdminPanel modal); 4 tabs: Letters, Issue Tags, Contacts, Letter Templates
+- **Member area:** dedicated `/letters` page; sidebar filter by issue tag + sort; letter detail is two-column (send panel left, preview iframe right)
+
+## 20. Alliance Guilds & Granular User Access (Priority: Low)
+
+Currently all `allowed_emails` users are a single homogeneous cell. Future work to differentiate access levels:
+
+- **Guild/tier model:** distinguish core cell members from allied organizations or partner groups, each with configurable access scopes (e.g., a guild can view letters but not the parliament tracker, or vice versa)
+- **Quick-block mechanism:** admin can suspend a previously-authorized user without deleting them from the allowlist — revokes active refresh tokens immediately without requiring email removal. Useful when someone leaves the group but admin doesn't want to lose the invite history
+- **Scope propagation:** gated features (letters, tracker, etc.) check guild membership, not just presence in `allowed_emails`
+
+This is a prerequisite for any cross-organization collaboration feature. Design separately when a specific alliance use case emerges.
+
 ## 17. Site-Wide Product Analytics (Priority: Low — Advanced)
 
 A general analytics layer covering **every** feature on the site (section views,
