@@ -368,6 +368,33 @@ genuinely needs per-feature engagement data. Considerations to brainstorm at tha
 **Notes:** Treat as a someday/maybe until there's a concrete need to measure specific
 features. Not a near-term item.
 
+## 21. Code Review Findings — Rolling (Priority: Low–Medium)
+
+Findings from periodic code review passes (speed, security, performance, storage, UX).
+Each is small and independent; promote to its own numbered item if it grows.
+
+### 2026-06-14 — Review pass 1: server read paths + frontend bundle
+
+- **[Performance] N+1 in the parliament read (hot path).** `TrackedMksRepository.getAll`
+  and `TrackedCommitteesRepository.getAll` loop over tracked rows and call `getById` per
+  entity (`server/repositories/tracked-mks-repository.ts:13`, `tracked-committees-repository.ts:13`),
+  and `getById` itself fans out (MK row + faction history + annotations; committee + sessions).
+  Tracking N entities ⇒ N×several queries on every `GET /api/parliament/:type`. Fine at the
+  current cell size; fix by batching with `inArray(...)` + in-memory grouping (one query per
+  table). Same shape in `CommitteesRepository.getAll` (`:71`, one sessions query per row).
+- **[Performance] N+1 in admin letters list.** `admin-letters.ts:23` runs
+  `analyticsRepo.getForLetter(id)` per letter. Batch into a single grouped query over
+  `letter_analytics`. Admin-only, low cardinality — low urgency.
+- **[Performance] `LettersRepository.listPublished` filters & sorts all published rows in
+  memory** (`letters-repository.ts:31`) with no SQL tag filter or LIMIT. Push the tag filter
+  into SQL and paginate when letter volume grows.
+- **[Performance/minor] `markPinNotified` issues one UPDATE per id** (`letters-repository.ts:126`).
+  Collapse to a single `UPDATE … WHERE id IN (…)`.
+- **[Speed/UX] Frontend ships a single ~492 KB JS chunk** (154 KB gzip; no route splitting).
+  The admin panel, admin-letters, letters, and constitution pages all load on first paint.
+  Use `React.lazy` + `Suspense` for the off-home routes to cut initial JS for the common
+  (homepage) visitor.
+
 ---
 
 ## Completed
