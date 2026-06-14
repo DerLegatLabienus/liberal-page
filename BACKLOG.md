@@ -395,6 +395,26 @@ Each is small and independent; promote to its own numbered item if it grows.
   Use `React.lazy` + `Suspense` for the off-home routes to cut initial JS for the common
   (homepage) visitor.
 
+### 2026-06-14 — Review pass 2: poller + external Knesset API
+
+- **[Performance/storage/cost] Summarizer re-downloads every document each poll cycle.**
+  `Summarizer.summarizeUrl` (`server/services/summarizer.ts:54`) fetches the full PDF/DOCX,
+  then keys the cache by MD5 of the downloaded buffer (`:43`). So even when the summary is
+  cached, `pollBills` (`poller.ts:91`) re-downloads every bill's document every cycle (6 h)
+  just to compute the hash and hit the cache. Short-circuit by URL — e.g. a `url → md5` (or
+  `url → summary`) lookup, or skip re-summarizing when the bill already has a summary and the
+  doc URL is unchanged. Saves bandwidth + cycle time.
+- **[Speed/resilience] External `fetch()` calls have no timeout/abort.** Neither the Knesset
+  OData layer (`knesset-bills.ts`) nor the summarizer set an `AbortController` deadline, so a
+  hung endpoint stalls the (sequential) poll loop indefinitely. The poller only backs off on
+  *total* failure. Add a per-request timeout (AbortController) and a small retry to all
+  outbound fetches.
+- **[Speed, trade-off] Poll loops are fully sequential.** `pollBills`/`pollCommittees`/
+  `pollMks` await one external round-trip per entity (`poller.ts:74,122,165`); cycle time
+  grows linearly with tracked-entity count. Bounded concurrency (e.g. p-limit 3–5) would cut
+  wall-clock time — but weigh against Knesset API politeness/rate-limits; keep concurrency low
+  and jittered. Document the chosen limit.
+
 ---
 
 ## Completed
