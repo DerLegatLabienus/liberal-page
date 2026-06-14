@@ -1,0 +1,48 @@
+import { LetterTemplatesRepository } from '../repositories/letter-templates-repository'
+import type { LetterAddress } from '../db/schema'
+
+const templatesRepo = new LetterTemplatesRepository()
+
+/** Strip all HTML tags, collapse whitespace. Used to generate body_plain from body_html. */
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/**
+ * Inject body_html into the chosen letter template's {{CONTENT}} placeholder.
+ * Returns body_html unmodified if no templateId is provided or template not found.
+ */
+export async function renderLetterHtml(bodyHtml: string, templateId: number | null | undefined): Promise<string> {
+  if (!templateId) return bodyHtml
+  const template = await templatesRepo.getById(templateId)
+  if (!template) return bodyHtml
+  return template.html.replace('{{CONTENT}}', bodyHtml)
+}
+
+/** Build a mailto: URI with pre-filled fields. Body is percent-encoded. */
+export function buildMailtoUrl(
+  toAddresses: LetterAddress[],
+  ccAddresses: LetterAddress[],
+  bccAddresses: LetterAddress[],
+  subject: string,
+  bodyPlain: string,
+): string {
+  const to = toAddresses.map((a) => a.email).join(',')
+  const params = new URLSearchParams()
+  if (ccAddresses.length) params.set('cc', ccAddresses.map((a) => a.email).join(','))
+  if (bccAddresses.length) params.set('bcc', bccAddresses.map((a) => a.email).join(','))
+  params.set('subject', subject)
+  params.set('body', bodyPlain)
+  return `mailto:${to}?${params.toString()}`
+}
