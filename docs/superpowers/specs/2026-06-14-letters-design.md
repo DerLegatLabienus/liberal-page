@@ -1,7 +1,7 @@
 # Letters — Civic Letter-Sending System
 
 **Date:** 2026-06-14  
-**Status:** Design approved, pending implementation plan
+**Status:** Design approved — implementation plan at `docs/superpowers/plans/2026-06-14-letters.md`
 
 ---
 
