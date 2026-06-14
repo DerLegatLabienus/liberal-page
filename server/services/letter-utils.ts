@@ -30,7 +30,12 @@ export async function renderLetterHtml(bodyHtml: string, templateId: number | nu
   return template.html.replace('{{CONTENT}}', bodyHtml)
 }
 
-/** Build a mailto: URI with pre-filled fields. Body is percent-encoded. */
+/**
+ * Build a mailto: URI with pre-filled fields. Per RFC 6068, hfields must be
+ * percent-encoded with %20 for spaces — NOT URLSearchParams, which form-encodes
+ * spaces as `+` that many mail clients render literally (mangling Hebrew subjects
+ * and bodies). Email addresses are ASCII-safe so the to-list is left as-is.
+ */
 export function buildMailtoUrl(
   toAddresses: LetterAddress[],
   ccAddresses: LetterAddress[],
@@ -39,10 +44,10 @@ export function buildMailtoUrl(
   bodyPlain: string,
 ): string {
   const to = toAddresses.map((a) => a.email).join(',')
-  const params = new URLSearchParams()
-  if (ccAddresses.length) params.set('cc', ccAddresses.map((a) => a.email).join(','))
-  if (bccAddresses.length) params.set('bcc', bccAddresses.map((a) => a.email).join(','))
-  params.set('subject', subject)
-  params.set('body', bodyPlain)
-  return `mailto:${to}?${params.toString()}`
+  const hfields: string[] = []
+  if (ccAddresses.length) hfields.push(`cc=${encodeURIComponent(ccAddresses.map((a) => a.email).join(','))}`)
+  if (bccAddresses.length) hfields.push(`bcc=${encodeURIComponent(bccAddresses.map((a) => a.email).join(','))}`)
+  hfields.push(`subject=${encodeURIComponent(subject)}`)
+  hfields.push(`body=${encodeURIComponent(bodyPlain)}`)
+  return `mailto:${to}?${hfields.join('&')}`
 }

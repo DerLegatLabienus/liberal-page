@@ -43,6 +43,17 @@ export default function LetterDetailPage() {
     setTimeout(() => setCopied(null), 2000)
   }, [data])
 
+  // Open the rendered letter in a new tab. Uses a Blob URL rather than a data: URL —
+  // Chrome and Firefox block top-level navigation to data: URLs. The object URL is
+  // revoked after a delay so the opened tab has time to load it.
+  const handleOpenInTab = useCallback(() => {
+    if (!data) return
+    const blob = new Blob([data.renderedHtml], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }, [data])
+
   return (
     <div className="min-h-screen bg-background">
       <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
@@ -111,14 +122,13 @@ export default function LetterDetailPage() {
             <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
               <div className="flex items-center justify-between border-b px-4 py-2">
                 <span className="text-sm font-medium text-muted-foreground">תצוגה מקדימה</span>
-                <a
-                  href={`data:text/html;charset=utf-8,${encodeURIComponent(data.renderedHtml)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={handleOpenInTab}
                   className="text-xs text-primary hover:underline"
                 >
                   פתח בלשונית חדשה
-                </a>
+                </button>
               </div>
               <iframe
                 srcDoc={data.renderedHtml}

@@ -1,8 +1,9 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
 import { LettersRepository } from '../repositories/letters-repository'
 import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
+import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { renderLetterHtml, buildMailtoUrl } from '../services/letter-utils'
 import type { LetterAddress } from '../db/schema'
 
@@ -10,8 +11,32 @@ const router = Router()
 const lettersRepo = new LettersRepository()
 const tagsRepo = new LetterIssueTagsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
+const flagsRepo = new FeatureFlagsRepository()
 
 router.use(requireAuth)
+
+// Honor the lettersEnabled kill-switch on the API too, not just in the frontend.
+router.use(async (_req, res, next) => {
+  try {
+    if (!(await flagsRepo.isEnabled('lettersEnabled'))) {
+      return res.status(404).json({ error: 'Not found' })
+    }
+    next()
+  } catch (err) {
+    console.error('[letters] flag check failed:', err)
+    res.status(500).json({ error: 'Failed to load letters' })
+  }
+})
+
+/** Parse a numeric route id, sending 400 instead of letting NaN reach the repo. */
+function parseId(req: Request, res: Response): number | null {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'Invalid id' })
+    return null
+  }
+  return id
+}
 
 // GET /api/letters/tags — all issue tags for filter UI
 router.get('/tags', async (_req, res) => {
@@ -40,7 +65,8 @@ router.get('/', async (req, res) => {
 // GET /api/letters/:id — letter detail with rendered HTML and mailto URL
 router.get('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id)
+    const id = parseId(req, res)
+    if (id === null) return
     const letter = await lettersRepo.getById(id)
     if (!letter || letter.status !== 'published') return res.status(404).json({ error: 'Not found' })
 
@@ -62,7 +88,8 @@ router.get('/:id', async (req, res) => {
 // POST /api/letters/:id/send — fire-and-forget analytics event
 router.post('/:id/send', async (req, res) => {
   try {
-    const id = Number(req.params.id)
+    const id = parseId(req, res)
+    if (id === null) return
     const { action } = req.body as { action?: string }
     if (action !== 'mailto' && action !== 'copy') return res.status(400).json({ error: 'action must be mailto or copy' })
 

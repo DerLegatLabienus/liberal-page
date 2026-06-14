@@ -121,6 +121,30 @@ describe('LettersRepository', () => {
     expect(letter.id).toBeTypeOf('number')
   })
 
+  it('stamps publishedAt when created already published, leaves it null for drafts', async () => {
+    const draft = await lettersRepo.create(BASE_LETTER)
+    expect(draft.publishedAt).toBeNull()
+    const published = await lettersRepo.create({ ...BASE_LETTER, status: 'published' })
+    expect(published.publishedAt).not.toBeNull()
+  })
+
+  it('sets publishedAt on the draft→published transition', async () => {
+    const draft = await lettersRepo.create(BASE_LETTER)
+    await lettersRepo.update(draft.id, { status: 'published' })
+    const found = await lettersRepo.getById(draft.id)
+    expect(found?.publishedAt).not.toBeNull()
+  })
+
+  it('does not bump publishedAt when editing an already-published letter', async () => {
+    const published = await lettersRepo.create({ ...BASE_LETTER, status: 'published' })
+    const firstDate = (await lettersRepo.getById(published.id))?.publishedAt?.getTime()
+    await new Promise((r) => setTimeout(r, 5))
+    await lettersRepo.update(published.id, { status: 'published', title: 'Edited typo' })
+    const after = await lettersRepo.getById(published.id)
+    expect(after?.publishedAt?.getTime()).toBe(firstDate)
+    expect(after?.title).toBe('Edited typo')
+  })
+
   it('listAll returns both draft and published', async () => {
     await lettersRepo.create(BASE_LETTER)
     await lettersRepo.create({ ...BASE_LETTER, title: 'Published', status: 'published' })

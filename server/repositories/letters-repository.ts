@@ -56,6 +56,7 @@ export class LettersRepository {
 
   async create(input: LetterInput): Promise<Letter> {
     const now = new Date()
+    const status = input.status ?? 'draft'
     const [row] = await db
       .insert(letters)
       .values({
@@ -68,10 +69,12 @@ export class LettersRepository {
         bccAddresses: input.bccAddresses ?? [],
         issueTagIds: input.issueTagIds ?? [],
         templateId: input.templateId ?? null,
-        status: input.status ?? 'draft',
+        status,
         priority: input.priority ?? 'normal',
         pinnedAt: input.pinnedAt ?? null,
         pinNotifiedAt: input.pinNotifiedAt ?? null,
+        // Stamp publishedAt when a letter is born published; drafts get it on first publish.
+        publishedAt: status === 'published' ? now : null,
         createdBy: input.createdBy ?? null,
         createdAt: now,
         updatedAt: now,
@@ -82,7 +85,15 @@ export class LettersRepository {
 
   async update(id: number, input: Partial<LetterInput>): Promise<void> {
     const fields: Record<string, unknown> = { ...input, updatedAt: new Date() }
-    if (input.status === 'published') fields.publishedAt = new Date()
+    // Stamp publishedAt only on the transition into published — never overwrite an existing
+    // publish date (editing an already-published letter must not bump it forward).
+    if (input.status === 'published') {
+      const [current] = await db
+        .select({ publishedAt: letters.publishedAt })
+        .from(letters)
+        .where(eq(letters.id, id))
+      if (current && current.publishedAt == null) fields.publishedAt = new Date()
+    }
     await db.update(letters).set(fields).where(eq(letters.id, id))
   }
 

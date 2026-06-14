@@ -52,6 +52,10 @@ app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/letters', lettersRouter)
+// Both share the /api/admin/letters base: adminLettersRouter owns the letter CRUD
+// (/, /:id, /:id/pin); adminLetterAssetsRouter owns /tags, /contacts, /templates.
+// Keep this order, and do NOT add a `GET /:id` to adminLettersRouter — it would shadow
+// the asset GETs below it. Add new asset sub-paths to adminLetterAssetsRouter only.
 app.use('/api/admin/letters', adminLettersRouter)
 app.use('/api/admin/letters', adminLetterAssetsRouter)
 app.use('/api/summarize', summarizeRouter)
