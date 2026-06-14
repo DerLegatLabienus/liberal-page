@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
 
 export default function AdminLettersPage() {
   const { user, ready } = useAuth()
+  const flags = useFeatureFlags()
+  const beautifyEnabled = !!flags?.lettersBeautifyEnabled?.enabled
   const isAdmin = ready && user?.role === 'admin'
   const [tab, setTab] = useState<Tab>('letters')
   const [letters, setLetters] = useState<LetterWithStats[]>([])
@@ -23,7 +26,15 @@ export default function AdminLettersPage() {
   async function refresh() {
     setLoading(true)
     try {
-      if (tab === 'letters') setLetters((await api.admin.letters.list()).letters)
+      if (tab === 'letters') {
+        // Templates are needed for the composer's template picker, so load both.
+        const [ls, tpls] = await Promise.all([
+          api.admin.letters.list(),
+          api.admin.letters.letterTemplates.list(),
+        ])
+        setLetters(ls.letters)
+        setTemplates(tpls.templates)
+      }
       else if (tab === 'tags') setTags((await api.admin.letters.tags.list()).tags)
       else if (tab === 'contacts') setContacts((await api.admin.letters.contacts.list()).contacts)
       else if (tab === 'templates') setTemplates((await api.admin.letters.letterTemplates.list()).templates)
@@ -82,7 +93,11 @@ export default function AdminLettersPage() {
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-semibold">All Letters ({letters.length})</h2>
             </div>
-            <NewLetterForm onCreate={async (body) => { await api.admin.letters.create(body); refresh() }} />
+            <NewLetterForm
+              templates={templates}
+              beautifyEnabled={beautifyEnabled}
+              onCreate={async (body) => { await api.admin.letters.create(body); refresh() }}
+            />
             <table className="mt-6 w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -210,27 +225,18 @@ export default function AdminLettersPage() {
 
         {!loading && tab === 'templates' && (
           <div>
-            <h2 className="mb-4 text-lg font-semibold">Letter Templates ({templates.length})</h2>
-            <div className="space-y-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Letter Templates ({templates.length})</h2>
+            </div>
+            <NewTemplateForm onCreate={async (name, html) => { await api.admin.letters.letterTemplates.create({ name, html }); refresh() }} />
+            <div className="mt-6 space-y-4">
               {templates.map((tpl) => (
-                <div key={tpl.id} className="rounded border bg-card p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-medium">{tpl.name}</span>
-                    <button
-                      type="button"
-                      onClick={async () => { await api.admin.letters.letterTemplates.delete(tpl.id); refresh() }}
-                      className="text-xs text-destructive hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                  <iframe
-                    srcDoc={tpl.html.replace('{{CONTENT}}', '<em>Sample content goes here.</em>')}
-                    className="h-48 w-full rounded border"
-                    sandbox="allow-same-origin"
-                    title={tpl.name}
-                  />
-                </div>
+                <TemplateRow
+                  key={tpl.id}
+                  template={tpl}
+                  onSave={async (name, html) => { await api.admin.letters.letterTemplates.update(tpl.id, { name, html }); refresh() }}
+                  onDelete={async () => { if (confirm('Delete this template?')) { await api.admin.letters.letterTemplates.delete(tpl.id); refresh() } }}
+                />
               ))}
             </div>
           </div>
@@ -244,9 +250,14 @@ type NewLetterBody = {
   title: string; subject: string; bodyHtml: string
   toAddresses: { email: string; display_name: string }[]
   status: Letter['status']; priority: Letter['priority']
+  templateId: number | null
 }
 
-function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promise<void> }) {
+function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
+  templates: LetterTemplate[]
+  beautifyEnabled: boolean
+  onCreate: (body: NewLetterBody) => Promise<void>
+}) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
@@ -256,6 +267,22 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
   const [toName, setToName] = useState('')
   const [status, setStatus] = useState<Letter['status']>('published')
   const [priority, setPriority] = useState<Letter['priority']>('normal')
+  const [templateId, setTemplateId] = useState<number | null>(null)
+  const [beautifying, setBeautifying] = useState(false)
+  const [beautifyError, setBeautifyError] = useState<string | null>(null)
+
+  async function beautify() {
+    if (!bodyHtml.trim()) return
+    setBeautifying(true); setBeautifyError(null)
+    try {
+      const res = await api.admin.letters.beautify(bodyHtml)
+      setBodyHtml(res.html)
+    } catch {
+      setBeautifyError('Beautify failed (AI service may be unavailable).')
+    } finally {
+      setBeautifying(false)
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -265,9 +292,9 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
       await onCreate({
         title, subject, bodyHtml,
         toAddresses: [{ email: toEmail, display_name: toName }],
-        status, priority,
+        status, priority, templateId,
       })
-      setTitle(''); setSubject(''); setBodyHtml(''); setToEmail(''); setToName('')
+      setTitle(''); setSubject(''); setBodyHtml(''); setToEmail(''); setToName(''); setTemplateId(null)
       setOpen(false)
     } finally {
       setSaving(false)
@@ -331,10 +358,42 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
           </select>
         </div>
         <div className="col-span-2">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Body HTML *</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Template</label>
+          <select
+            value={templateId ?? ''}
+            onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full rounded border px-3 py-1.5 text-sm"
+          >
+            <option value="">— None (raw body) —</option>
+            {templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            The body below is injected into the template’s <code>{'{{CONTENT}}'}</code> placeholder when the letter is viewed.
+          </p>
+        </div>
+        <div className="col-span-2">
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-muted-foreground">Body HTML *</label>
+            {beautifyEnabled && (
+              <button
+                type="button"
+                onClick={beautify}
+                disabled={beautifying || !bodyHtml.trim()}
+                className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-50"
+              >
+                {beautifying ? '✨ Beautifying…' : '✨ Beautify'}
+              </button>
+            )}
+          </div>
           <textarea value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} required rows={6}
             className="w-full rounded border px-3 py-1.5 text-sm font-mono"
             placeholder="<p>לכבוד ח&quot;כ...</p>" />
+          {beautifyError && <p className="mt-1 text-xs text-destructive">{beautifyError}</p>}
+          {beautifyEnabled && (
+            <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
+          )}
         </div>
       </div>
       <button type="submit" disabled={saving}
@@ -342,6 +401,105 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
         {saving ? 'Saving...' : 'Create Letter'}
       </button>
     </form>
+  )
+}
+
+const PLACEHOLDER = '{{CONTENT}}'
+
+function NewTemplateForm({ onCreate }: { onCreate: (name: string, html: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [name, setName] = useState('')
+  const [html, setHtml] = useState('')
+  const valid = name.trim() && html.includes(PLACEHOLDER)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!valid) return
+    setSaving(true)
+    try { await onCreate(name, html); setName(''); setHtml(''); setOpen(false) }
+    finally { setSaving(false) }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+        className="rounded border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary">
+        + New Template
+      </button>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3 rounded-lg border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">New Template</h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+      </div>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Template name" className="w-full rounded border px-3 py-1.5 text-sm" />
+      <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={6} placeholder={`<div dir="rtl">${PLACEHOLDER}</div>`} className="w-full rounded border px-3 py-1.5 font-mono text-sm" />
+      {!html.includes(PLACEHOLDER) && html.length > 0 && (
+        <p className="text-xs text-destructive">HTML must contain the <code>{PLACEHOLDER}</code> placeholder.</p>
+      )}
+      <div>
+        <p className="mb-1 text-xs text-muted-foreground">Preview:</p>
+        <iframe srcDoc={html.replace(PLACEHOLDER, '<em>תוכן המכתב…</em>')} className="h-40 w-full rounded border" sandbox="allow-same-origin" title="preview" />
+      </div>
+      <button type="submit" disabled={!valid || saving} className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+        {saving ? 'Saving...' : 'Create Template'}
+      </button>
+    </form>
+  )
+}
+
+function TemplateRow({ template, onSave, onDelete }: {
+  template: LetterTemplate
+  onSave: (name: string, html: string) => Promise<void>
+  onDelete: () => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(template.name)
+  const [html, setHtml] = useState(template.html)
+  const [saving, setSaving] = useState(false)
+  const valid = name.trim() && html.includes(PLACEHOLDER)
+
+  async function save() {
+    if (!valid) return
+    setSaving(true)
+    try { await onSave(name, html); setEditing(false) } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="rounded border bg-card p-4">
+      <div className="mb-2 flex items-center justify-between">
+        {editing
+          ? <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border px-2 py-1 text-sm" />
+          : <span className="font-medium">{template.name}</span>}
+        <div className="flex gap-3">
+          {editing ? (
+            <>
+              <button type="button" onClick={save} disabled={!valid || saving} className="text-xs text-primary hover:underline disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+              <button type="button" onClick={() => { setEditing(false); setName(template.name); setHtml(template.html) }} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+            </>
+          ) : (
+            <button type="button" onClick={() => setEditing(true)} className="text-xs text-primary hover:underline">Edit</button>
+          )}
+          <button type="button" onClick={onDelete} className="text-xs text-destructive hover:underline">Delete</button>
+        </div>
+      </div>
+      {editing && (
+        <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={6} className="mb-2 w-full rounded border px-3 py-1.5 font-mono text-sm" />
+      )}
+      {editing && !html.includes(PLACEHOLDER) && (
+        <p className="mb-2 text-xs text-destructive">HTML must contain <code>{PLACEHOLDER}</code>.</p>
+      )}
+      <iframe
+        srcDoc={html.replace(PLACEHOLDER, '<em>תוכן המכתב…</em>')}
+        className="h-48 w-full rounded border"
+        sandbox="allow-same-origin"
+        title={template.name}
+      />
+    </div>
   )
 }
 

@@ -42,10 +42,28 @@ export default function LetterDetailPage() {
 
   const handleCopyHtml = useCallback(async () => {
     if (!data || !id) return
-    await navigator.clipboard.writeText(data.renderedHtml)
-    setCopied('html')
-    setTimeout(() => setCopied(null), 2000)
-    api.letters.recordSend(Number(id), 'copy').catch(() => {})
+    // Copy as rich HTML wrapped in dir="rtl" so pasting into Gmail keeps right-aligned RTL
+    // rendering (writeText pasted raw tags / lost direction). Fall back to plain text.
+    const rtlHtml = `<div dir="rtl" style="text-align:right">${data.renderedHtml}</div>`
+    try {
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([rtlHtml], { type: 'text/html' }),
+            'text/plain': new Blob([data.letter.bodyPlain], { type: 'text/plain' }),
+          }),
+        ])
+      } else {
+        await navigator.clipboard.writeText(data.letter.bodyPlain)
+      }
+      setCopied('html')
+      setTimeout(() => setCopied(null), 2000)
+      api.letters.recordSend(Number(id), 'copy').catch(() => {})
+    } catch {
+      await navigator.clipboard.writeText(data.letter.bodyPlain)
+      setCopied('html')
+      setTimeout(() => setCopied(null), 2000)
+    }
   }, [data, id])
 
   const handleCopyAddresses = useCallback(async () => {

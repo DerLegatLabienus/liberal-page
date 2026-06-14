@@ -129,8 +129,13 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `PUT`    | `/api/admin/email-templates/:name` | update email template (admin) |
 | `PUT`    | `/api/admin/feature-flags/:name`   | update feature flag enabled/value (admin) |
 | `GET`    | `/api/admin/analytics/join`        | join click-through summary: lifetime + daily rows (admin) |
+| `POST`   | `/api/admin/letters/beautify`      | AI clean+improve letter body HTML (admin; gated by `lettersBeautifyEnabled` flag → 404 when off). Output is sanitized. |
 
 `type` is one of `bill`, `committee`, or `mk`.
+
+Letter & template HTML written via the letter/template admin routes is sanitized
+server-side (`server/services/html-sanitizer.ts`, strict allowlist) before storage,
+since it is later opened in a scriptable context (Blob "open in new tab", rich clipboard).
 
 ### External data sources
 

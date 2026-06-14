@@ -2,12 +2,16 @@ import { Router } from 'express'
 import { requireAdmin } from '../middleware/auth'
 import { LettersRepository } from '../repositories/letters-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
+import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { stripHtml } from '../services/letter-utils'
+import { sanitizeLetterHtml } from '../services/html-sanitizer'
+import { beautifyLetterHtml } from '../services/letter-beautifier'
 import type { LetterAddress } from '../db/schema'
 
 const router = Router()
 const lettersRepo = new LettersRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
+const flagsRepo = new FeatureFlagsRepository()
 
 router.use(requireAdmin)
 
@@ -39,7 +43,8 @@ router.post('/', async (req, res) => {
     if (!body.title || !body.subject || !body.bodyHtml || !Array.isArray(body.toAddresses) || body.toAddresses.length === 0) {
       return res.status(400).json({ error: 'title, subject, bodyHtml, and at least one toAddress are required' })
     }
-    const letter = await lettersRepo.create({ ...body, bodyPlain: stripHtml(body.bodyHtml) })
+    const bodyHtml = sanitizeLetterHtml(body.bodyHtml)
+    const letter = await lettersRepo.create({ ...body, bodyHtml, bodyPlain: stripHtml(bodyHtml) })
     res.status(201).json({ letter })
   } catch (err) {
     console.error('[admin/letters] create failed:', err)
@@ -57,7 +62,11 @@ router.put('/:id', async (req, res) => {
       templateId: number | null; status: string; priority: string
     }>
     const update: Parameters<typeof lettersRepo.update>[1] = { ...body }
-    if (body.bodyHtml) update.bodyPlain = stripHtml(body.bodyHtml)
+    if (body.bodyHtml) {
+      const bodyHtml = sanitizeLetterHtml(body.bodyHtml)
+      update.bodyHtml = bodyHtml
+      update.bodyPlain = stripHtml(bodyHtml)
+    }
     await lettersRepo.update(id, update)
     const letter = await lettersRepo.getById(id)
     res.json({ letter })
@@ -89,6 +98,27 @@ router.patch('/:id/pin', async (req, res) => {
   } catch (err) {
     console.error('[admin/letters] pin failed:', err)
     res.status(500).json({ error: 'Failed to toggle pin' })
+  }
+})
+
+// POST /api/admin/letters/beautify — AI clean + improve letter body HTML.
+// Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark).
+router.post('/beautify', async (req, res) => {
+  try {
+    if (!(await flagsRepo.isEnabled('lettersBeautifyEnabled'))) {
+      return res.status(404).json({ error: 'Not found' })
+    }
+    const { html } = req.body as { html?: string }
+    if (!html || !html.trim()) return res.status(400).json({ error: 'html is required' })
+
+    const beautified = await beautifyLetterHtml(html)
+    res.json({ html: beautified })
+  } catch (err) {
+    console.error('[admin/letters] beautify failed:', err)
+    const msg = err instanceof Error && err.message === 'beautify_unavailable'
+      ? 'AI service is not configured'
+      : 'Failed to beautify'
+    res.status(err instanceof Error && err.message === 'beautify_unavailable' ? 503 : 500).json({ error: msg })
   }
 })
 

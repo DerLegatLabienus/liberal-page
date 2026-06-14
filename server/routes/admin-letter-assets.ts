@@ -3,6 +3,7 @@ import { requireAdmin } from '../middleware/auth'
 import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-repository'
 import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
 import { LetterTemplatesRepository } from '../repositories/letter-templates-repository'
+import { sanitizeLetterHtml } from '../services/html-sanitizer'
 
 const router = Router()
 const tagsRepo = new LetterIssueTagsRepository()
@@ -73,14 +74,15 @@ router.post('/templates', async (req, res) => {
   const { name, html } = req.body as { name?: string; html?: string }
   if (!name || !html) return res.status(400).json({ error: 'name and html required' })
   if (!html.includes('{{CONTENT}}')) return res.status(400).json({ error: 'Template html must contain {{CONTENT}}' })
-  const template = await templatesRepo.create({ name, html })
+  // Sanitize after the placeholder check; {{CONTENT}} is plain text and survives sanitization.
+  const template = await templatesRepo.create({ name, html: sanitizeLetterHtml(html) })
   res.status(201).json({ template })
 })
 
 router.put('/templates/:id', async (req, res) => {
   const { name, html } = req.body as { name?: string; html?: string }
   if (html && !html.includes('{{CONTENT}}')) return res.status(400).json({ error: 'Template html must contain {{CONTENT}}' })
-  await templatesRepo.update(Number(req.params.id), { name, html })
+  await templatesRepo.update(Number(req.params.id), { name, html: html ? sanitizeLetterHtml(html) : undefined })
   res.json({ ok: true })
 })
 

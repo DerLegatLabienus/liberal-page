@@ -158,6 +158,8 @@ export const api = {
       delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/${id}`, { method: 'DELETE' }),
       togglePin: (id: number, pinned: boolean) =>
         apiFetch<{ letter: Letter }>(`/admin/letters/${id}/pin`, { method: 'PATCH', body: JSON.stringify({ pinned }) }),
+      beautify: (html: string) =>
+        apiFetch<{ html: string }>('/admin/letters/beautify', { method: 'POST', body: JSON.stringify({ html }) }),
       tags: {
         list: () => apiFetch<{ tags: LetterIssueTag[] }>('/admin/letters/tags'),
         create: (body: { name: string; slug: string }) =>

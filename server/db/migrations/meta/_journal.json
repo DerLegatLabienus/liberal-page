@@ -127,6 +127,13 @@
       "when": 1781409331970,
       "tag": "0017_gifted_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781424000000,
+      "tag": "0018_seed_letter_templates",
+      "breakpoints": true
     }
   ]
 }
