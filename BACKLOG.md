@@ -373,6 +373,35 @@ features. Not a near-term item.
 Findings from periodic code review passes (speed, security, performance, storage, UX).
 Each is small and independent; promote to its own numbered item if it grows.
 
+### Priority rollup (2026-06-14, after passes 1–7 — all major subsystems reviewed)
+
+Ranked by impact ÷ effort. Detail for each is in the dated pass below.
+
+**Fix now (high leverage, low effort):**
+1. **SSRF in `POST /api/summarize`** (pass 3) — unauth'd server-side fetch of an arbitrary URL.
+   The one genuine security hole; gate with auth + host allowlist + private-IP block. *Small.*
+2. **Index migration** (pass 5) — add indexes on `refresh_tokens.token_hash` (scanned every
+   refresh), `committee_sessions.committee_id`, and MK child tables' `mk_id`. One migration,
+   no app changes, big read win. *Small.*
+3. **Gate deploy on CI** (pass 7) — `deploy.yml` ships on `vite build` alone; failing
+   tests/lint/typecheck don't block. Make deploy `needs:` the CI job. *Small.*
+
+**Next (clear value, modest effort):**
+4. Resend **batch send** for broadcasts + **crash-safe** notify (passes 6) — stop blocking the
+   poll cycle and stop the duplicate-email risk on mid-send crash.
+5. **React error boundary** + **dedupe `useFeatureFlags`** via context (pass 4) — stops a render
+   throw white-screening the SPA; removes 3× redundant flag fetches per page.
+6. **`AbortController` timeouts + retry** on all outbound `fetch` (pass 2) — a hung Knesset
+   endpoint currently stalls the whole poll loop.
+7. **`helmet`** + **graceful shutdown** (SIGTERM → stop poller, `pool.end()`) (pass 7).
+
+**Someday / low:**
+8. Summarizer re-download short-circuit by URL (pass 2); N+1 batching in parliament & admin-letters
+   reads (pass 1); `summaries_cache` prune (pass 5); `listPublished`/`markPinNotified` SQL tidy
+   (pass 1); route-based code splitting (pass 1); broken-image placeholders, flag-gate flash (pass 4);
+   role-in-JWT instant-revocation (pass 3); central error handler / 404, poller-in-web-process
+   (pass 7).
+
 ### 2026-06-14 — Review pass 1: server read paths + frontend bundle
 
 - **[Performance] N+1 in the parliament read (hot path).** `TrackedMksRepository.getAll`
