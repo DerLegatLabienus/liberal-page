@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
-import type { LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
+import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
 
@@ -242,7 +242,7 @@ export default function AdminLettersPage() {
 type NewLetterBody = {
   title: string; subject: string; bodyHtml: string
   toAddresses: { email: string; display_name: string }[]
-  status: string; priority: string
+  status: Letter['status']; priority: Letter['priority']
 }
 
 function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promise<void> }) {
@@ -253,8 +253,8 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
   const [bodyHtml, setBodyHtml] = useState('')
   const [toEmail, setToEmail] = useState('')
   const [toName, setToName] = useState('')
-  const [status, setStatus] = useState('published')
-  const [priority, setPriority] = useState('normal')
+  const [status, setStatus] = useState<Letter['status']>('published')
+  const [priority, setPriority] = useState<Letter['priority']>('normal')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -314,7 +314,7 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}
+          <select value={status} onChange={(e) => setStatus(e.target.value as Letter['status'])}
             className="w-full rounded border px-3 py-1.5 text-sm">
             <option value="published">Published</option>
             <option value="draft">Draft</option>
@@ -322,7 +322,7 @@ function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promis
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Priority</label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)}
+          <select value={priority} onChange={(e) => setPriority(e.target.value as Letter['priority'])}
             className="w-full rounded border px-3 py-1.5 text-sm">
             <option value="normal">Normal</option>
             <option value="high">High</option>
