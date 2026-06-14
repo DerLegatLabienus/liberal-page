@@ -14,6 +14,9 @@ import analyticsRouter from './routes/analytics'
 import authRouter from './routes/auth'
 import adminRouter from './routes/admin'
 import meetingsRouter from './routes/meetings'
+import lettersRouter from './routes/letters'
+import adminLettersRouter from './routes/admin-letters'
+import adminLetterAssetsRouter from './routes/admin-letter-assets'
 import { startPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
 
@@ -48,6 +51,9 @@ app.use('/api/feature-flags', featureFlagsRouter)
 app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/letters', lettersRouter)
+app.use('/api/admin/letters', adminLettersRouter)
+app.use('/api/admin/letters', adminLetterAssetsRouter)
 app.use('/api/summarize', summarizeRouter)
 app.use('/api/meetings', meetingsRouter)
 
