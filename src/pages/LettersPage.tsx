@@ -10,7 +10,7 @@ import type { Letter, LetterIssueTag } from '@/types'
 const PRIORITY_LABELS: Record<string, string> = { urgent: 'דחוף', high: 'גבוה', normal: '' }
 
 export default function LettersPage() {
-  const { flags } = useFeatureFlags()
+  const flags = useFeatureFlags()
   const { user } = useAuth()
   const [letters, setLetters] = useState<Letter[]>([])
   const [tags, setTags] = useState<LetterIssueTag[]>([])

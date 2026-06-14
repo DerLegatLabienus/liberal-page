@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { vi, describe, it, expect } from 'vitest'
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null, loading: false, signIn: vi.fn(), signOut: vi.fn() }),
+  useAuthOptional: () => null,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 import Header from '@/components/layout/Header'
 
 describe('Header constitution link', () => {

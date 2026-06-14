@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null, loading: false, signIn: vi.fn(), signOut: vi.fn() }),
+  useAuthOptional: () => null,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 import Header from '@/components/layout/Header'
 
 const renderHeader = (props: { hasNewParliamentData: boolean; onOpenDrawer: () => void; trackerEnabled: boolean }) =>
