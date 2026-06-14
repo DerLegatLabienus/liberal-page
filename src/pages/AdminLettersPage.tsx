@@ -69,8 +69,11 @@ export default function AdminLettersPage() {
 
         {!loading && tab === 'letters' && (
           <div>
-            <h2 className="mb-4 text-lg font-semibold">All Letters ({letters.length})</h2>
-            <table className="w-full text-sm">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">All Letters ({letters.length})</h2>
+            </div>
+            <NewLetterForm onCreate={async (body) => { await api.admin.letters.create(body); refresh() }} />
+            <table className="mt-6 w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2 pr-4">Title</th>
@@ -224,6 +227,111 @@ export default function AdminLettersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+type NewLetterBody = {
+  title: string; subject: string; bodyHtml: string
+  toAddresses: { email: string; display_name: string }[]
+  status: string; priority: string
+}
+
+function NewLetterForm({ onCreate }: { onCreate: (body: NewLetterBody) => Promise<void> }) {
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [title, setTitle] = useState('')
+  const [subject, setSubject] = useState('')
+  const [bodyHtml, setBodyHtml] = useState('')
+  const [toEmail, setToEmail] = useState('')
+  const [toName, setToName] = useState('')
+  const [status, setStatus] = useState('published')
+  const [priority, setPriority] = useState('normal')
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title || !subject || !bodyHtml || !toEmail || !toName) return
+    setSaving(true)
+    try {
+      await onCreate({
+        title, subject, bodyHtml,
+        toAddresses: [{ email: toEmail, display_name: toName }],
+        status, priority,
+      })
+      setTitle(''); setSubject(''); setBodyHtml(''); setToEmail(''); setToName('')
+      setOpen(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary"
+      >
+        + New Letter
+      </button>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="mb-6 space-y-3 rounded-lg border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">New Letter</h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Internal title" />
+        </div>
+        <div className="col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Email Subject *</label>
+          <input value={subject} onChange={(e) => setSubject(e.target.value)} required
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Re: ..." />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">To — Email *</label>
+          <input value={toEmail} onChange={(e) => setToEmail(e.target.value)} required type="email"
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="mk@knesset.gov.il" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">To — Display Name *</label>
+          <input value={toName} onChange={(e) => setToName(e.target.value)} required
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="ח&quot;כ ישראל ישראלי" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm">
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Priority</label>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Body HTML *</label>
+          <textarea value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} required rows={6}
+            className="w-full rounded border px-3 py-1.5 text-sm font-mono"
+            placeholder="<p>לכבוד ח&quot;כ...</p>" />
+        </div>
+      </div>
+      <button type="submit" disabled={saving}
+        className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+        {saving ? 'Saving...' : 'Create Letter'}
+      </button>
+    </form>
   )
 }
 
