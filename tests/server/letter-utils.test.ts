@@ -3,7 +3,7 @@ import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
 import { letterTemplates } from '../../server/db/schema'
 import { LetterTemplatesRepository } from '../../server/repositories/letter-templates-repository'
-import { stripHtml, renderLetterHtml, buildMailtoUrl } from '../../server/services/letter-utils'
+import { stripHtml, renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../../server/services/letter-utils'
 
 describe('stripHtml', () => {
   it('strips tags and decodes common entities', () => {
@@ -54,6 +54,41 @@ describe('buildMailtoUrl', () => {
     const url = buildMailtoUrl(to, [], [], 'A & B', 'x=1 & y=2')
     expect(url).toContain('subject=A%20%26%20B')
     expect(url).toContain('body=x%3D1%20%26%20y%3D2')
+  })
+})
+
+describe('buildGmailComposeUrl', () => {
+  const to = [{ email: 'mk@knesset.gov.il', display_name: 'MK' }]
+
+  it('targets the Gmail compose endpoint with view=cm', () => {
+    const url = buildGmailComposeUrl(to, [], [], 'S', 'B')
+    expect(url.startsWith('https://mail.google.com/mail/?')).toBe(true)
+    expect(url).toContain('view=cm')
+    expect(url).toContain('fs=1')
+  })
+
+  it('maps recipients to `to` and uses Gmail su/body fields', () => {
+    const url = buildGmailComposeUrl(to, [], [], 'Subject', 'Body')
+    const q = new URL(url).searchParams
+    expect(q.get('to')).toBe('mk@knesset.gov.il')
+    expect(q.get('su')).toBe('Subject')
+    expect(q.get('body')).toBe('Body')
+  })
+
+  it('round-trips Hebrew subject and body through the query string', () => {
+    const url = buildGmailComposeUrl(to, [], [], 'מכתב לחבר הכנסת', 'שלום רב')
+    const q = new URL(url).searchParams
+    expect(q.get('su')).toBe('מכתב לחבר הכנסת')
+    expect(q.get('body')).toBe('שלום רב')
+  })
+
+  it('includes cc and bcc only when present', () => {
+    const cc = [{ email: 'cc@x.com', display_name: 'CC' }]
+    const bcc = [{ email: 'bcc@x.com', display_name: 'BCC' }]
+    const withBoth = new URL(buildGmailComposeUrl(to, cc, bcc, 'S', 'B')).searchParams
+    expect(withBoth.get('cc')).toBe('cc@x.com')
+    expect(withBoth.get('bcc')).toBe('bcc@x.com')
+    expect(new URL(buildGmailComposeUrl(to, [], [], 'S', 'B')).searchParams.has('cc')).toBe(false)
   })
 })
 

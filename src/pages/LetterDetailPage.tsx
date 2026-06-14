@@ -28,7 +28,15 @@ export default function LetterDetailPage() {
 
   const handleMailto = useCallback(() => {
     if (!data || !id) return
-    window.open(data.mailtoUrl, '_blank')
+    // Navigate the current tab to the mailto: — window.open('_blank') leaves a blank tab
+    // on desktop when no handler picks it up.
+    window.location.href = data.mailtoUrl
+    api.letters.recordSend(Number(id), 'mailto').catch(() => {})
+  }, [data, id])
+
+  const handleGmail = useCallback(() => {
+    if (!data || !id) return
+    window.open(data.gmailUrl, '_blank', 'noopener,noreferrer')
     api.letters.recordSend(Number(id), 'mailto').catch(() => {})
   }, [data, id])
 
@@ -97,9 +105,17 @@ export default function LetterDetailPage() {
               <button
                 type="button"
                 onClick={handleMailto}
-                className="mb-3 w-full rounded bg-primary px-4 py-2.5 font-medium text-primary-foreground hover:bg-primary/90"
+                className="mb-2 w-full rounded bg-primary px-4 py-2.5 font-medium text-primary-foreground hover:bg-primary/90"
               >
                 ✉️ שלח ממייל שלי
+              </button>
+
+              <button
+                type="button"
+                onClick={handleGmail}
+                className="mb-3 w-full rounded border border-border px-4 py-2.5 font-medium hover:bg-muted"
+              >
+                פתח ב-Gmail
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -120,7 +136,8 @@ export default function LetterDetailPage() {
               </div>
 
               <p className="mt-4 text-xs text-muted-foreground">
-                &ldquo;שלח ממייל שלי&rdquo; פותח את תוכנת המייל שלך עם הפרטים ממולאים מראש.
+                &ldquo;שלח ממייל שלי&rdquo; פותח את תוכנת המייל שבמכשיר. במחשב, אם לא נפתח דבר,
+                השתמשו ב&rdquo;פתח ב-Gmail&rdquo; לחלון חיבור ישירות בדפדפן.
               </p>
             </div>
 

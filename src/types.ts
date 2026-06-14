@@ -238,4 +238,5 @@ export interface LetterDetailResponse {
   letter: Letter
   renderedHtml: string
   mailtoUrl: string
+  gmailUrl: string
 }

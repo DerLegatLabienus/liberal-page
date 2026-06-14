@@ -51,3 +51,25 @@ export function buildMailtoUrl(
   hfields.push(`body=${encodeURIComponent(bodyPlain)}`)
   return `mailto:${to}?${hfields.join('&')}`
 }
+
+/**
+ * Build a Gmail web "compose" URL. mailto: only works on desktop when a protocol
+ * handler is registered (often nothing happens on Chrome); this opens Gmail's compose
+ * window directly in the browser, which works regardless of handler config.
+ */
+export function buildGmailComposeUrl(
+  toAddresses: LetterAddress[],
+  ccAddresses: LetterAddress[],
+  bccAddresses: LetterAddress[],
+  subject: string,
+  bodyPlain: string,
+): string {
+  const params = new URLSearchParams({ view: 'cm', fs: '1' })
+  params.set('to', toAddresses.map((a) => a.email).join(','))
+  if (ccAddresses.length) params.set('cc', ccAddresses.map((a) => a.email).join(','))
+  if (bccAddresses.length) params.set('bcc', bccAddresses.map((a) => a.email).join(','))
+  params.set('su', subject)
+  params.set('body', bodyPlain)
+  // Gmail decodes + as space in su/body, so URLSearchParams' + encoding is fine here.
+  return `https://mail.google.com/mail/?${params.toString()}`
+}

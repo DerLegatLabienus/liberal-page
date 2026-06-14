@@ -4,7 +4,7 @@ import { LettersRepository } from '../repositories/letters-repository'
 import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
-import { renderLetterHtml, buildMailtoUrl } from '../services/letter-utils'
+import { renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../services/letter-utils'
 import type { LetterAddress } from '../db/schema'
 
 const router = Router()
@@ -71,14 +71,14 @@ router.get('/:id', async (req, res) => {
     if (!letter || letter.status !== 'published') return res.status(404).json({ error: 'Not found' })
 
     const renderedHtml = await renderLetterHtml(letter.bodyHtml, letter.templateId)
-    const mailtoUrl = buildMailtoUrl(
+    const addrs = [
       letter.toAddresses as LetterAddress[],
       letter.ccAddresses as LetterAddress[],
       letter.bccAddresses as LetterAddress[],
-      letter.subject,
-      letter.bodyPlain,
-    )
-    res.json({ letter, renderedHtml, mailtoUrl })
+    ] as const
+    const mailtoUrl = buildMailtoUrl(...addrs, letter.subject, letter.bodyPlain)
+    const gmailUrl = buildGmailComposeUrl(...addrs, letter.subject, letter.bodyPlain)
+    res.json({ letter, renderedHtml, mailtoUrl, gmailUrl })
   } catch (err) {
     console.error('[letters] detail failed:', err)
     res.status(500).json({ error: 'Failed to load letter' })
