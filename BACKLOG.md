@@ -508,6 +508,32 @@ crash-safety:
 - *(Checked, OK: `sent_emails` ledger is pruned under storage pressure via `SENT_EMAIL_PURGE_BATCH`
   (§10); delivery-status polling is capped by `EMAIL_STATUS_POLL_CAP`.)*
 
+### 2026-06-14 — Review pass 7: server bootstrap / HTTP hardening / CI
+
+- **[CI/CD, high-ish] Deploy is not gated on tests.** `ci.yml` runs lint + `tsc --noEmit` +
+  `npm test` + build on push/PR, but `deploy.yml` is a *separate* workflow that fires on the same
+  push and only runs `vite build` before deploying. So code that fails lint/typecheck/tests still
+  ships as long as `vite build` compiles (this is how a type-only break slipped past `tsc --noEmit`
+  earlier — caught only because `tsc -b` runs in the build). Gate deploy on CI: have `deploy.yml`
+  `needs:` the CI job (reusable workflow / `workflow_run`) or run the full `npm test` in deploy.
+- **[Security] No security headers (`helmet`).** `server/index.ts` mounts `cors` + `express.json`
+  but no `helmet`, so responses lack `X-Content-Type-Options`, `Referrer-Policy`, HSTS, frame
+  protections. Cheap defense-in-depth — add `helmet()` early in the middleware chain.
+- **[Resilience] No graceful shutdown.** No `SIGTERM`/`SIGINT` handler. On every Render redeploy
+  the process is killed without stopping the poller, draining in-flight requests, or closing the
+  node-postgres pool — risking a truncated poll-cycle write or dropped connections. Add a handler
+  that stops the listener + poller and `await pool.end()`.
+- **[Resilience/minor] No central Express error handler or JSON 404.** Routes catch their own
+  errors, but an unexpected throw in middleware (e.g. the CORS callback) has no centralized
+  handler, and unknown `/api/*` paths fall through. Add a final `(err,req,res,next)` JSON error
+  handler + 404 to avoid leaking defaults.
+- **[Architecture/scaling — note] The poller runs in the web process.** `startPoller()` shares the
+  event loop with request serving, so a heavy cycle (many sequential external fetches, pass 2) adds
+  latency to API requests. Fine on one small instance; if load grows, split the poller into a
+  separate Render worker/cron service.
+- *(Checked, OK: `express.json()` keeps the default 100 kb body cap; CORS allow-no-origin is
+  intentional and not an auth boundary since auth is JWT.)*
+
 ---
 
 ## Completed
