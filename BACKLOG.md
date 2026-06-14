@@ -436,6 +436,27 @@ Each is small and independent; promote to its own numbered item if it grows.
   instant revocation is ever needed, check the role against the DB in `requireAdmin` or shorten
   the access TTL. Pairs with the quick-block idea in §20.
 
+### 2026-06-14 — Review pass 4: frontend UX / accessibility / client perf
+
+- **[Performance] `useFeatureFlags` refetches per component instance.** The hook holds its own
+  `useState` + `fetch` (`src/hooks/useFeatureFlags.ts`), and the homepage mounts it 3× (Header,
+  MeetUsSection, useBillsOverview) — plus LettersPage/AdminLettersPage — firing identical
+  `GET /api/feature-flags` requests in parallel with no shared cache. Hoist to a context
+  provider (fetch once, share) or a module-level/SWR cache.
+- **[UX/resilience] No React error boundary.** There is no `ErrorBoundary` anywhere, so a single
+  render-time throw (e.g. in the parliament drawer or a letters page) white-screens the entire
+  SPA. Add a top-level boundary with a friendly RTL fallback + reload action; optionally wrap the
+  parliament tracker separately so a tracker error doesn't take down the homepage.
+- **[UX/minor] Flag-gated content flashes on load.** `useFeatureFlags` returns `{}` until the
+  fetch resolves, so flag-gated UI (letters nav link, Meet-Us section, bills-overview tabs)
+  briefly renders hidden then pops in. Fixed largely by the dedup/cache item above; consider a
+  brief loading state for gated sections.
+- **[UX/nit] Broken images vanish silently.** `onError` handlers set `display:none` on `<img>`
+  (MkCard, GallerySection, AboutSection) — a failed photo leaves an empty gap rather than a
+  placeholder/initials avatar. Low priority.
+- *(Checked, OK: all `<img>` have meaningful `alt`; combobox/icon buttons mostly have visible
+  text or labels — no broad a11y gap found this pass.)*
+
 ---
 
 ## Completed
