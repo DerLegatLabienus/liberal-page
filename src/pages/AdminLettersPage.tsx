@@ -50,7 +50,8 @@ export default function AdminLettersPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background">
+    // Admin UI is English-only; force LTR so it aligns correctly on the RTL (Hebrew) site.
+    <div className="min-h-screen bg-background" dir="ltr">
       <header className="flex items-center gap-4 border-b px-8 py-4">
         <Link to="/" className="text-sm text-muted-foreground hover:underline">← Back to site</Link>
         <h1 className="text-xl font-semibold">Admin — Letters</h1>
