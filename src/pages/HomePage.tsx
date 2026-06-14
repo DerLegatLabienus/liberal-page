@@ -22,7 +22,7 @@ export default function HomePage() {
   const { user } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [scope, setScope] = useState<TrackScope>('group')
-  const { bills, committees, mks, loading, lastSyncedAt, refresh } = useParliament(scope)
+  const { bills, committees, mks, loading, error: parliamentError, lastSyncedAt, refresh } = useParliament(scope)
 
   // Personal list is editable by its owner; the group list only by admins.
   const canEdit = scope === 'personal' ? !!user : user?.role === 'admin'
@@ -61,6 +61,11 @@ export default function HomePage() {
         <LiberalsShowcase />
         {isHebrew && (
           <>
+            {parliamentError && (
+              <div className="bg-destructive/10 px-4 py-2 text-center text-sm text-destructive" dir="rtl">
+                שגיאה בטעינת נתוני הכנסת — <button type="button" onClick={refresh} className="underline">נסה שוב</button>
+              </div>
+            )}
             <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
             <KnessetBillsOverview />
           </>

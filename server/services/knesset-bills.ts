@@ -50,6 +50,9 @@ export function _resetCommitteeMapCache() {
 // --- Progress ranking cache (maps billId → max CommitteeSessionID seen) ---
 const PROGRESS_POOL = 200
 const PROGRESS_TTL = 30 * 60 * 1000
+// Knesset OData returns 404 when the encoded filter URL exceeds ~2000 chars;
+// 40 IDs produces ~1300-char URLs, safely under the threshold.
+const PROGRESS_CHUNK = 40
 
 interface ProgressCache { map: Map<number, number>; at: number; knesset: number }
 let progressCache: ProgressCache | null = null
@@ -60,13 +63,17 @@ async function getProgressScoreMap(knesset: number, billIds: number[]): Promise<
   if (progressCache && progressCache.knesset === knesset && Date.now() - progressCache.at < PROGRESS_TTL) {
     return progressCache.map
   }
-  const ors = billIds.map((id) => `ItemID eq ${id}`).join(' or ')
-  const path =
-    `KNS_CmtSessionItem?$filter=ItemTypeID eq 2 and (${ors})` +
-    `&$select=ItemID,CommitteeSessionID&$format=json`
-  const rows = await odataGetAllPages<{ ItemID: number; CommitteeSessionID: number }>(path)
+  const chunks: number[][] = []
+  for (let i = 0; i < billIds.length; i += PROGRESS_CHUNK) chunks.push(billIds.slice(i, i + PROGRESS_CHUNK))
+  const allRows = (await Promise.all(
+    chunks.map((chunk) => {
+      const filter = `ItemTypeID eq 2 and (${chunk.map((id) => `ItemID eq ${id}`).join(' or ')})`
+      const path = `KNS_CmtSessionItem?$filter=${encodeURIComponent(filter)}&$select=ItemID,CommitteeSessionID&$format=json`
+      return odataGetAllPages<{ ItemID: number; CommitteeSessionID: number }>(path)
+    }),
+  )).flat()
   const map = new Map<number, number>()
-  for (const row of rows) {
+  for (const row of allRows) {
     const prev = map.get(row.ItemID) ?? 0
     if (row.CommitteeSessionID > prev) map.set(row.ItemID, row.CommitteeSessionID)
   }

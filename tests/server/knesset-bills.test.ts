@@ -128,6 +128,22 @@ describe('fetchRecentBills (progress ranking)', () => {
     expect(fetch).toHaveBeenCalledOnce() // no second call for CmtSessionItem
     expect(items[0].billId).toBe(300) // BillID desc order preserved
   })
+
+  it('chunks CmtSessionItem requests when pool > 40 and encodes filter URLs', async () => {
+    const bigPool = Array.from({ length: 41 }, (_, i) => ({
+      BillID: 1000 + i, Name: `חוק ${i}`, StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '',
+    }))
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(bigPool)) // pool fetch
+    vi.mocked(fetch).mockResolvedValue(mockOdata([]))          // both chunk fetches
+    await fetchRecentBills(5, 'progress')
+    // pool + 2 chunks (40 + 1)
+    expect(fetch).toHaveBeenCalledTimes(3)
+    for (const call of vi.mocked(fetch).mock.calls.slice(1)) {
+      const url = call[0] as string
+      expect(url).not.toContain(' ')     // no raw spaces
+      expect(url).toContain('%20')       // properly encoded
+    }
+  })
 })
 
 describe('fetchPolicyAlignedBills', () => {

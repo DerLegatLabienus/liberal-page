@@ -18,6 +18,7 @@ router.get('/search', async (req, res) => {
   try {
     res.json(await searchBills(q, getCurrentKnesset()))
   } catch (err) {
+    console.error('[bills] search failed:', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }
 })
@@ -58,6 +59,7 @@ router.get('/recent', async (req, res) => {
     const ranking = flags['recentRanking']?.value ?? 'newest'
     res.json(await fetchRecentBills(parseLimit(req.query.limit), ranking))
   } catch (err) {
+    console.error('[bills] recent failed:', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }
 })
@@ -66,6 +68,7 @@ router.get('/trending', async (_req, res) => {
   try {
     res.json(await getTrendingBills())
   } catch (err) {
+    console.error('[bills] trending failed:', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }
 })
@@ -76,6 +79,7 @@ router.get('/policy-aligned', async (req, res) => {
     if (!(flags['policyFilter']?.enabled)) return res.status(404).json({ error: 'Policy filter disabled' })
     res.json(await fetchPolicyAlignedBills(parseLimit(req.query.limit)))
   } catch (err) {
+    console.error('[bills] policy-aligned failed:', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })
   }
 })
