@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import AuthControl from '@/components/layout/AuthControl'
 import { useDirection } from '@/hooks/useDirection'
+import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useAuth } from '@/contexts/AuthContext'
 import siteData from '@/data/site.json'
 import type { SiteConfig } from '@/types'
 
@@ -19,8 +21,11 @@ interface HeaderProps {
 export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnabled }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
+  const flags = useFeatureFlags()
+  const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const isHome = useLocation().pathname === '/'
+  const showLetters = !!(flags.lettersEnabled?.enabled && user)
 
   // On the homepage, hash anchors scroll in-page; off-route they point back to
   // the homepage (with the section hash) so the link still works and returns home.
@@ -71,6 +76,14 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
               {link.label}
             </a>
           ))}
+          {showLetters && (
+            <Link
+              to="/letters"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              מכתבים
+            </Link>
+          )}
           <button
             onClick={toggleLang}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -118,6 +131,15 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
                 {link.label}
               </a>
             ))}
+            {showLetters && (
+              <Link
+                to="/letters"
+                className="text-sm text-muted-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                מכתבים
+              </Link>
+            )}
             <button
               onClick={() => { toggleLang(); setMobileOpen(false) }}
               className="text-start text-sm text-muted-foreground"

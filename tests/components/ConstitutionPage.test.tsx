@@ -14,6 +14,11 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }))
 vi.mock('@/hooks/useDirection', () => ({ useDirection: () => (h.lang === 'he' ? 'rtl' : 'ltr') }))
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null, loading: false, signIn: vi.fn(), signOut: vi.fn() }),
+  useAuthOptional: () => null,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
 
 import ConstitutionPage from '@/pages/ConstitutionPage'
 
