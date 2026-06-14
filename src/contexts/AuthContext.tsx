@@ -2,6 +2,11 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, ty
 import { api, setAccessToken, setRefreshHandler, type AuthUser } from '@/lib/api-client'
 
 const REFRESH_KEY = 'liberal.refreshToken'
+const CHANNEL_NAME = 'liberal-auth'
+
+type BroadcastMsg =
+  | { type: 'session'; accessToken: string; refreshToken: string; user: AuthUser }
+  | { type: 'logout' }
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -30,8 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshToken = useRef<string | null>(localStorage.getItem(REFRESH_KEY))
   // Deduplicates concurrent refresh calls: if multiple 401s fire at the same time they all
   // await the same in-flight promise instead of each rotating the token (which triggers the
-  // server's reuse-detection and wipes all sessions).
+  // server's reuse-detection and wiping all sessions).
   const refreshInFlight = useRef<Promise<string | null> | null>(null)
+  // Cross-tab session sync: broadcasts login/logout to sibling tabs so they pick up the
+  // session immediately without having to re-authenticate.
+  const channel = useRef<BroadcastChannel | null>(null)
 
   const updateUser = useCallback((patch: Partial<AuthUser>) => {
     setUser((u) => (u ? { ...u, ...patch } : u))
@@ -42,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshToken.current = newRefresh
     localStorage.setItem(REFRESH_KEY, newRefresh)
     setUser(u)
+    channel.current?.postMessage({ type: 'session', accessToken, refreshToken: newRefresh, user: u } satisfies BroadcastMsg)
   }, [])
 
   const clear = useCallback(() => {
@@ -49,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshToken.current = null
     localStorage.removeItem(REFRESH_KEY)
     setUser(null)
+    channel.current?.postMessage({ type: 'logout' } satisfies BroadcastMsg)
   }, [])
 
   // Feed api-client's 401 retry: refresh and return a fresh access token, else sign out.
@@ -83,6 +93,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clear()
     if (token) { try { await api.auth.logout(token) } catch { /* best-effort */ } }
   }, [clear])
+
+  // Set up cross-tab broadcast channel. Other tabs send us their session state when they
+  // log in or out; we apply it directly so the user is never asked to sign in twice.
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return
+    const bc = new BroadcastChannel(CHANNEL_NAME)
+    channel.current = bc
+    bc.onmessage = (e: MessageEvent<BroadcastMsg>) => {
+      const msg = e.data
+      if (msg.type === 'session') {
+        setAccessToken(msg.accessToken)
+        refreshToken.current = msg.refreshToken
+        localStorage.setItem(REFRESH_KEY, msg.refreshToken)
+        setUser(msg.user)
+      } else if (msg.type === 'logout') {
+        setAccessToken(null)
+        refreshToken.current = null
+        localStorage.removeItem(REFRESH_KEY)
+        setUser(null)
+      }
+    }
+    return () => { bc.close(); channel.current = null }
+  }, [])
 
   // Register the refresh handler once; restore any existing session on mount.
   useEffect(() => {

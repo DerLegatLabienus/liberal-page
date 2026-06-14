@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { XIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -79,7 +80,16 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
           <DialogClose className="absolute end-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-slate-100">
             <XIcon className="h-5 w-5" /><span className="sr-only">Close</span>
           </DialogClose>
-          <h2 className="mb-4 text-lg font-bold">Admin</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Admin</h2>
+            <Link
+              to="/admin/letters"
+              onClick={onClose}
+              className="text-sm text-primary hover:underline"
+            >
+              Letters →
+            </Link>
+          </div>
           {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
           <section className="mb-6">
