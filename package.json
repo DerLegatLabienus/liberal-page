@@ -41,6 +41,7 @@
     "express": "^5.2.1",
     "google-auth-library": "^10.6.2",
     "i18next": "^26.2.0",
+    "ipaddr.js": "^2.4.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.16.0",
     "mammoth": "^1.12.0",

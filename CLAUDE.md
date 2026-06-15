@@ -100,7 +100,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `GET`    | `/api/parliament/:type`       | reads tracked entities from DB, returns data |
 | `POST`   | `/api/tracking/add`           | parse URL → fetch metadata → upsert entity + tracking row in DB |
 | `DELETE` | `/api/tracking/:type/:id`     | remove tracking row from DB by entity `id` |
-| `POST`   | `/api/summarize`              | download PDF/DOCX → Claude → cache in DB (summaries_cache) |
+| `POST`   | `/api/summarize`              | **requireAuth + per-IP rate limit.** SSRF-guarded download (host allowlist + IP check) → Claude (relevance-gated) → cache in DB (summaries_cache) |
 | `GET`    | `/api/bills/search`           | search Knesset OData API |
 | `POST`   | `/api/bills/track`            | add bill by Knesset bill ID |
 | `GET`    | `/api/bills/recent`           | Bills Overview Recent tab (ordered by BillID desc or progress date) |
@@ -143,6 +143,12 @@ since it is later opened in a scriptable context (Blob "open in new tab", rich c
 - **Knesset OData API** (`knesset.gov.il/Odata/ParliamentInfo.svc`) — member identity, bill/committee lookup for comboboxes. Uses `SiteId` in URLs but internal `KnsID` in the OData layer; `KNS_MkSiteCode` is the join table.
 - **Knesset website API** (`GetParlamentayActivity`) — MK activity feed. Identified by `knesset_site_id` (integer, e.g. `1116`).
 - **Main knesset.gov.il site** — bot-protected; only scraped for specific activity endpoints.
+
+**SSRF guard:** all server-side document fetches in the summarizer go through
+`server/services/url-guard.ts` — a host allowlist (`*.knesset.gov.il`) plus an `ipaddr.js` check
+that rejects any resolved non-public address, with redirect re-validation, a timeout, and a size
+cap. Extend `ALLOWED_DOC_HOST_SUFFIXES` if a legitimate document host outside `knesset.gov.il` is
+ever needed.
 
 ### Poller
 

@@ -378,8 +378,10 @@ Each is small and independent; promote to its own numbered item if it grows.
 Ranked by impact ÷ effort. Detail for each is in the dated pass below.
 
 **Fix now (high leverage, low effort):**
-1. **SSRF in `POST /api/summarize`** (pass 3) — unauth'd server-side fetch of an arbitrary URL.
-   The one genuine security hole; gate with auth + host allowlist + private-IP block. *Small.*
+1. ~~**SSRF in `POST /api/summarize`**~~ ✅ **SHIPPED 2026-06-15** — added `requireAuth` + per-IP
+   rate limit + `server/services/url-guard.ts` (host allowlist + `ipaddr.js` IP check + redirect
+   re-validation + timeout + size cap), applied at the summarizer fetch boundary (covers the
+   poller too); plus a relevance-gated, injection-resistant prompt and `[summarizer]` logging.
 2. **Index migration** (pass 5) — add indexes on `refresh_tokens.token_hash` (scanned every
    refresh), `committee_sessions.committee_id`, and MK child tables' `mk_id`. One migration,
    no app changes, big read win. *Small.*

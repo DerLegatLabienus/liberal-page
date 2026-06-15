@@ -1,14 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { createHash } from 'crypto'
 
+const createMock = vi.fn()
 vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: {
-      create: vi.fn().mockResolvedValue({
-        content: [{ type: 'text', text: 'סיכום בדיקה' }],
-      }),
-    },
-  })),
+  default: vi.fn().mockImplementation(() => ({ messages: { create: createMock } })),
 }))
 
 vi.mock('pdf-parse', () => ({
@@ -31,7 +26,10 @@ vi.mock('../../server/repositories/summaries-repository', () => ({
 
 import { Summarizer } from '../../server/services/summarizer'
 
-describe('Summarizer', () => {
+const relevant = (summary: string) => ({ content: [{ type: 'text', text: JSON.stringify({ relevant: true, summary }) }] })
+const irrelevant = () => ({ content: [{ type: 'text', text: JSON.stringify({ relevant: false, summary: '' }) }] })
+
+describe('Summarizer.summarizeBuffer', () => {
   let summarizer: Summarizer
 
   beforeEach(() => {
@@ -41,32 +39,31 @@ describe('Summarizer', () => {
     mockRepoSet.mockResolvedValue(undefined)
   })
 
-  it('returns cached summary when MD5 matches', async () => {
+  it('returns cached summary when MD5 matches (no AI call)', async () => {
     const content = Buffer.from('test content')
     const md5 = createHash('md5').update(content).digest('hex')
-    const cachedSummary = 'סיכום שמור'
-
-    mockRepoGet.mockResolvedValueOnce({
-      summary: cachedSummary,
-      createdAt: '2024-01-01',
-      sourceUrl: 'http://test.com',
-    })
+    mockRepoGet.mockResolvedValueOnce({ summary: 'סיכום שמור', createdAt: '2024-01-01', sourceUrl: 'http://test.com' })
 
     const result = await summarizer.summarizeBuffer(content, 'http://test.com', 'pdf')
-    expect(result).toBe(cachedSummary)
+    expect(result).toBe('סיכום שמור')
     expect(mockRepoGet).toHaveBeenCalledWith(md5)
+    expect(createMock).not.toHaveBeenCalled()
   })
 
-  it('calls Claude API on cache miss and caches result', async () => {
-    mockRepoGet.mockResolvedValueOnce(null)
-
-    const result = await summarizer.summarizeBuffer(
-      Buffer.from('new content'),
-      'http://test.com',
-      'pdf'
-    )
-
+  it('summarizes and caches on cache miss when content is relevant', async () => {
+    createMock.mockResolvedValueOnce(relevant('סיכום בדיקה'))
+    const result = await summarizer.summarizeBuffer(Buffer.from('new content'), 'http://test.com', 'pdf')
     expect(result).toBe('סיכום בדיקה')
     expect(mockRepoSet).toHaveBeenCalled()
+  })
+
+  it('returns null and does NOT cache when content is judged irrelevant', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    createMock.mockResolvedValueOnce(irrelevant())
+    const result = await summarizer.summarizeBuffer(Buffer.from('spam'), 'http://evil.example/ad', 'pdf')
+    expect(result).toBeNull()
+    expect(mockRepoSet).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
   })
 })
