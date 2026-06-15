@@ -391,8 +391,12 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    push that fails CI never ships. (All three fix-now items now done.)
 
 **Next (clear value, modest effort):**
-4. Resend **batch send** for broadcasts + **crash-safe** notify (passes 6) — stop blocking the
-   poll cycle and stop the duplicate-email risk on mid-send crash.
+4. ~~Resend **batch send** + **crash-safe** notify~~ ✅ **SHIPPED 2026-06-15** — `sendEmailsBatch`
+   (`resend.batch.send`, ≤100/request) replaces the sequential 500ms loop for both broadcasts
+   (pinned-letter + bill alerts); `notifyPinnedLetters` now stamps `pin_notified_at` only when ≥1
+   email actually sent (no more silent "notified" with nothing delivered). Residual: per-recipient
+   idempotency (a partial-failure could re-send to already-delivered recipients) would need a
+   per-recipient ledger — separate follow-up if needed.
 5. **React error boundary** + **dedupe `useFeatureFlags`** via context (pass 4) — stops a render
    throw white-screening the SPA; removes 3× redundant flag fetches per page.
 6. **`AbortController` timeouts + retry** on all outbound `fetch` (pass 2) — a hung Knesset

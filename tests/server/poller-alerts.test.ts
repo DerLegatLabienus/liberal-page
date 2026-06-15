@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { findAlertRecipients, renderFragment, sendEmailsThrottled } = vi.hoisted(() => ({
+const { findAlertRecipients, renderFragment, sendEmailsBatch } = vi.hoisted(() => ({
   findAlertRecipients: vi.fn(),
   renderFragment: vi.fn().mockResolvedValue('<li>item</li>'),
-  sendEmailsThrottled: vi.fn().mockResolvedValue(undefined),
+  sendEmailsBatch: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('../../server/repositories/tracked-bills-repository', () => ({
   TrackedBillsRepository: vi.fn().mockImplementation(() => ({ findAlertRecipients })),
 }))
 vi.mock('../../server/services/email-render', () => ({ renderFragment }))
-vi.mock('../../server/services/email', () => ({ sendEmailsThrottled }))
+vi.mock('../../server/services/email', () => ({ sendEmailsBatch }))
 
 import { sendBillAlerts } from '../../server/services/poller'
 
@@ -26,8 +26,8 @@ describe('sendBillAlerts', () => {
       { userId: 2, email: 'two@x.com', name: 'Two', billId: 10 },
     ])
     await sendBillAlerts([CH(10), CH(11)])
-    expect(sendEmailsThrottled).toHaveBeenCalledTimes(1)
-    const messages = sendEmailsThrottled.mock.calls[0][0]
+    expect(sendEmailsBatch).toHaveBeenCalledTimes(1)
+    const messages = sendEmailsBatch.mock.calls[0][0]
     expect(messages).toHaveLength(2)
     const u1 = messages.find((m: { to: string; template: string; params: Record<string, string>; raw?: string[] }) => m.to === 'one@x.com')
     expect(u1.params.count).toBe('2')
@@ -38,12 +38,12 @@ describe('sendBillAlerts', () => {
   it('does nothing when there are no changes', async () => {
     await sendBillAlerts([])
     expect(findAlertRecipients).not.toHaveBeenCalled()
-    expect(sendEmailsThrottled).not.toHaveBeenCalled()
+    expect(sendEmailsBatch).not.toHaveBeenCalled()
   })
 
   it('does nothing when no one is tracking the changed bills', async () => {
     findAlertRecipients.mockResolvedValue([])
     await sendBillAlerts([CH(10)])
-    expect(sendEmailsThrottled).not.toHaveBeenCalled()
+    expect(sendEmailsBatch).not.toHaveBeenCalled()
   })
 })

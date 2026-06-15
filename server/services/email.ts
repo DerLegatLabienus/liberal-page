@@ -84,3 +84,71 @@ export async function sendEmailsThrottled(messages: SendArgs[]): Promise<void> {
     if (i < messages.length - 1) await new Promise((r) => setTimeout(r, THROTTLE_MS))
   }
 }
+
+const BATCH_MAX = 100
+
+// Ledger write is best-effort and must never throw or block the batch. Promise.resolve wraps
+// the repo result so this is safe even if record() is synchronous/mocked.
+function recordSafe(r: Parameters<SentEmailsRepository['record']>[0]): Promise<void> {
+  return Promise.resolve(getSentRepo().record(r)).catch(() => {})
+}
+
+export interface BatchOutcome { sent: number; failed: number; skipped: number }
+
+/**
+ * Send many emails via Resend's batch API — one request per ≤100 messages instead of the
+ * sequential 500ms-spaced loop, so a broadcast no longer blocks the poll cycle for ~N/2 s and
+ * the crash window (mid-broadcast restart → duplicates) shrinks to a single request. Renders
+ * each message, records the ledger, never throws. Returns counts so callers can decide whether
+ * to mark a broadcast as delivered (e.g. only stamp pin_notified_at when sent > 0).
+ */
+export async function sendEmailsBatch(messages: SendArgs[]): Promise<BatchOutcome> {
+  const outcome: BatchOutcome = { sent: 0, failed: 0, skipped: 0 }
+  if (messages.length === 0) return outcome
+
+  // Render up front; a render failure is a per-message failure (recorded), never a throw.
+  type Prepared = { to: string; template: string; subject: string; html: string }
+  const prepared: Prepared[] = []
+  for (const m of messages) {
+    try {
+      const r = await renderTemplate(m.template, m.params, { raw: m.raw })
+      prepared.push({ to: m.to, template: m.template, subject: r.subject, html: r.html })
+    } catch (err) {
+      console.error('[email] batch render failed template=%s to=%s', m.template, redactEmail(m.to), err)
+      await recordSafe({ id: `failed:${randomUUID()}`, toEmail: m.to, template: m.template, status: 'failed', error: String(err) })
+      outcome.failed++
+    }
+  }
+
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY unset — skipping batch of %d', prepared.length)
+    outcome.skipped += prepared.length
+    return outcome
+  }
+  const from = process.env.EMAIL_FROM ?? ''
+
+  for (let i = 0; i < prepared.length; i += BATCH_MAX) {
+    const chunk = prepared.slice(i, i + BATCH_MAX)
+    try {
+      const { data, error } = await resend.batch.send(
+        chunk.map((c) => ({ from, to: c.to, subject: c.subject, html: c.html })),
+      )
+      if (error || !data) throw error ?? new Error('Resend batch returned no data')
+      const ids = (data as { data?: { id: string }[] }).data ?? []
+      chunk.forEach((c, idx) => {
+        outcome.sent++
+        const id = ids[idx]?.id ?? `sent:${randomUUID()}`
+        void recordSafe({ id, toEmail: c.to, template: c.template, status: 'sent', error: null })
+      })
+      console.info('[email] batch sent %d messages', chunk.length)
+    } catch (err) {
+      console.error('[email] batch send failed for %d messages', chunk.length, err)
+      for (const c of chunk) {
+        outcome.failed++
+        await recordSafe({ id: `failed:${randomUUID()}`, toEmail: c.to, template: c.template, status: 'failed', error: String(err) })
+      }
+    }
+  }
+  return outcome
+}

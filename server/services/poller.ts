@@ -6,7 +6,7 @@ import { CommitteesRepository } from '../repositories/committees-repository'
 import { MksRepository } from '../repositories/mks-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
 import { renderFragment } from './email-render'
-import { sendEmailsThrottled, type SendArgs } from './email'
+import { sendEmailsBatch, type SendArgs } from './email'
 import { getCurrentKnesset, detectKnessetTransition } from './knesset-config'
 import { refreshCommitteeListIfStale } from './committee-list-refresh'
 import { enrichCommitteeSessions } from './committee-session-enricher'
@@ -61,7 +61,7 @@ export async function sendBillAlerts(changes: BillChange[]): Promise<void> {
       raw: ['bills'],
     })
   }
-  await sendEmailsThrottled(messages)
+  await sendEmailsBatch(messages)
 }
 
 async function pollBills(): Promise<boolean> {
