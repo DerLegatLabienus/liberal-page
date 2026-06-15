@@ -1,4 +1,5 @@
 import type { MkActivity } from '../../src/types'
+import { fetchWithTimeout } from '../lib/http'
 
 const KNESSET_WEBSITE_API = 'https://www.knesset.gov.il/WebSiteApi/knessetapi'
 import { getCurrentKnesset } from './knesset-config'
@@ -35,7 +36,7 @@ function parsePlenaryDate(s: string): string {
 
 export async function fetchMkActivity(siteId: number, limit = 10): Promise<MkActivity[]> {
   const url = `${KNESSET_WEBSITE_API}/MKs/GetParlamentayActivity?mkId=${siteId}&knessetId=${getCurrentKnesset()}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
   })
   if (!res.ok) throw new Error(`Knesset Website API error ${res.status}`)

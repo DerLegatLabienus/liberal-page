@@ -401,8 +401,10 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    `src/components/ErrorBoundary.tsx` wraps the app in `main.tsx` (RTL fallback + reload instead of
    a white screen); `useFeatureFlags` now shares a module-level cache + single in-flight fetch, so
    all consumers trigger one `GET /api/feature-flags` instead of 3+ per page.
-6. **`AbortController` timeouts + retry** on all outbound `fetch` (pass 2) — a hung Knesset
-   endpoint currently stalls the whole poll loop.
+6. ~~**`AbortController` timeouts + retry**~~ ✅ **SHIPPED 2026-06-16** — `server/lib/http.ts`
+   `fetchWithTimeout` (15 s `AbortSignal.timeout` + 1 retry on network error / 5xx) wired into the
+   three Knesset poll-cycle fetchers (`odata`, `oknesset`, `knesset-scraper`). A hung endpoint no
+   longer stalls the loop. (AI path keeps its own handling; Calendly POSTs left unretried.)
 7. **`helmet`** + **graceful shutdown** (SIGTERM → stop poller, `pool.end()`) (pass 7).
 
 **Someday / low:**

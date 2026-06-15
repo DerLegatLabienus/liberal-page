@@ -6,6 +6,8 @@
  * only the entity + query (e.g. `KNS_Bill?$filter=...`).
  */
 
+import { fetchWithTimeout } from '../lib/http'
+
 const ODATA_BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 
 export interface OdataOptions {
@@ -21,7 +23,7 @@ async function fetchPage<T>(
   pathAndQuery: string,
   opts: OdataOptions | undefined,
 ): Promise<{ rows: T[]; nextLink: string | null }> {
-  const res = await fetch(`${ODATA_BASE}/${pathAndQuery}`, {
+  const res = await fetchWithTimeout(`${ODATA_BASE}/${pathAndQuery}`, {
     headers: { Accept: 'application/json', ...opts?.headers },
     signal: opts?.signal,
   })

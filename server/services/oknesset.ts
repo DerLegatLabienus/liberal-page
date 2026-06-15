@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '../lib/http'
+
 const BASE = 'https://oknesset.org/api/v2'
 
 export interface OknessetBill {
@@ -25,7 +27,7 @@ export interface OknessetMk {
 
 export class OknessetClient {
   private async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetchWithTimeout(`${BASE}${path}`, {
       headers: { Accept: 'application/json' },
     })
     if (!res.ok) throw new Error(`oknesset API error: ${res.status}`)

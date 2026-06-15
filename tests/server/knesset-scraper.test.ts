@@ -79,8 +79,9 @@ describe('fetchMkActivity', () => {
     expect(result).toHaveLength(2)
   })
 
-  it('throws when fetch fails', async () => {
-    vi.mocked(fetch).mockRejectedValueOnce(new Error('network error'))
+  it('throws when fetch fails (after retries are exhausted)', async () => {
+    // fetchWithTimeout retries transient failures, so reject persistently, not just once.
+    vi.mocked(fetch).mockRejectedValue(new Error('network error'))
 
     await expect(fetchMkActivity(1116)).rejects.toThrow('network error')
   })
