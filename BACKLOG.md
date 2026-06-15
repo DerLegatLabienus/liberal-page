@@ -397,8 +397,10 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    email actually sent (no more silent "notified" with nothing delivered). Residual: per-recipient
    idempotency (a partial-failure could re-send to already-delivered recipients) would need a
    per-recipient ledger — separate follow-up if needed.
-5. **React error boundary** + **dedupe `useFeatureFlags`** via context (pass 4) — stops a render
-   throw white-screening the SPA; removes 3× redundant flag fetches per page.
+5. ~~**React error boundary** + **dedupe `useFeatureFlags`**~~ ✅ **SHIPPED 2026-06-15** —
+   `src/components/ErrorBoundary.tsx` wraps the app in `main.tsx` (RTL fallback + reload instead of
+   a white screen); `useFeatureFlags` now shares a module-level cache + single in-flight fetch, so
+   all consumers trigger one `GET /api/feature-flags` instead of 3+ per page.
 6. **`AbortController` timeouts + retry** on all outbound `fetch` (pass 2) — a hung Knesset
    endpoint currently stalls the whole poll loop.
 7. **`helmet`** + **graceful shutdown** (SIGTERM → stop poller, `pool.end()`) (pass 7).
