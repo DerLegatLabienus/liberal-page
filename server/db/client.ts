@@ -5,6 +5,9 @@ import * as schema from './schema'
 
 export type DB = NodePgDatabase<typeof schema>
 
+// Kept so graceful shutdown can drain the connection pool (closeDb). Null in test mode (pglite).
+let pgPool: Pool | null = null
+
 function createDb(): DB {
   if (process.env.NODE_ENV === 'test') {
     // createRequire gives a working `require` under ESM (tsx/Vite), so pglite —
@@ -16,8 +19,13 @@ function createDb(): DB {
   }
   // One driver for both local Docker and Neon. SSL is driven by the connection
   // string (the Neon URL carries `?sslmode=require`; the local URL carries none).
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-  return drizzleNodePg(pool, { schema })
+  pgPool = new Pool({ connectionString: process.env.DATABASE_URL })
+  return drizzleNodePg(pgPool, { schema })
 }
 
 export const db: DB = createDb()
+
+/** Close the Postgres connection pool on shutdown. No-op under pglite/tests. */
+export async function closeDb(): Promise<void> {
+  if (pgPool) await pgPool.end()
+}

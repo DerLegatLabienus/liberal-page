@@ -1,6 +1,7 @@
 import './lib/fetch-logger'
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import trackingRouter from './routes/tracking'
 import parliamentRouter from './routes/parliament'
 import summarizeRouter from './routes/summarize'
@@ -17,11 +18,17 @@ import meetingsRouter from './routes/meetings'
 import lettersRouter from './routes/letters'
 import adminLettersRouter from './routes/admin-letters'
 import adminLetterAssetsRouter from './routes/admin-letter-assets'
-import { startPoller } from './services/poller'
+import { startPoller, stopPoller } from './services/poller'
 import { runMigrations } from './db/migrate'
+import { closeDb } from './db/client'
 
 const app = express()
 const PORT = 3001
+
+// Security headers. CSP is disabled because the API is JSON-first and the few HTML responses
+// (e.g. the committee /info page) use inline styles a default CSP would block; the SPA is served
+// from GitHub Pages, not here, so CSP belongs there.
+app.use(helmet({ contentSecurityPolicy: false }))
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
   .split(',')
@@ -68,7 +75,7 @@ app.get('/api/health', (_req, res) => {
 runMigrations()
   .then(() => loadConfig())
   .then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`)
       startPoller()
       detectKnessetTransition().then((transitioned) => {
@@ -77,6 +84,25 @@ runMigrations()
         console.error('Knesset transition detection failed on startup:', err)
       })
     })
+
+    // Graceful shutdown: on a platform stop/redeploy (SIGTERM) or Ctrl-C (SIGINT), stop the
+    // poller, drain in-flight HTTP, then close the DB pool — instead of being hard-killed
+    // mid-write. Force-exit after 10s if something hangs.
+    let shuttingDown = false
+    const shutdown = (signal: string) => {
+      if (shuttingDown) return
+      shuttingDown = true
+      console.log(`Received ${signal} — shutting down gracefully`)
+      stopPoller()
+      server.close(() => {
+        closeDb()
+          .catch((err) => console.error('Error closing DB pool:', err))
+          .finally(() => process.exit(0))
+      })
+      setTimeout(() => { console.error('Forced shutdown after timeout'); process.exit(1) }, 10_000).unref()
+    }
+    process.on('SIGTERM', () => shutdown('SIGTERM'))
+    process.on('SIGINT', () => shutdown('SIGINT'))
   })
   .catch((err) => {
     console.error(

@@ -251,6 +251,9 @@ export async function runPollCycle(): Promise<boolean> {
   return anySuccess
 }
 
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let stopped = false
+
 async function runAndSchedule(): Promise<void> {
   const success = await runPollCycle()
   if (success) {
@@ -264,9 +267,16 @@ async function runAndSchedule(): Promise<void> {
     }
     console.warn(`Poller: all polls failed — backing off ${currentDelayMs / 1000}s before next cycle`)
   }
-  setTimeout(runAndSchedule, currentDelayMs)
+  if (!stopped) pollTimer = setTimeout(runAndSchedule, currentDelayMs)
 }
 
 export function startPoller(): void {
+  stopped = false
   runAndSchedule()
+}
+
+/** Stop scheduling further poll cycles (used on graceful shutdown). */
+export function stopPoller(): void {
+  stopped = true
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null }
 }

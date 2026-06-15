@@ -405,7 +405,11 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    `fetchWithTimeout` (15 s `AbortSignal.timeout` + 1 retry on network error / 5xx) wired into the
    three Knesset poll-cycle fetchers (`odata`, `oknesset`, `knesset-scraper`). A hung endpoint no
    longer stalls the loop. (AI path keeps its own handling; Calendly POSTs left unretried.)
-7. **`helmet`** + **graceful shutdown** (SIGTERM → stop poller, `pool.end()`) (pass 7).
+7. ~~**`helmet`** + **graceful shutdown**~~ ✅ **SHIPPED 2026-06-16** — `helmet()` (CSP disabled;
+   JSON API + inline-styled `/info` HTML) for security headers; SIGTERM/SIGINT handler stops the
+   poller (`stopPoller`), drains in-flight HTTP (`server.close`), then closes the DB pool
+   (`closeDb`), with a 10s force-exit. **The "Next" tier is now fully cleared** — only
+   "Someday / low" items remain.
 
 **Someday / low:**
 8. Summarizer re-download short-circuit by URL (pass 2); N+1 batching in parliament & admin-letters
