@@ -386,8 +386,9 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    `refresh_tokens(token_hash,user_id,expires_at)`, `committee_sessions(committee_id)`, and
    `mk_roles`/`mk_activity`/`mk_votes(mk_id)` (declared via schema `index()`).
    (`mk_knesset_terms.mk_id` was already covered by its composite unique.)
-3. **Gate deploy on CI** (pass 7) — `deploy.yml` ships on `vite build` alone; failing
-   tests/lint/typecheck don't block. Make deploy `needs:` the CI job. *Small.*
+3. ~~**Gate deploy on CI**~~ ✅ **SHIPPED 2026-06-15** — `deploy.yml` now has a `test` job
+   (lint + `tsc --noEmit` + `npm test`); `build` `needs: test` and `deploy` `needs: build`, so a
+   push that fails CI never ships. (All three fix-now items now done.)
 
 **Next (clear value, modest effort):**
 4. Resend **batch send** for broadcasts + **crash-safe** notify (passes 6) — stop blocking the
