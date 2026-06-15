@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from 'drizzle-orm/pg-core'
+import { pgTable, serial, integer, text, boolean, timestamp, index } from 'drizzle-orm/pg-core'
 
 export const committees = pgTable('committees', {
   id: serial('id').primaryKey(),
@@ -25,4 +25,4 @@ export const committeeSessions = pgTable('committee_sessions', {
   sessionUrl: text('session_url').notNull(),
   attendingSiteIds: text('attending_site_ids').array().notNull().default([]),
   aiSummary: text('ai_summary'),
-})
+}, (t) => ({ byCommitteeId: index('idx_committee_sessions_committee_id').on(t.committeeId) }))

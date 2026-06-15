@@ -382,9 +382,10 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    rate limit + `server/services/url-guard.ts` (host allowlist + `ipaddr.js` IP check + redirect
    re-validation + timeout + size cap), applied at the summarizer fetch boundary (covers the
    poller too); plus a relevance-gated, injection-resistant prompt and `[summarizer]` logging.
-2. **Index migration** (pass 5) — add indexes on `refresh_tokens.token_hash` (scanned every
-   refresh), `committee_sessions.committee_id`, and MK child tables' `mk_id`. One migration,
-   no app changes, big read win. *Small.*
+2. ~~**Index migration**~~ ✅ **SHIPPED 2026-06-15** — migration `0019` adds indexes on
+   `refresh_tokens(token_hash,user_id,expires_at)`, `committee_sessions(committee_id)`, and
+   `mk_roles`/`mk_activity`/`mk_votes(mk_id)` (declared via schema `index()`).
+   (`mk_knesset_terms.mk_id` was already covered by its composite unique.)
 3. **Gate deploy on CI** (pass 7) — `deploy.yml` ships on `vite build` alone; failing
    tests/lint/typecheck don't block. Make deploy `needs:` the CI job. *Small.*
 

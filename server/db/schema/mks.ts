@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp, unique } from 'drizzle-orm/pg-core'
+import { pgTable, serial, integer, text, boolean, timestamp, unique, index } from 'drizzle-orm/pg-core'
 
 export const mks = pgTable('mks', {
   id: serial('id').primaryKey(),
@@ -30,7 +30,7 @@ export const mkRoles = pgTable('mk_roles', {
   committeeName: text('committee_name'),
   isCurrent: boolean('is_current').notNull(),
   startDate: timestamp('start_date', { withTimezone: true }),
-})
+}, (t) => ({ byMkId: index('idx_mk_roles_mk_id').on(t.mkId) }))
 
 export const mkActivity = pgTable('mk_activity', {
   id: serial('id').primaryKey(),
@@ -40,7 +40,7 @@ export const mkActivity = pgTable('mk_activity', {
   title: text('title').notNull(),
   detail: text('detail'),
   sourceUrl: text('source_url'),
-})
+}, (t) => ({ byMkId: index('idx_mk_activity_mk_id').on(t.mkId) }))
 
 export const mkVotes = pgTable('mk_votes', {
   id: serial('id').primaryKey(),
@@ -48,4 +48,4 @@ export const mkVotes = pgTable('mk_votes', {
   date: timestamp('date', { withTimezone: true }).notNull(),
   billTitle: text('bill_title').notNull(),
   vote: text('vote').notNull(),
-})
+}, (t) => ({ byMkId: index('idx_mk_votes_mk_id').on(t.mkId) }))

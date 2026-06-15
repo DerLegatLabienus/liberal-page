@@ -134,6 +134,13 @@
       "when": 1781424000000,
       "tag": "0018_seed_letter_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781522546904,
+      "tag": "0019_open_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }
