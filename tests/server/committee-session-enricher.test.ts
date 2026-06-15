@@ -50,7 +50,7 @@ describe('enrichCommitteeSessions', () => {
     expect(result[0].aiSummary).toBeUndefined()
   })
 
-  it('committee lookup query does not contain KnessetNum', async () => {
+  it('resolves the newest committee term (orderby KnessetNum desc, not the unreliable IsCurrent flag)', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockOdata(ODATA_COMMITTEE))
       .mockResolvedValueOnce(mockOdata(ODATA_SESSIONS))
@@ -59,9 +59,13 @@ describe('enrichCommitteeSessions', () => {
 
     await enrichCommitteeSessions('ועדת הכספים', [], false)
 
+    // The Knesset OData marks IsCurrent=true on multiple historical instances of a same-named
+    // committee, so the lookup must order by KnessetNum desc + top 1 instead of trusting IsCurrent.
     const committeeCall = vi.mocked(fetch).mock.calls[0][0] as string
-    expect(committeeCall).not.toContain('KnessetNum')
-    expect(committeeCall).toContain('IsCurrent')
+    expect(committeeCall).toContain('orderby=KnessetNum')
+    expect(committeeCall).toContain('desc')
+    expect(committeeCall).toContain('top=1')
+    expect(committeeCall).not.toContain('IsCurrent')
   })
 
   it('session query uses $top=5', async () => {

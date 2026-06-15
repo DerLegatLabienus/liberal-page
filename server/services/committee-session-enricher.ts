@@ -9,7 +9,7 @@ interface ODataSession {
 }
 
 interface ODataItem { Name: string; Ordinal: number }
-interface ODataCommittee { CommitteeID: number; Name: string }
+interface ODataCommittee { CommitteeID: number; Name: string; KnessetNum: number }
 
 // Enrichment is best-effort: a failed call yields no sessions rather than an error,
 // so it never blocks tracking. Wrap the throwing shared helper to preserve that.
@@ -23,8 +23,13 @@ async function safeOdataGet<T>(path: string): Promise<T[]> {
 
 async function resolveCommitteeId(committeeName: string): Promise<number | null> {
   const encoded = encodeURIComponent(committeeName.trim())
+  // Resolve to the NEWEST committee instance with this name. We deliberately do NOT filter on
+  // IsCurrent: the Knesset OData sets IsCurrent=true on multiple historical instances of the
+  // same-named committee (e.g. "ועדת הכלכלה" is true for both Knesset 15 / CommitteeID 4 and
+  // Knesset 25 / CommitteeID 4193). Ordering by KnessetNum desc + top 1 always picks the
+  // current term's committee, whose sessions are the recent ones.
   const results = await safeOdataGet<ODataCommittee>(
-    `KNS_Committee?$filter=IsCurrent%20eq%20true%20and%20Name%20eq%20'${encoded}'&$select=CommitteeID,Name&$top=1&$format=json`
+    `KNS_Committee?$filter=Name%20eq%20'${encoded}'&$orderby=KnessetNum%20desc&$select=CommitteeID,Name,KnessetNum&$top=1&$format=json`
   )
   return results[0]?.CommitteeID ?? null
 }
