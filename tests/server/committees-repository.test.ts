@@ -27,6 +27,21 @@ describe('CommitteesRepository', () => {
     expect(c?.recentSessions?.[0].attendingSiteIds).toEqual(['1116'])
   })
 
+  it('returns sessions newest-first regardless of insert order', async () => {
+    const id = await repo.upsert({
+      ...COMMITTEE,
+      recentSessions: [
+        { sessionId: 1, date: '2026-03-15T13:00:00.000Z', knessetNum: 25, title: 'old', sessionUrl: 'u1', attendingSiteIds: [] },
+        { sessionId: 2, date: '2026-06-18T09:30:00.000Z', knessetNum: 25, title: 'new', sessionUrl: 'u2', attendingSiteIds: [] },
+        { sessionId: 3, date: '2026-05-01T09:30:00.000Z', knessetNum: 25, title: 'mid', sessionUrl: 'u3', attendingSiteIds: [] },
+      ],
+    })
+    const c = await repo.getById(id)
+    expect(c?.recentSessions?.map((s) => s.date)).toEqual([
+      '2026-06-18T09:30:00.000Z', '2026-05-01T09:30:00.000Z', '2026-03-15T13:00:00.000Z',
+    ])
+  })
+
   it('re-upsert replaces sessions (replace-set)', async () => {
     const id = await repo.upsert(COMMITTEE)
     await repo.upsert({ ...COMMITTEE, recentSessions: [] }, id)
