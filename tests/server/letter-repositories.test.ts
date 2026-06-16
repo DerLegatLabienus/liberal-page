@@ -231,4 +231,20 @@ describe('LetterAnalyticsRepository', () => {
     expect(stats.lifetime?.total).toBe(3)
     expect(stats.lifetime?.breakdown).toEqual({ copy: 2, mailto: 1 })
   })
+
+  it('getLifetimeForLetters returns batched totals keyed by letter, omitting letters with no sends', async () => {
+    const now = new Date('2026-06-14T10:00:00Z')
+    const a = await lettersRepo.create({ ...BASE_LETTER, title: 'A' })
+    const b = await lettersRepo.create({ ...BASE_LETTER, title: 'B' })
+    const c = await lettersRepo.create({ ...BASE_LETTER, title: 'C' }) // no sends
+    await analyticsRepo.record(a.id, 'mailto', now)
+    await analyticsRepo.record(a.id, 'copy', now)
+    await analyticsRepo.record(b.id, 'mailto', now)
+
+    const map = await analyticsRepo.getLifetimeForLetters([a.id, b.id, c.id])
+    expect(map.get(a.id)).toEqual({ total: 2, breakdown: { mailto: 1, copy: 1 } })
+    expect(map.get(b.id)?.total).toBe(1)
+    expect(map.has(c.id)).toBe(false)
+    expect(await analyticsRepo.getLifetimeForLetters([])).toEqual(new Map())
+  })
 })

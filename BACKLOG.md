@@ -415,14 +415,20 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
 8. ~~Summarizer re-download short-circuit by URL~~ ✅ **SHIPPED 2026-06-16** (`SummariesRepository.
    getBySourceUrl` + `summarizeUrl` skips the download on a URL hit); ~~N+1 batching in the parliament
    read~~ ✅ **SHIPPED 2026-06-16** (`MksRepository`/`CommitteesRepository.getByIds` batch via
-   `inArray`; tracked-list reads went from ~5×N / 2×N queries to a fixed handful — admin-letters
-   `getForLetter`-per-letter N+1 still open); ~~`summaries_cache` prune~~ ✅ **SHIPPED 2026-06-16**
+   `inArray`; tracked-list reads went from ~5×N / 2×N queries to a fixed handful);
+   ~~admin-letters `getForLetter` N+1~~ ✅ **SHIPPED 2026-06-17** (`getLifetimeForLetters` batches the
+   list's analytics into one query); ~~`summaries_cache` prune~~ ✅ **SHIPPED 2026-06-16**
    (poller prunes summaries older than `SUMMARIES_TTL_DAYS`, default 180, each cycle via
-   `deleteOlderThan`); `listPublished`/`markPinNotified`
-   SQL tidy (pass 1); ~~route-based code splitting~~ ✅ **SHIPPED 2026-06-16** (`React.lazy` for the
-   off-home pages + the admin-only `AdminPanel`; main JS chunk 493→432 kB, gzip 155→139); broken-image
-   placeholders, flag-gate flash (pass 4); role-in-JWT instant-revocation (pass 3); central error
-   handler / 404, poller-in-web-process (pass 7).
+   `deleteOlderThan`); ~~`markPinNotified` single-statement~~ ✅ **SHIPPED 2026-06-17**
+   (`UPDATE … WHERE id IN`); ~~route-based code splitting~~ ✅ **SHIPPED 2026-06-16** (`React.lazy` for the
+   off-home pages + the admin-only `AdminPanel`; main JS chunk 493→432 kB, gzip 155→139);
+   ~~broken-image placeholders~~ ✅ **SHIPPED 2026-06-17** (neutral SVG fallback, no more `display:none`);
+   ~~role-in-JWT instant-revocation~~ ✅ **SHIPPED 2026-06-17** (`requireAdmin` re-reads role from DB);
+   ~~central error handler / 404~~ ✅ **SHIPPED 2026-06-17** (JSON 404 + final error handler in `index.ts`).
+
+   **Still deferred:** `listPublished` tag-filter-to-SQL + pagination (in-memory fine at current scale);
+   flag-gate flash (largely mitigated by the `useFeatureFlags` dedup); poller-in-web-process split
+   (deployment-topology change, unneeded now).
 
 ### 2026-06-14 — Review pass 1: server read paths + frontend bundle
 

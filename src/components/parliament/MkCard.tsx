@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
+import { onImageError } from '@/lib/image-fallback'
 import type { Mk } from '@/types'
 import type { MkActivity } from '@/types'
 
@@ -62,7 +63,7 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
               src={photoUrl}
               alt={mk.name}
               className="h-10 w-10 shrink-0 rounded-full object-cover border border-slate-200"
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
+              onError={onImageError}
             />
           )}
           <div className="min-w-0">

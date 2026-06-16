@@ -1,4 +1,4 @@
-import { eq, and, isNull, isNotNull, sql } from 'drizzle-orm'
+import { eq, and, isNull, isNotNull, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { letters } from '../db/schema'
 import type { LetterAddress } from '../db/schema'
@@ -123,8 +123,7 @@ export class LettersRepository {
   }
 
   async markPinNotified(ids: number[]): Promise<void> {
-    for (const id of ids) {
-      await db.update(letters).set({ pinNotifiedAt: new Date() }).where(eq(letters.id, id))
-    }
+    if (ids.length === 0) return
+    await db.update(letters).set({ pinNotifiedAt: new Date() }).where(inArray(letters.id, ids))
   }
 }

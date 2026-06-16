@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
 import { verifyAccessToken } from '../services/auth-service'
+import { AuthRepository } from '../repositories/auth-repository'
+
+const authRepo = new AuthRepository()
 
 export interface AuthedUser { id: number; role: string }
 
@@ -34,12 +37,23 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next()
 }
 
-/** Requires a valid bearer token with the admin role; 401/403 otherwise. */
-export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+/**
+ * Requires a valid bearer token AND a current admin role read fresh from the DB — so a demoted
+ * admin loses access immediately rather than within the 15-min access-token window (the JWT role
+ * claim alone could be stale). One extra query per admin request; admin traffic is tiny.
+ */
+export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = readBearer(req)
   const claims = token ? verifyAccessToken(token) : null
   if (!claims) { res.status(401).json({ error: 'Authentication required' }); return }
-  if (claims.role !== 'admin') { res.status(403).json({ error: 'Admins only' }); return }
-  req.user = { id: claims.userId, role: claims.role }
-  next()
+  try {
+    const user = await authRepo.findUserById(claims.userId)
+    if (!user) { res.status(401).json({ error: 'Authentication required' }); return }
+    if (user.role !== 'admin') { res.status(403).json({ error: 'Admins only' }); return }
+    req.user = { id: user.id, role: user.role }
+    next()
+  } catch (err) {
+    console.error('[auth] requireAdmin role check failed:', err)
+    res.status(500).json({ error: 'Server error' })
+  }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react'
 import { useDirection } from '@/hooks/useDirection'
+import { onImageError } from '@/lib/image-fallback'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import galleryData from '@/data/gallery.json'
 import type { GalleryItem } from '@/types'
@@ -50,7 +51,7 @@ export default function GallerySection() {
                     src={resolveImageSrc(item.src)}
                     alt={i18n.language === 'he' ? item.caption : (item.captionEn ?? item.caption)}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    onError={onImageError}
                   />
                 </div>
                 <div className="px-3 py-2">

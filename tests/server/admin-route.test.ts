@@ -3,6 +3,7 @@ import express from 'express'
 import request from 'supertest'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
+import { eq } from 'drizzle-orm'
 import { users, allowedEmails, refreshTokens, joinAnalytics } from '../../server/db/schema'
 import { issueAccessToken } from '../../server/services/auth-service'
 import adminRouter from '../../server/routes/admin'
@@ -39,6 +40,13 @@ describe('admin routes', () => {
     expect((await request(app).get('/api/admin/invites')).status).toBe(401)
     expect((await asMember('get', '/api/admin/invites')).status).toBe(403)
     expect((await asAdmin('get', '/api/admin/invites')).status).toBe(200)
+  })
+
+  it('revokes admin immediately when the DB role is downgraded (token still valid)', async () => {
+    expect((await asAdmin('get', '/api/admin/invites')).status).toBe(200)
+    // Demote in the DB without touching the still-valid admin JWT.
+    await db.update(users).set({ role: 'member' }).where(eq(users.id, adminId))
+    expect((await asAdmin('get', '/api/admin/invites')).status).toBe(403)
   })
 
   it('invites: add, list, remove', async () => {

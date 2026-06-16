@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
+import { onImageError } from '@/lib/image-fallback'
 import aboutData from '@/data/about.json'
 import type { AboutData } from '@/types'
 
@@ -50,7 +51,7 @@ export default function AboutSection() {
                       src={member.image}
                       alt={member.name}
                       className="h-14 w-14 shrink-0 rounded-full object-cover border-2 border-blue-100"
-                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      onError={onImageError}
                     />
                     <div>
                       <p className="text-start text-sm font-semibold text-foreground">{i18n.language === 'he' ? member.name : (member.nameEn ?? member.name)}</p>

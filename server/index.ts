@@ -72,6 +72,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Unknown route → consistent JSON 404 (instead of Express's default HTML).
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found' })
+})
+
+// Final error handler: catches unexpected throws (incl. the CORS-origin rejection) so clients get
+// JSON, not a stack trace. Must keep all four args for Express to treat it as an error handler.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[server] unhandled error:', err)
+  if (res.headersSent) return
+  res.status(500).json({ error: 'Server error' })
+})
+
 runMigrations()
   .then(() => loadConfig())
   .then(() => {

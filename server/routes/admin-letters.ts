@@ -19,12 +19,11 @@ router.use(requireAdmin)
 router.get('/', async (_req, res) => {
   try {
     const allLetters = await lettersRepo.listAll()
-    const withStats = await Promise.all(
-      allLetters.map(async (letter) => {
-        const stats = await analyticsRepo.getForLetter(letter.id)
-        return { ...letter, totalSends: stats.lifetime?.total ?? 0, breakdown: stats.lifetime?.breakdown ?? {} }
-      }),
-    )
+    const statsById = await analyticsRepo.getLifetimeForLetters(allLetters.map((l) => l.id))
+    const withStats = allLetters.map((letter) => {
+      const stats = statsById.get(letter.id)
+      return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {} }
+    })
     res.json({ letters: withStats })
   } catch (err) {
     console.error('[admin/letters] list failed:', err)
