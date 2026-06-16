@@ -19,4 +19,12 @@ describe('SummariesRepository', () => {
     expect(e?.summary).toBe('תקציר')
     expect(e?.attendees).toEqual(['1116'])
   })
+
+  it('deleteOlderThan() removes rows older than the cutoff and keeps newer ones', async () => {
+    await repo.set('old', { summary: 's', createdAt: '2025-01-01T00:00:00.000Z', sourceUrl: 'https://a' })
+    await repo.set('new', { summary: 's', createdAt: '2026-06-01T00:00:00.000Z', sourceUrl: 'https://b' })
+    const removed = await repo.deleteOlderThan(new Date('2026-01-01T00:00:00.000Z'))
+    expect(removed).toBe(1)
+    expect((await db.select().from(summariesCache)).map((r) => r.md5)).toEqual(['new'])
+  })
 })

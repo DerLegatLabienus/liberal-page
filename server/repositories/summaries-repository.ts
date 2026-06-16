@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, lt } from 'drizzle-orm'
 import { db } from '../db/client'
 import { summariesCache } from '../db/schema'
 
@@ -69,5 +69,15 @@ export class SummariesRepository {
         target: summariesCache.md5,
         set: { summary: entry.summary, createdAt: new Date(entry.createdAt), sourceUrl: entry.sourceUrl, attendees: entry.attendees ?? null, derivedTitle: entry.derivedTitle ?? null },
       })
+  }
+
+  /** Hygiene: delete summaries older than `cutoff` so the cache doesn't grow unbounded. They
+   *  regenerate on next access (cheap with the URL short-circuit). Returns rows removed. */
+  async deleteOlderThan(cutoff: Date): Promise<number> {
+    const deleted = await db
+      .delete(summariesCache)
+      .where(lt(summariesCache.createdAt, cutoff))
+      .returning({ md5: summariesCache.md5 })
+    return deleted.length
   }
 }

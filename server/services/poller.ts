@@ -15,7 +15,12 @@ import { pollDeliveryStatus } from './email-delivery-poll'
 import { notifyPinnedLetters } from './letter-notifier'
 import { getDatabaseSizeBytes } from '../db/size'
 import { AuthRepository } from '../repositories/auth-repository'
+import { SummariesRepository } from '../repositories/summaries-repository'
 import type { CommitteeSession } from '../../src/types'
+
+// Summaries older than this are pruned each cycle so summaries_cache stays bounded; they
+// regenerate cheaply on next access (URL short-circuit). Override with SUMMARIES_TTL_DAYS.
+const SUMMARIES_TTL_DAYS = Number(process.env.SUMMARIES_TTL_DAYS ?? 180)
 
 const INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 21_600_000)
 const BACKOFF_INITIAL_MS = 60_000   // 1 minute minimum on failure
@@ -245,6 +250,17 @@ export async function runPollCycle(): Promise<boolean> {
     await new AuthRepository().deleteExpired(new Date())
   } catch (err) {
     console.error('Poller: refresh-token cleanup failed:', err)
+  }
+
+  // Prune old cached summaries so summaries_cache stays bounded (regenerate on next access).
+  if (Number.isFinite(SUMMARIES_TTL_DAYS) && SUMMARIES_TTL_DAYS > 0) {
+    try {
+      const cutoff = new Date(Date.now() - SUMMARIES_TTL_DAYS * 86_400_000)
+      const pruned = await new SummariesRepository().deleteOlderThan(cutoff)
+      if (pruned > 0) console.log(`Poller: pruned ${pruned} summaries_cache rows older than ${SUMMARIES_TTL_DAYS}d`)
+    } catch (err) {
+      console.error('Poller: summaries-cache cleanup failed:', err)
+    }
   }
 
   console.log('Poller: poll cycle complete', anySuccess ? '(success)' : '(all failed)')
