@@ -413,8 +413,10 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
 
 **Someday / low:**
 8. ~~Summarizer re-download short-circuit by URL~~ ✅ **SHIPPED 2026-06-16** (`SummariesRepository.
-   getBySourceUrl` + `summarizeUrl` skips the download on a URL hit); N+1 batching in parliament &
-   admin-letters reads (pass 1); `summaries_cache` prune (pass 5); `listPublished`/`markPinNotified`
+   getBySourceUrl` + `summarizeUrl` skips the download on a URL hit); ~~N+1 batching in the parliament
+   read~~ ✅ **SHIPPED 2026-06-16** (`MksRepository`/`CommitteesRepository.getByIds` batch via
+   `inArray`; tracked-list reads went from ~5×N / 2×N queries to a fixed handful — admin-letters
+   `getForLetter`-per-letter N+1 still open); `summaries_cache` prune (pass 5); `listPublished`/`markPinNotified`
    SQL tidy (pass 1); ~~route-based code splitting~~ ✅ **SHIPPED 2026-06-16** (`React.lazy` for the
    off-home pages + the admin-only `AdminPanel`; main JS chunk 493→432 kB, gzip 155→139); broken-image
    placeholders, flag-gate flash (pass 4); role-in-JWT instant-revocation (pass 3); central error

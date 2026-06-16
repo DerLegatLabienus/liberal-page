@@ -8,13 +8,8 @@ export class TrackedCommitteesRepository {
   private committees = new CommitteesRepository()
 
   async getAll(userId: number): Promise<Committee[]> {
-    const tracks = await db.select().from(trackedCommittees).where(eq(trackedCommittees.userId, userId))
-    const out: Committee[] = []
-    for (const t of tracks) {
-      const c = await this.committees.getById(t.committeeId)
-      if (c) out.push(c)
-    }
-    return out
+    const tracks = await db.select({ committeeId: trackedCommittees.committeeId }).from(trackedCommittees).where(eq(trackedCommittees.userId, userId))
+    return this.committees.getByIds(tracks.map((t) => t.committeeId))
   }
 
   async track(userId: number, committeeId: number): Promise<void> {

@@ -42,4 +42,29 @@ describe('MksRepository', () => {
     expect((await repo.getById(id, 25))?.inactive).toBe(false)
     expect((await repo.getById(id, 26))?.inactive).toBe(true)
   })
+
+  it('getByIds batches multiple MKs, in input order, with their own children', async () => {
+    const a = await repo.upsert({ ...MK, name: 'MK A', oknesset_id: 'A' })
+    const b = await repo.upsert({
+      ...MK, name: 'MK B', oknesset_id: 'B',
+      currentRoles: [], recentVotes: [],
+      activity: [
+        { type: 'bill_initiated' as const, date: '2026-05-01T00:00:00.000Z', title: 'a1', detail: undefined, sourceUrl: undefined },
+        { type: 'bill_initiated' as const, date: '2026-05-03T00:00:00.000Z', title: 'a2', detail: undefined, sourceUrl: undefined },
+      ],
+    })
+    const result = await repo.getByIds([b, a], 25) // input order b, a
+    expect(result.map((m) => m.name)).toEqual(['MK B', 'MK A'])
+    const mkB = result[0], mkA = result[1]
+    expect(mkB.activity).toHaveLength(2)
+    expect(mkB.currentRoles).toHaveLength(0)
+    expect(mkA.currentRoles).toHaveLength(1)
+    expect(mkA.recentVotes).toHaveLength(1)
+  })
+
+  it('getByIds returns [] for empty input and skips missing ids', async () => {
+    const id = await repo.upsert(MK)
+    expect(await repo.getByIds([], 25)).toEqual([])
+    expect((await repo.getByIds([id, 999999], 25)).map((m) => m.id)).toEqual([id])
+  })
 })

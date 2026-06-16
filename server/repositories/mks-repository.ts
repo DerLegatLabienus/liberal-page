@@ -1,7 +1,24 @@
-import { eq, asc, notExists } from 'drizzle-orm'
+import { eq, asc, inArray, notExists } from 'drizzle-orm'
 import { db } from '../db/client'
 import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes, trackedMks } from '../db/schema'
 import type { Mk, MkRole, MkActivity, MkVote } from '../../src/types'
+
+type MkRow = typeof mks.$inferSelect
+type TermRow = typeof mkKnessetTerms.$inferSelect
+type RoleRow = typeof mkRoles.$inferSelect
+type ActivityRow = typeof mkActivity.$inferSelect
+type VoteRow = typeof mkVotes.$inferSelect
+
+/** Group child rows by their mkId, preserving input order within each group. */
+function groupByMk<T extends { mkId: number }>(rows: T[]): Map<number, T[]> {
+  const m = new Map<number, T[]>()
+  for (const r of rows) {
+    const arr = m.get(r.mkId)
+    if (arr) arr.push(r)
+    else m.set(r.mkId, [r])
+  }
+  return m
+}
 
 export interface MkTermInput { knessetNumber: number; faction: string }
 export interface MkInput {
@@ -71,14 +88,10 @@ export class MksRepository {
     })
   }
 
-  async getById(id: number, currentKnesset: number): Promise<Mk | null> {
-    const rows = await db.select().from(mks).where(eq(mks.id, id))
-    const row = rows[0]
-    if (!row) return null
-    const terms = await db.select().from(mkKnessetTerms).where(eq(mkKnessetTerms.mkId, id)).orderBy(asc(mkKnessetTerms.id))
-    const roles = await db.select().from(mkRoles).where(eq(mkRoles.mkId, id)).orderBy(asc(mkRoles.id))
-    const activity = await db.select().from(mkActivity).where(eq(mkActivity.mkId, id)).orderBy(asc(mkActivity.id))
-    const votes = await db.select().from(mkVotes).where(eq(mkVotes.mkId, id)).orderBy(asc(mkVotes.id))
+  private toMk(
+    row: MkRow, terms: TermRow[], roles: RoleRow[], activity: ActivityRow[], votes: VoteRow[],
+    currentKnesset: number,
+  ): Mk {
     const currentTerm = terms.find((t) => t.knessetNumber === currentKnesset)
     return {
       id: row.id,
@@ -106,14 +119,42 @@ export class MksRepository {
     }
   }
 
-  async getAll(currentKnesset: number): Promise<Mk[]> {
-    const allMks = await db.select().from(mks)
-    const result: Mk[] = []
-    for (const row of allMks) {
-      const mk = await this.getById(row.id, currentKnesset)
-      if (mk) result.push(mk)
+  async getById(id: number, currentKnesset: number): Promise<Mk | null> {
+    const [mk] = await this.getByIds([id], currentKnesset)
+    return mk ?? null
+  }
+
+  /**
+   * Batched read: assembles many MKs in a fixed number of queries (one per child table via
+   * inArray) instead of N×5 — the parliament read previously looped getById per tracked MK.
+   * Returns MKs in the order of `ids`, skipping any that don't exist.
+   */
+  async getByIds(ids: number[], currentKnesset: number): Promise<Mk[]> {
+    if (ids.length === 0) return []
+    const [rows, terms, roles, activity, votes] = await Promise.all([
+      db.select().from(mks).where(inArray(mks.id, ids)),
+      db.select().from(mkKnessetTerms).where(inArray(mkKnessetTerms.mkId, ids)).orderBy(asc(mkKnessetTerms.id)),
+      db.select().from(mkRoles).where(inArray(mkRoles.mkId, ids)).orderBy(asc(mkRoles.id)),
+      db.select().from(mkActivity).where(inArray(mkActivity.mkId, ids)).orderBy(asc(mkActivity.id)),
+      db.select().from(mkVotes).where(inArray(mkVotes.mkId, ids)).orderBy(asc(mkVotes.id)),
+    ])
+    const byId = new Map(rows.map((r) => [r.id, r]))
+    const termsByMk = groupByMk(terms)
+    const rolesByMk = groupByMk(roles)
+    const activityByMk = groupByMk(activity)
+    const votesByMk = groupByMk(votes)
+    const out: Mk[] = []
+    for (const id of ids) {
+      const row = byId.get(id)
+      if (!row) continue
+      out.push(this.toMk(row, termsByMk.get(id) ?? [], rolesByMk.get(id) ?? [], activityByMk.get(id) ?? [], votesByMk.get(id) ?? [], currentKnesset))
     }
-    return result
+    return out
+  }
+
+  async getAll(currentKnesset: number): Promise<Mk[]> {
+    const rows = await db.select({ id: mks.id }).from(mks)
+    return this.getByIds(rows.map((r) => r.id), currentKnesset)
   }
 
   async getAllBasic(): Promise<{ id: number; knessetSiteId: string | null }[]> {

@@ -58,21 +58,38 @@ export class CommitteesRepository {
   }
 
   async getById(id: number): Promise<Committee | null> {
-    const rows = await db.select().from(committees).where(eq(committees.id, id))
-    const row = rows[0]
-    if (!row) return null
-    const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, id)).orderBy(desc(committeeSessions.date))
-    return this.toCommittee(row, sessions)
+    const [c] = await this.getByIds([id])
+    return c ?? null
+  }
+
+  /**
+   * Batched read: committees + their sessions in two queries (sessions via inArray, grouped in
+   * memory) instead of one sessions query per committee. Returns committees in `ids` order.
+   */
+  async getByIds(ids: number[]): Promise<Committee[]> {
+    if (ids.length === 0) return []
+    const [rows, sessions] = await Promise.all([
+      db.select().from(committees).where(inArray(committees.id, ids)),
+      db.select().from(committeeSessions).where(inArray(committeeSessions.committeeId, ids)).orderBy(desc(committeeSessions.date)),
+    ])
+    const byId = new Map(rows.map((r) => [r.id, r]))
+    const sessionsByCommittee = new Map<number, (typeof committeeSessions.$inferSelect)[]>()
+    for (const s of sessions) {
+      const arr = sessionsByCommittee.get(s.committeeId)
+      if (arr) arr.push(s)
+      else sessionsByCommittee.set(s.committeeId, [s])
+    }
+    const out: Committee[] = []
+    for (const id of ids) {
+      const row = byId.get(id)
+      if (row) out.push(this.toCommittee(row, sessionsByCommittee.get(id) ?? []))
+    }
+    return out
   }
 
   async getAll(): Promise<Committee[]> {
-    const rows = await db.select().from(committees)
-    const out: Committee[] = []
-    for (const row of rows) {
-      const sessions = await db.select().from(committeeSessions).where(eq(committeeSessions.committeeId, row.id)).orderBy(desc(committeeSessions.date))
-      out.push(this.toCommittee(row, sessions))
-    }
-    return out
+    const rows = await db.select({ id: committees.id }).from(committees)
+    return this.getByIds(rows.map((r) => r.id))
   }
 
   /** Targeted update of the `inactive` flag for the given oknesset_ids. No-op on empty input. */

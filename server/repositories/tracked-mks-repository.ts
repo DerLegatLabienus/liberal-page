@@ -8,13 +8,8 @@ export class TrackedMksRepository {
   private mks = new MksRepository()
 
   async getAll(userId: number, currentKnesset: number): Promise<Mk[]> {
-    const tracks = await db.select().from(trackedMks).where(eq(trackedMks.userId, userId))
-    const out: Mk[] = []
-    for (const t of tracks) {
-      const m = await this.mks.getById(t.mkId, currentKnesset)
-      if (m) out.push(m)
-    }
-    return out
+    const tracks = await db.select({ mkId: trackedMks.mkId }).from(trackedMks).where(eq(trackedMks.userId, userId))
+    return this.mks.getByIds(tracks.map((t) => t.mkId), currentKnesset)
   }
 
   async track(userId: number, mkId: number): Promise<void> {
