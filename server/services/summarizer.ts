@@ -84,6 +84,13 @@ ${text.slice(0, 8000)}`
     const started = Date.now()
     console.info('[summarizer] start url=%s', url)
     try {
+      // Short-circuit on a prior summary for this URL — avoids re-downloading the document every
+      // poll cycle just to compute its MD5 (the only reason the byte-fetch happened on a cache hit).
+      const byUrl = await this.repo.getBySourceUrl(url)
+      if (byUrl) {
+        console.info('[summarizer] url cache hit (skipped download) url=%s', url)
+        return byUrl.summary
+      }
       const buffer = await fetchAllowedDocument(url)
       const format = url.toLowerCase().includes('.docx') ? 'docx' : 'pdf'
       const summary = await this.summarizeBuffer(buffer, url, format)

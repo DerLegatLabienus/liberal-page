@@ -412,11 +412,12 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    "Someday / low" items remain.
 
 **Someday / low:**
-8. Summarizer re-download short-circuit by URL (pass 2); N+1 batching in parliament & admin-letters
-   reads (pass 1); `summaries_cache` prune (pass 5); `listPublished`/`markPinNotified` SQL tidy
-   (pass 1); route-based code splitting (pass 1); broken-image placeholders, flag-gate flash (pass 4);
-   role-in-JWT instant-revocation (pass 3); central error handler / 404, poller-in-web-process
-   (pass 7).
+8. ~~Summarizer re-download short-circuit by URL~~ ✅ **SHIPPED 2026-06-16** (`SummariesRepository.
+   getBySourceUrl` + `summarizeUrl` skips the download on a URL hit); N+1 batching in parliament &
+   admin-letters reads (pass 1); `summaries_cache` prune (pass 5); `listPublished`/`markPinNotified`
+   SQL tidy (pass 1); route-based code splitting (pass 1); broken-image placeholders, flag-gate
+   flash (pass 4); role-in-JWT instant-revocation (pass 3); central error handler / 404,
+   poller-in-web-process (pass 7).
 
 ### 2026-06-14 — Review pass 1: server read paths + frontend bundle
 

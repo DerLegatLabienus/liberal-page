@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import { db } from '../db/client'
 import { summariesCache } from '../db/schema'
 
@@ -13,6 +13,30 @@ export interface SummaryEntry {
 export class SummariesRepository {
   async get(md5: string): Promise<SummaryEntry | null> {
     const rows = await db.select().from(summariesCache).where(eq(summariesCache.md5, md5))
+    const row = rows[0]
+    if (!row) return null
+    return {
+      summary: row.summary,
+      createdAt: row.createdAt.toISOString(),
+      sourceUrl: row.sourceUrl,
+      attendees: row.attendees ?? undefined,
+      derivedTitle: row.derivedTitle ?? undefined,
+    }
+  }
+
+  /**
+   * Look up the newest cached summary by its source URL — lets callers skip re-downloading a
+   * document just to compute its MD5 cache key. Knesset document URLs are stable, so a hit is
+   * served without a fetch; if a doc's content ever changes at the same URL the cached summary
+   * is reused until the row is deleted (deleteBySourceUrl) — acceptable for this domain.
+   */
+  async getBySourceUrl(url: string): Promise<SummaryEntry | null> {
+    const rows = await db
+      .select()
+      .from(summariesCache)
+      .where(eq(summariesCache.sourceUrl, url))
+      .orderBy(desc(summariesCache.createdAt))
+      .limit(1)
     const row = rows[0]
     if (!row) return null
     return {
