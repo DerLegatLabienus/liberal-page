@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
 import { api, errorStatus } from '@/lib/api-client'
-import AdminPanel from '@/components/admin/AdminPanel'
+
+// Admin-only and heavy (tabs, accordion, analytics) — lazy-loaded so the ~99% of visitors who
+// never open it (and every non-admin) don't pay for it in the main bundle.
+const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
 
 /**
  * Header auth control: Google sign-in button when logged out; name + sign-out when in.
@@ -44,7 +47,11 @@ export default function AuthControl() {
             >
               {t('admin.title')}
             </button>
-            <AdminPanel open={adminOpen} onClose={() => setAdminOpen(false)} />
+            {adminOpen && (
+              <Suspense fallback={null}>
+                <AdminPanel open onClose={() => setAdminOpen(false)} />
+              </Suspense>
+            )}
           </>
         )}
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
