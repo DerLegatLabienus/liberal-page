@@ -659,23 +659,27 @@ in the database. Promote each cohesive cluster to its own **Postgres schema** (n
 tables that change together live together, cross-domain references are explicit and minimized,
 and per-domain access/permissions become possible.
 
-**Proposed schema → tables mapping** (mirrors the existing `server/db/schema/` files):
+**Proposed schema → tables mapping:**
 - `parliament` — `bills`, `committees`, `committee_sessions`, `mks`, `mk_activity`,
-  `mk_knesset_terms`, `mk_roles`, `mk_votes`, `mk_annotations`
-- `tracking` — `tracked_bills`, `tracked_committees`, `tracked_mks` (per-user join tables)
+  `mk_knesset_terms`, `mk_roles`, `mk_votes`, `mk_annotations`, `tracked_bills`,
+  `tracked_committees`, `tracked_mks`, `knesset_members_cache`, `knesset_committees_cache`,
+  `summaries_cache`, `knesset_config`
 - `auth` — `users`, `refresh_tokens`, `allowed_emails`
 - `email` — `email_templates`, `sent_emails`
-- `letters` — `letters`, `letter_contacts`, `letter_issue_tags`, `letter_templates`, `letter_analytics`
-- `analytics` — `join_analytics`
-- `config` — `feature_flags`, `knesset_config`
-- `cache` — `knesset_members_cache`, `knesset_committees_cache`, `summaries_cache`
+- `letters` — `letters`, `letter_contacts`, `letter_issue_tags`, `letter_templates`
+- `analytics` — `join_analytics`, `letter_analytics`
+- `config` — `feature_flags`
 
-**Coupling notes (the point of the exercise):** the only legitimate cross-schema FKs are the
-cross-cutters — `tracking.*` → `parliament.*` + `auth.users`, `parliament.mk_annotations` →
-`parliament.mks`, `letters.letters.created_by` → `auth.users`, `letters.letter_analytics` →
-`letters.letters`. Postgres supports cross-schema FKs fine; the goal is to make those few links
-visible and keep everything else intra-schema. `letter_analytics` stays with `letters` (cohesion
-with the entity it counts) rather than under `analytics`.
+Per-user **tracking** tables fold into `parliament` (not a separate schema) so
+`tracked_* → bills/committees/mks` stay intra-schema. **Caches** live in the domain they cache
+(`knesset_*_cache` + `summaries_cache` → `parliament`) rather than a shared `cache` schema, and
+`knesset_config` joins `parliament` as knesset-domain state. **All analytics** consolidate under
+`analytics` (`join_analytics` + `letter_analytics`) for a single analytics surface.
+
+**Coupling notes (the point of the exercise):** after the above, the only cross-schema FKs are
+`parliament.tracked_* → auth.users`, `letters.letters.created_by → auth.users`, and
+`analytics.letter_analytics → letters.letters`. Everything else is intra-schema. Postgres supports
+cross-schema FKs fine; the goal is to make those few links explicit and keep the rest local.
 
 **Implementation considerations:**
 - Drizzle: declare each group via `pgSchema('parliament').table(...)` instead of `pgTable(...)`;
