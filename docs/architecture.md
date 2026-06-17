@@ -185,6 +185,9 @@ src/data/*.json
 
 scripts/seed-data/*.json
   └─ curated baseline loaded via `npm run db:seed` (one-time setup)
+     — includes ministry-contacts.json (verified gov.il spokesperson mailboxes),
+       seeded into letter_contacts (category 'ministry') alongside MK emails
+       (category 'mk') via idempotent bulkUpsert on the UNIQUE email
 
 frontend actions
   └─ /api/* through Vite proxy

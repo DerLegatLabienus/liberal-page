@@ -18,6 +18,7 @@ import { UsersRepository } from '../server/repositories/users-repository'
 import { TrackedBillsRepository } from '../server/repositories/tracked-bills-repository'
 import { TrackedCommitteesRepository } from '../server/repositories/tracked-committees-repository'
 import { TrackedMksRepository } from '../server/repositories/tracked-mks-repository'
+import { LetterContactsRepository } from '../server/repositories/letter-contacts-repository'
 import type { Bill, Committee, Mk } from '../src/types'
 
 const DATA = path.join(process.cwd(), 'scripts/seed-data')
@@ -138,7 +139,40 @@ async function main() {
     await annRepo.set(siteId, ann)
   }
 
+  // Pre-populate the letter address book (letter_contacts). Idempotent via
+  // bulkUpsert (ON CONFLICT DO NOTHING on the UNIQUE email) — re-running the
+  // seed never creates duplicates and never clobbers admin-curated contacts,
+  // which is why letter_contacts is deliberately NOT in the wipe block above.
+  const contactsRepo = new LetterContactsRepository()
+
+  // 1) MKs — reuse emails already loaded from mks.json; only those with a real email.
+  const mkContacts = mksData
+    .filter((m): m is Mk & { email: string } => Boolean(m.email))
+    .map((m) => ({ displayName: m.name, email: m.email, category: 'mk' }))
+
+  // 2) Committees — committee emails come from the Knesset OData KNS_Committee.Email
+  //    field (see server/services/knesset-committees.ts -> CommitteeInfo.Email).
+  //    That data is only available from the live Knesset API; seeding runs
+  //    offline and the offline committees.json baseline has no email field, so
+  //    we cannot seed committee contacts here without fabricating addresses.
+  //    TODO: once committee emails are captured into the seed baseline (e.g. by
+  //    the poller persisting CommitteeInfo.Email), map them here with category
+  //    'committee'. Skipped for now — a correct empty set beats invented data.
+  const committeeContacts: { displayName: string; email: string; category: string }[] = []
+
+  // 3) Ministries — curated, source-verified gov.il spokesperson role mailboxes.
+  const ministryRaw = await readJson<{ contacts: { displayName: string; email: string }[] }>('ministry-contacts.json')
+  const ministryContacts = ministryRaw.contacts.map((c) => ({
+    displayName: c.displayName,
+    email: c.email,
+    category: 'ministry',
+  }))
+
+  const allContacts = [...mkContacts, ...committeeContacts, ...ministryContacts]
+  await contactsRepo.bulkUpsert(allContacts)
+
   console.log(`Seeded: ${bills.length} bills, ${committees.length} committees, ${mksData.length} MKs, tracking rows: ${bills.length} tracked_bills, ${committees.length} tracked_committees, ${mksData.length} tracked_mks.`)
+  console.log(`Letter contacts: ${mkContacts.length} mk, ${committeeContacts.length} committee, ${ministryContacts.length} ministry (idempotent upsert on unique email).`)
   process.exit(0)
 }
 

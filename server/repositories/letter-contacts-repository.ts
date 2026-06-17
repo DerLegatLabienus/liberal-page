@@ -23,6 +23,16 @@ export class LetterContactsRepository {
     return row
   }
 
+  /**
+   * Insert many contacts, skipping any whose email already exists. Idempotent:
+   * re-running never creates duplicates (email is UNIQUE) and never clobbers
+   * admin-curated rows. Used by the seed to pre-populate the address book.
+   */
+  async bulkUpsert(rows: { displayName: string; email: string; category: string }[]): Promise<void> {
+    if (rows.length === 0) return
+    await db.insert(letterContacts).values(rows).onConflictDoNothing({ target: letterContacts.email })
+  }
+
   async update(id: number, input: { displayName: string; email: string; category: string }): Promise<void> {
     await db.update(letterContacts).set(input).where(eq(letterContacts.id, id))
   }
