@@ -651,6 +651,51 @@ invalidate the contacts and templates lists when the composer opens or after a s
 create elsewhere.
 Files: `src/pages/AdminLettersPage.tsx`.
 
+## 23. Database — Group Tables into Domain Schemas (Low Coupling / High Cohesion) (Priority: Low)
+
+All 28 tables currently live in one Postgres `public` schema on Neon. They already cluster by
+domain at the Drizzle file level (`server/db/schema/*.ts`), but that grouping isn't expressed
+in the database. Promote each cohesive cluster to its own **Postgres schema** (namespace) so
+tables that change together live together, cross-domain references are explicit and minimized,
+and per-domain access/permissions become possible.
+
+**Proposed schema → tables mapping** (mirrors the existing `server/db/schema/` files):
+- `parliament` — `bills`, `committees`, `committee_sessions`, `mks`, `mk_activity`,
+  `mk_knesset_terms`, `mk_roles`, `mk_votes`, `mk_annotations`
+- `tracking` — `tracked_bills`, `tracked_committees`, `tracked_mks` (per-user join tables)
+- `auth` — `users`, `refresh_tokens`, `allowed_emails`
+- `email` — `email_templates`, `sent_emails`
+- `letters` — `letters`, `letter_contacts`, `letter_issue_tags`, `letter_templates`, `letter_analytics`
+- `analytics` — `join_analytics`
+- `config` — `feature_flags`, `knesset_config`
+- `cache` — `knesset_members_cache`, `knesset_committees_cache`, `summaries_cache`
+
+**Coupling notes (the point of the exercise):** the only legitimate cross-schema FKs are the
+cross-cutters — `tracking.*` → `parliament.*` + `auth.users`, `parliament.mk_annotations` →
+`parliament.mks`, `letters.letters.created_by` → `auth.users`, `letters.letter_analytics` →
+`letters.letters`. Postgres supports cross-schema FKs fine; the goal is to make those few links
+visible and keep everything else intra-schema. `letter_analytics` stays with `letters` (cohesion
+with the entity it counts) rather than under `analytics`.
+
+**Implementation considerations:**
+- Drizzle: declare each group via `pgSchema('parliament').table(...)` instead of `pgTable(...)`;
+  Drizzle then emits schema-qualified DDL/queries, so repositories that reference table objects
+  need no change. Audit any **raw SQL** in migrations (`server/db/migrations/*.sql`) and services
+  for unqualified table names.
+- Migration: `CREATE SCHEMA IF NOT EXISTS ...` then `ALTER TABLE <t> SET SCHEMA <s>` for each
+  table (cheap metadata-only move; FKs/indexes follow). Sequence so dependents move with/after
+  their parents. Must run cleanly via the existing startup migration runner against Neon.
+- Connection: either set the `node-postgres` pool `search_path` to include all schemas, or rely
+  on Drizzle's full qualification (preferred — no implicit search_path dependence).
+- Update `npm run db:seed` / `scripts/seed-data` loading and any pglite test setup so the schemas
+  exist before seeding; run the full suite.
+
+**Cost/benefit:** this is organizational, not behavioral — payoff is clarity, enforceable
+per-domain permissions, and a schema map that documents the coupling. For an app this size it's
+optional polish; do it when touching the data layer anyway, and as one atomic migration (don't
+leave tables half-migrated across schemas). Verify: `npx tsc --noEmit` && `npm test` &&
+`npm run build`, plus a migration dry-run against a scratch Neon branch before production.
+
 ---
 
 ## Completed
