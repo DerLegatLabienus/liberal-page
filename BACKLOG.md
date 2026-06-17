@@ -591,6 +591,66 @@ crash-safety:
 - *(Checked, OK: `express.json()` keeps the default 100 kb body cap; CORS allow-no-origin is
   intentional and not an auth boundary since auth is JWT.)*
 
+## 22. Civic Letters — Usability v2 (Priority: Medium)
+
+The Civic Letters system (§19) works but feels heavy. The DB and the mailto/Gmail URL
+builders (`server/services/letter-utils.ts`) already support multiple recipients and a full
+address book (`letter_contacts`); the gaps are in the UI, in seeding, and in transparency.
+Items below are scoped to be as independent as possible.
+
+**Tracks / parallelism:** §22.3 (privacy notice) and §22.4 (seed address book) touch disjoint
+files and are safely parallelizable. §22.1, §22.2, §22.5, §22.6 all edit
+`src/pages/AdminLettersPage.tsx` / `LetterDetailPage.tsx` and should run as one sequential
+owner to avoid collisions. Suggested order: **22.3 ∥ 22.4**, then **22.1 → 22.6 → 22.2 → 22.5**.
+
+### 🔲 Open — 22.1 Multi-recipient composer (To/Cc/Bcc) with address-book picker
+Replace the single To email/name pair in the admin composer with To/Cc/Bcc multi-recipient
+editors. Each row is picked from the address book (searchable, via existing
+`GET /api/admin/letters/contacts?q=`) or typed free-form; persist into the existing
+`toAddresses/ccAddresses/bccAddresses` JSONB arrays (carry `contact_id` when picked). No
+schema change — the arrays and URL builders already handle many recipients.
+Files: `src/pages/AdminLettersPage.tsx`; `src/lib/api-client.ts` (contacts-search helper if
+not already exposed).
+
+### 🔲 Open — 22.2 Members can add/remove their own recipients before sending
+On `/letters/:id`, let members add/remove recipients (address book or free-form) on top of
+the admin presets, then send. `mailtoUrl`/`gmailUrl` are currently built server-side in the
+detail response, so move/duplicate URL construction to the client (or add an endpoint that
+accepts extra recipients) so links reflect member edits. Admin presets remain the default set.
+Files: `src/pages/LetterDetailPage.tsx`; client-side mailto/Gmail builders (port from
+`server/services/letter-utils.ts`); read-only contacts access for members.
+
+### 🔲 Open — 22.3 Privacy/transparency notice: sends are counted anonymously
+Add a clear Hebrew-first notice on the letters list and detail pages: sends are counted in
+aggregate only; the platform does **not** record who sent which letter. This is truthful —
+`letter_analytics` stores only `(letterId, action)` with no `user_id`.
+Files: `src/pages/LettersPage.tsx`, `src/pages/LetterDetailPage.tsx`, locale files. Small
+isolated component. *(Parallelizable.)*
+
+### 🔲 Open — 22.4 Seed the address book (ministries + MKs + committees)
+Pre-populate `letter_contacts` so recipients aren't typed by hand:
+- **Ministries:** new curated `scripts/seed-data/ministry-contacts.json` (official gov.il
+  public contact emails) → `category='ministry'`.
+- **MKs:** reuse emails already in `scripts/seed-data/mks.json` / `KNS_Person.Email` → `category='mk'`.
+- **Committees:** `KNS_Committee.Email` (available via OData) → `category='committee'`.
+Make seeding idempotent (unique `email`); decide one-time seed vs. periodic top-up. Add a
+`category` filter to the contacts picker so the book is browsable by group.
+Files: `scripts/seed-data/ministry-contacts.json` (new), seed script,
+`server/repositories/letter-contacts-repository.ts` (bulk upsert), contacts picker. *(Parallelizable.)*
+
+### 🔲 Open — 22.5 Composer usability pass (reduce heaviness)
+After 22.1 lands, tighten the admin composer: clearer layout/grouping, live template preview
+while editing, fewer clicks to publish, inline feedback. Stay within the current single-page
+form; no new framework.
+Files: `src/pages/AdminLettersPage.tsx`. Do last (depends on 22.1 layout).
+
+### 🔲 Open — 22.6 (bug) Composer doesn't refresh contacts/templates after creation
+After creating a contact or template in another admin tab, the composer's pickers don't show
+it until reload (lists load on mount and never refetch). Refetch / lift to shared state /
+invalidate the contacts and templates lists when the composer opens or after a successful
+create elsewhere.
+Files: `src/pages/AdminLettersPage.tsx`.
+
 ---
 
 ## Completed
