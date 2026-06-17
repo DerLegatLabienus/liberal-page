@@ -154,6 +154,10 @@ Displays committee name, chair, latest session date, optional summary/document l
 
 Displays MK name, party, optional photo/email/roles, recent activity, source link, poll timestamp, and remove action. Activity currently comes from the Knesset OData scraper for Knesset-site MK URLs.
 
+### `LetterPrivacyNotice`
+
+Understated, i18n-driven privacy notice rendered on both Civic Letters pages (`LettersPage`, `LetterDetailPage`). Props: `className?: string` (merged onto the wrapping `<p>` for spacing/borders). Tells members that letter sends are tallied anonymously / in aggregate only and that their identity is never linked to a send — matching the `letter_analytics` table, which stores only `(letterId, action)` with no `user_id`. Copy lives under the `letters.privacy_title` / `letters.privacy_body` i18n keys (he + en).
+
 ## UI Primitives
 
 `src/components/ui/` contains local shadcn-style primitives such as `button`, `card`, `input`, `sheet`, `tabs`, `badge`, `accordion`, and `separator`.

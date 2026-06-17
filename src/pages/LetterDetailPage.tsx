@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { LetterDetailResponse } from '@/types'
@@ -157,6 +158,8 @@ export default function LetterDetailPage() {
                 &ldquo;שלח ממייל שלי&rdquo; פותח את תוכנת המייל שבמכשיר. במחשב, אם לא נפתח דבר,
                 השתמשו ב&rdquo;פתח ב-Gmail&rdquo; לחלון חיבור ישירות בדפדפן.
               </p>
+
+              <LetterPrivacyNotice className="mt-3 border-t border-border pt-3" />
             </div>
 
             {/* Preview Panel */}
