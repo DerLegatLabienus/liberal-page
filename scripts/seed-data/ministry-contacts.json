@@ -1,0 +1,66 @@
+{
+  "_comment": "Curated government MINISTRY spokesperson / public-relations role mailboxes (dover@/dovrut@<ministry>.gov.il). Seeded with category='ministry'. Addresses verified from the official Israeli government spokesperson directory PDF (see _source). That directory is dated ~2019-2020 (minister names in it are from that era and were deliberately dropped); the generic ROLE mailboxes are durable across minister turnover — dover@mod.gov.il was independently re-confirmed live on mod.gov.il in 2026. Only durable role mailboxes are included; personal addresses and non-ministry bodies (Knesset, State Comptroller, Police, Tax Authority, Population Authority, Civil Service Commission) were excluded so category='ministry' stays truthful. TODO: refresh against the latest directory periodically; the list can be extended with more verified ministries.",
+  "_source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf",
+  "contacts": [
+    {
+      "displayName": "משרד הביטחון",
+      "email": "dover@mod.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf (corroborated live 2026: https://mod.gov.il/%D7%90%D7%92%D7%A4%D7%99%D7%9D/%D7%90%D7%92%D7%A3-%D7%93%D7%95%D7%91%D7%A8%D7%95%D7%AA-%D7%95%D7%A7%D7%A9%D7%A8%D7%99-%D7%A6%D7%99%D7%91%D7%95%D7%A8)"
+    },
+    {
+      "displayName": "משרד הבריאות",
+      "email": "dover@moh.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד החינוך",
+      "email": "dovrut@education.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד המשפטים",
+      "email": "dover@justice.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד האוצר",
+      "email": "dover@mof.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד הכלכלה והתעשייה",
+      "email": "dover@economy.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד האנרגיה",
+      "email": "dover@energy.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד החקלאות ופיתוח הכפר",
+      "email": "dover@moag.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד העבודה והרווחה",
+      "email": "dover@molsa.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד התחבורה",
+      "email": "dover@mot.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד התקשורת",
+      "email": "dovrut@moc.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    },
+    {
+      "displayName": "משרד הפנים",
+      "email": "dovrut@moin.gov.il",
+      "source": "https://www.gov.il/BlobFolder/generalpage/spokesmen_lists/he/file_%D7%93%D7%95%D7%91%D7%A8%D7%99-%D7%9E%D7%9E%D7%A9%D7%9C%D7%94.pdf"
+    }
+  ]
+}

@@ -75,6 +75,38 @@ describe('LetterContactsRepository', () => {
     await contactsRepo.delete(c.id)
     expect(await contactsRepo.list()).toHaveLength(0)
   })
+
+  it('bulkUpsert is idempotent: seeding twice yields no duplicates, preserves categories', async () => {
+    const seed = [
+      { displayName: 'אבי דיכטר', email: 'davraham@knesset.gov.il', category: 'mk' },
+      { displayName: 'משרד הביטחון', email: 'dover@mod.gov.il', category: 'ministry' },
+      { displayName: 'משרד הבריאות', email: 'dover@moh.gov.il', category: 'ministry' },
+    ]
+    await contactsRepo.bulkUpsert(seed)
+    await contactsRepo.bulkUpsert(seed) // re-run must not duplicate
+
+    const all = await contactsRepo.list()
+    expect(all).toHaveLength(3)
+    expect(all.filter((c) => c.category === 'mk')).toHaveLength(1)
+    expect(all.filter((c) => c.category === 'ministry')).toHaveLength(2)
+    // unique email is the conflict key
+    expect(new Set(all.map((c) => c.email)).size).toBe(3)
+  })
+
+  it('bulkUpsert does not clobber an existing manually-created contact on conflict', async () => {
+    await contactsRepo.create({ displayName: 'Custom Name', email: 'dover@mod.gov.il', category: 'custom' })
+    await contactsRepo.bulkUpsert([{ displayName: 'משרד הביטחון', email: 'dover@mod.gov.il', category: 'ministry' }])
+
+    const all = await contactsRepo.list()
+    expect(all).toHaveLength(1)
+    expect(all[0].displayName).toBe('Custom Name')
+    expect(all[0].category).toBe('custom')
+  })
+
+  it('bulkUpsert is a no-op on empty input', async () => {
+    await contactsRepo.bulkUpsert([])
+    expect(await contactsRepo.list()).toHaveLength(0)
+  })
 })
 
 describe('LetterTemplatesRepository', () => {
