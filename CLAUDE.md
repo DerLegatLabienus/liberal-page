@@ -130,8 +130,13 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `PUT`    | `/api/admin/feature-flags/:name`   | update feature flag enabled/value (admin) |
 | `GET`    | `/api/admin/analytics/join`        | join click-through summary: lifetime + daily rows (admin) |
 | `POST`   | `/api/admin/letters/beautify`      | AI clean+improve letter body HTML (admin; gated by `lettersBeautifyEnabled` flag → 404 when off). Output is sanitized. |
+| `GET`    | `/api/letters/contacts`            | **requireAuth + `lettersEnabled`.** Read-only address book for the member recipient picker (optional `?q=` search). |
 
 `type` is one of `bill`, `committee`, or `mk`.
+
+The mailto/Gmail compose-URL builders live in `src/lib/letter-urls.ts` (pure, no deps) so the
+server detail endpoint and the client (member recipient edits) produce identical URLs from one
+source; `server/services/letter-utils.ts` re-exports them.
 
 Letter & template HTML written via the letter/template admin routes is sanitized
 server-side (`server/services/html-sanitizer.ts`, strict allowlist) before storage,
