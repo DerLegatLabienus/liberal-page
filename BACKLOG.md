@@ -681,6 +681,19 @@ Per-user **tracking** tables fold into `parliament` (not a separate schema) so
 `analytics.letter_analytics → letters.letters`. Everything else is intra-schema. Postgres supports
 cross-schema FKs fine; the goal is to make those few links explicit and keep the rest local.
 
+**Feasibility — VERIFIED (2026-06-18 spike):** the make-or-break risk (does the test driver
+support schema DDL?) is cleared. A pglite 0.4.6 spike confirmed `CREATE SCHEMA`,
+`ALTER TABLE … SET SCHEMA`, **cross-schema FKs preserved + enforced**, and cross-schema JOINs all
+work; after a move an unqualified `SELECT … FROM <t>` correctly fails (proving Drizzle must emit
+schema-qualified SQL — which `pgSchema()` does). Code audit also confirmed **no raw SQL hardcodes a
+table name in any query** (only `pg_database_size(current_database())`, schema-independent), so
+moving tables auto-qualifies every repository query — zero repo changes. Neon (Postgres 17) supports
+all of the above trivially. Remaining fiddly step is reconciling Drizzle's `meta/*_snapshot.json` to
+the new `pgSchema` declarations after hand-writing the move migration. One ordering trap: the raw
+`INSERT INTO letter_contacts` in `0020_seed_letter_contacts.sql` is unqualified, so the schema-move
+migration must be a later index (runs after, when the table is already moved is irrelevant since
+0020 runs first while still in `public`) — and any *future* raw SQL must schema-qualify.
+
 **Implementation considerations:**
 - Drizzle: declare each group via `pgSchema('parliament').table(...)` instead of `pgTable(...)`;
   Drizzle then emits schema-qualified DDL/queries, so repositories that reference table objects
