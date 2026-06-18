@@ -194,6 +194,8 @@ export const api = {
     detail: (id: number) => apiFetch<LetterDetailResponse>(`/letters/${id}`),
     recordSend: (id: number, action: 'mailto' | 'copy') =>
       apiFetch<{ ok: boolean }>(`/letters/${id}/send`, { method: 'POST', body: JSON.stringify({ action }) }),
+    contacts: (q?: string) =>
+      apiFetch<{ contacts: LetterContact[] }>(`/letters/contacts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   },
 }
 
