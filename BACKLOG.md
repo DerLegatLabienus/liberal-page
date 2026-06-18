@@ -667,6 +667,19 @@ Files: `src/pages/AdminLettersPage.tsx`.
 
 ## 23. Database — Group Tables into Domain Schemas (Low Coupling / High Cohesion) (Priority: Low)
 
+### ✅ Implemented (full split A) — 2026-06-18 — pending prod migration
+
+All 28 tables moved into 6 Postgres schemas (`parliament`, `auth`, `email`, `letters`,
+`analytics`, `config`) via `pgSchema().table()` (new `server/db/schema/schemas.ts`). Migration
+`0021_domain_schemas.sql` is non-destructive `CREATE SCHEMA` + `ALTER TABLE … SET SCHEMA`
+(FKs/indexes/sequences ride along; fresh-DB safe; runs in the migrator's transaction → all-or-
+nothing). Snapshot `0021_snapshot.json` generated via `drizzle-kit/api`'s `generateDrizzleJson`
+so future `db:generate` diffs correctly. Repositories unchanged (Drizzle auto-qualifies).
+**Verified locally:** full suite 565 pass under pglite, `db:generate` reports "no changes",
+lint/tsc/build green. Spec: `docs/superpowers/specs/2026-06-18-domain-schemas-design.md`.
+**Not yet deployed** — mutates the prod Neon schema on boot (`runMigrations`), so it awaits a
+Neon-branch dry-run + explicit go-ahead before the master push. Branch: `worktree-schema-domains`.
+
 All 28 tables currently live in one Postgres `public` schema on Neon. They already cluster by
 domain at the Drizzle file level (`server/db/schema/*.ts`), but that grouping isn't expressed
 in the database. Promote each cohesive cluster to its own **Postgres schema** (namespace) so
