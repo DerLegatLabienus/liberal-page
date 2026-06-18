@@ -61,4 +61,12 @@ describe('admin composer multi-recipient', () => {
     await user.click(screen.getByRole('button', { name: /New Letter/ }))
     expect(vi.mocked(api.admin.letters.letterTemplates.list).mock.calls.length).toBeGreaterThan(before)
   })
+
+  it('shows a live preview of the body wrapped in the selected template', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /New Letter/ }))
+    await user.type(screen.getByPlaceholderText(/<p>/), '<p>שלום</p>')
+    expect(screen.getByTitle('composer-preview')).toBeInTheDocument()
+  })
 })

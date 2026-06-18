@@ -332,6 +332,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
       </div>
       <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identify</div>
         <div className="col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} required
@@ -342,6 +343,8 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
           <input value={subject} onChange={(e) => setSubject(e.target.value)} required
             className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Re: ..." />
         </div>
+
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipients</div>
         <div className="col-span-2 space-y-3">
           <RecipientEditor label="To *" value={toAddresses} onChange={setToAddresses}
             search={searchContacts} allowFreeForm />
@@ -369,6 +372,8 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
             <option value="urgent">Urgent</option>
           </select>
         </div>
+
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content</div>
         <div className="col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Template</label>
           <select
@@ -406,6 +411,16 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
           {beautifyEnabled && (
             <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
           )}
+        </div>
+        <div className="col-span-2">
+          <p className="mb-1 text-xs text-muted-foreground">Live preview:</p>
+          <iframe
+            title="composer-preview"
+            srcDoc={(templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
+              .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>')}
+            className="h-48 w-full rounded border"
+            sandbox="allow-same-origin"
+          />
         </div>
       </div>
       <button type="submit" disabled={saving}
