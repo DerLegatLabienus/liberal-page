@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
+import RecipientEditor from '@/components/letters/RecipientEditor'
+import { buildMailtoUrl, buildGmailComposeUrl } from '@/lib/letter-urls'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
-import type { LetterDetailResponse } from '@/types'
+import type { LetterDetailResponse, LetterAddress } from '@/types'
 
 export default function LetterDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -15,6 +17,7 @@ export default function LetterDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<'html' | 'addresses' | null>(null)
+  const [extraTo, setExtraTo] = useState<LetterAddress[]>([])
 
   // Wait for session restore — the detail endpoint requires auth, so fetching before the
   // access token exists would 401 on a fresh load and flash "letter not found".
@@ -22,24 +25,34 @@ export default function LetterDetailPage() {
     if (!id || !authed) return
     setLoading(true)
     api.letters.detail(Number(id))
-      .then(setData)
+      .then((res) => { setData(res); setExtraTo([]) })
       .catch(() => setError('המכתב לא נמצא'))
       .finally(() => setLoading(false))
   }, [id, authed])
+
+  const searchContacts = useCallback((q: string) => api.letters.contacts(q).then((r) => r.contacts), [])
+
+  const mergedTo: LetterAddress[] = data ? [...data.letter.toAddresses, ...extraTo] : []
+  const liveMailto = data
+    ? buildMailtoUrl(mergedTo, data.letter.ccAddresses, data.letter.bccAddresses, data.letter.subject, data.letter.bodyPlain)
+    : ''
+  const liveGmail = data
+    ? buildGmailComposeUrl(mergedTo, data.letter.ccAddresses, data.letter.bccAddresses, data.letter.subject, data.letter.bodyPlain)
+    : ''
 
   const handleMailto = useCallback(() => {
     if (!data || !id) return
     // Navigate the current tab to the mailto: — window.open('_blank') leaves a blank tab
     // on desktop when no handler picks it up.
-    window.location.href = data.mailtoUrl
+    window.location.href = liveMailto
     api.letters.recordSend(Number(id), 'mailto').catch(() => {})
-  }, [data, id])
+  }, [data, id, liveMailto])
 
   const handleGmail = useCallback(() => {
     if (!data || !id) return
-    window.open(data.gmailUrl, '_blank', 'noopener,noreferrer')
+    window.open(liveGmail, '_blank', 'noopener,noreferrer')
     api.letters.recordSend(Number(id), 'mailto').catch(() => {})
-  }, [data, id])
+  }, [data, id, liveGmail])
 
   const handleCopyHtml = useCallback(async () => {
     if (!data || !id) return
@@ -69,11 +82,11 @@ export default function LetterDetailPage() {
 
   const handleCopyAddresses = useCallback(async () => {
     if (!data) return
-    const addresses = data.letter.toAddresses.map((a) => a.email).join(', ')
+    const addresses = [...data.letter.toAddresses, ...extraTo].map((a) => a.email).join(', ')
     await navigator.clipboard.writeText(addresses)
     setCopied('addresses')
     setTimeout(() => setCopied(null), 2000)
-  }, [data])
+  }, [data, extraTo])
 
   // Open the rendered letter in a new tab. Uses a Blob URL rather than a data: URL —
   // Chrome and Firefox block top-level navigation to data: URLs. The object URL is
@@ -107,7 +120,15 @@ export default function LetterDetailPage() {
               <div className="mb-4 space-y-2 text-sm">
                 <div>
                   <span className="font-medium text-muted-foreground">נמענים: </span>
-                  {data.letter.toAddresses.map((a) => a.display_name).join(', ')}
+                  <RecipientEditor
+                    label=""
+                    value={extraTo}
+                    onChange={setExtraTo}
+                    search={searchContacts}
+                    allowFreeForm={false}
+                    lockedValue={data.letter.toAddresses}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">ניתן להוסיף נמענים מספר הכתובות בלבד.</p>
                 </div>
                 {data.letter.ccAddresses.length > 0 && (
                   <div>
