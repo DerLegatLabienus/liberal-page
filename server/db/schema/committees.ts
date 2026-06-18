@@ -1,6 +1,7 @@
-import { pgTable, serial, integer, text, boolean, timestamp, index } from 'drizzle-orm/pg-core'
+import { serial, integer, text, boolean, timestamp, index } from 'drizzle-orm/pg-core'
+import { parliamentSchema } from './schemas'
 
-export const committees = pgTable('committees', {
+export const committees = parliamentSchema.table('committees', {
   id: serial('id').primaryKey(),
   oknessetId: text('oknesset_id').notNull().default(''),
   name: text('name').notNull(),
@@ -14,7 +15,7 @@ export const committees = pgTable('committees', {
   inactive: boolean('inactive').notNull().default(false),
 })
 
-export const committeeSessions = pgTable('committee_sessions', {
+export const committeeSessions = parliamentSchema.table('committee_sessions', {
   sessionId: integer('session_id').primaryKey(),
   committeeId: integer('committee_id')
     .notNull()

@@ -1,9 +1,10 @@
-import { pgTable, serial, integer, text, timestamp, unique, boolean } from 'drizzle-orm/pg-core'
+import { serial, integer, text, timestamp, unique, boolean } from 'drizzle-orm/pg-core'
 import { bills } from './bills'
 import { committees } from './committees'
 import { mks } from './mks'
+import { authSchema, parliamentSchema } from './schemas'
 
-export const users = pgTable('users', {
+export const users = authSchema.table('users', {
   id: serial('id').primaryKey(),
   label: text('label').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
@@ -15,7 +16,7 @@ export const users = pgTable('users', {
   emailAlerts: boolean('email_alerts').notNull().default(true),
 })
 
-export const trackedBills = pgTable('tracked_bills', {
+export const trackedBills = parliamentSchema.table('tracked_bills', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   billId: integer('bill_id').notNull().references(() => bills.id, { onDelete: 'restrict' }),
@@ -24,14 +25,14 @@ export const trackedBills = pgTable('tracked_bills', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 }, (t) => ({ uniqUserBill: unique('uniq_user_bill').on(t.userId, t.billId) }))
 
-export const trackedCommittees = pgTable('tracked_committees', {
+export const trackedCommittees = parliamentSchema.table('tracked_committees', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   committeeId: integer('committee_id').notNull().references(() => committees.id, { onDelete: 'restrict' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 }, (t) => ({ uniqUserCommittee: unique('uniq_user_committee').on(t.userId, t.committeeId) }))
 
-export const trackedMks = pgTable('tracked_mks', {
+export const trackedMks = parliamentSchema.table('tracked_mks', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   mkId: integer('mk_id').notNull().references(() => mks.id, { onDelete: 'restrict' }),

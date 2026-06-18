@@ -1,6 +1,7 @@
-import { pgTable, serial, integer, text, boolean, timestamp, unique, index } from 'drizzle-orm/pg-core'
+import { serial, integer, text, boolean, timestamp, unique, index } from 'drizzle-orm/pg-core'
+import { parliamentSchema } from './schemas'
 
-export const mks = pgTable('mks', {
+export const mks = parliamentSchema.table('mks', {
   id: serial('id').primaryKey(),
   oknessetId: text('oknesset_id').notNull().default(''),
   knessetSiteId: text('knesset_site_id'),
@@ -13,7 +14,7 @@ export const mks = pgTable('mks', {
   lastPolledAt: timestamp('last_polled_at', { withTimezone: true }),
 })
 
-export const mkKnessetTerms = pgTable('mk_knesset_terms', {
+export const mkKnessetTerms = parliamentSchema.table('mk_knesset_terms', {
   id: serial('id').primaryKey(),
   mkId: integer('mk_id').notNull().references(() => mks.id, { onDelete: 'restrict' }),
   knessetNumber: integer('knesset_number').notNull(),
@@ -22,7 +23,7 @@ export const mkKnessetTerms = pgTable('mk_knesset_terms', {
   uniqMkKnesset: unique('uniq_mk_knesset').on(t.mkId, t.knessetNumber),
 }))
 
-export const mkRoles = pgTable('mk_roles', {
+export const mkRoles = parliamentSchema.table('mk_roles', {
   id: serial('id').primaryKey(),
   mkId: integer('mk_id').notNull().references(() => mks.id, { onDelete: 'restrict' }),
   positionId: integer('position_id').notNull(),
@@ -32,7 +33,7 @@ export const mkRoles = pgTable('mk_roles', {
   startDate: timestamp('start_date', { withTimezone: true }),
 }, (t) => ({ byMkId: index('idx_mk_roles_mk_id').on(t.mkId) }))
 
-export const mkActivity = pgTable('mk_activity', {
+export const mkActivity = parliamentSchema.table('mk_activity', {
   id: serial('id').primaryKey(),
   mkId: integer('mk_id').notNull().references(() => mks.id, { onDelete: 'restrict' }),
   type: text('type').notNull(),
@@ -42,7 +43,7 @@ export const mkActivity = pgTable('mk_activity', {
   sourceUrl: text('source_url'),
 }, (t) => ({ byMkId: index('idx_mk_activity_mk_id').on(t.mkId) }))
 
-export const mkVotes = pgTable('mk_votes', {
+export const mkVotes = parliamentSchema.table('mk_votes', {
   id: serial('id').primaryKey(),
   mkId: integer('mk_id').notNull().references(() => mks.id, { onDelete: 'restrict' }),
   date: timestamp('date', { withTimezone: true }).notNull(),

@@ -1,6 +1,7 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from 'drizzle-orm/pg-core'
+import { serial, integer, text, boolean, timestamp } from 'drizzle-orm/pg-core'
+import { parliamentSchema } from './schemas'
 
-export const bills = pgTable('bills', {
+export const bills = parliamentSchema.table('bills', {
   id: serial('id').primaryKey(),
   oknessetId: text('oknesset_id').notNull().default(''),
   number: text('number').notNull(),

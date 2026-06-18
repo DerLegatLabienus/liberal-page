@@ -1,6 +1,7 @@
-import { pgTable, integer, text, boolean, timestamp } from 'drizzle-orm/pg-core'
+import { integer, text, boolean, timestamp } from 'drizzle-orm/pg-core'
+import { parliamentSchema } from './schemas'
 
-export const knessetMembersCache = pgTable('knesset_members_cache', {
+export const knessetMembersCache = parliamentSchema.table('knesset_members_cache', {
   siteId: integer('site_id').primaryKey(),
   name: text('name').notNull(),
   party: text('party').notNull(),
@@ -10,14 +11,14 @@ export const knessetMembersCache = pgTable('knesset_members_cache', {
   cachedAt: timestamp('cached_at', { withTimezone: true }).notNull(),
 })
 
-export const knessetCommitteesCache = pgTable('knesset_committees_cache', {
+export const knessetCommitteesCache = parliamentSchema.table('knesset_committees_cache', {
   committeeId: integer('committee_id').primaryKey(),
   name: text('name').notNull(),
   knessetUrl: text('knesset_url').notNull(),
   cachedAt: timestamp('cached_at', { withTimezone: true }).notNull(),
 })
 
-export const summariesCache = pgTable('summaries_cache', {
+export const summariesCache = parliamentSchema.table('summaries_cache', {
   md5: text('md5').primaryKey(),
   summary: text('summary').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),

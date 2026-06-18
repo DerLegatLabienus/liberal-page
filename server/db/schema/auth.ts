@@ -1,9 +1,10 @@
-import { pgTable, serial, integer, text, timestamp, index } from 'drizzle-orm/pg-core'
+import { serial, integer, text, timestamp, index } from 'drizzle-orm/pg-core'
 import { users } from './tracking'
+import { authSchema } from './schemas'
 
 // Invite allowlist for the closed group. Presence here lets an email sign in;
 // `role` is granted to the user on first Google login.
-export const allowedEmails = pgTable('allowed_emails', {
+export const allowedEmails = authSchema.table('allowed_emails', {
   email: text('email').primaryKey(),
   role: text('role').notNull().default('member'), // 'admin' | 'member'
   invitedBy: integer('invited_by').references(() => users.id, { onDelete: 'set null' }),
@@ -12,7 +13,7 @@ export const allowedEmails = pgTable('allowed_emails', {
 
 // Active refresh tokens. Only the sha256 hash of the raw token is stored. A row's existence
 // (with expiresAt > now) IS its validity — invalidation is row deletion, never a flag.
-export const refreshTokens = pgTable('refresh_tokens', {
+export const refreshTokens = authSchema.table('refresh_tokens', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   tokenHash: text('token_hash').notNull(),

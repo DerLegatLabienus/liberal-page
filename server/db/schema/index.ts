@@ -1,3 +1,4 @@
+export * from './schemas'
 export * from './config'
 export * from './bills'
 export * from './committees'

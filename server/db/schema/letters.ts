@@ -1,16 +1,17 @@
-import { pgTable, serial, integer, text, timestamp, jsonb, primaryKey } from 'drizzle-orm/pg-core'
+import { serial, integer, text, timestamp, jsonb, primaryKey } from 'drizzle-orm/pg-core'
 import { users } from './tracking'
+import { lettersSchema, analyticsSchema } from './schemas'
 
 export type LetterAddress = { email: string; display_name: string; contact_id?: number }
 
-export const letterIssueTags = pgTable('letter_issue_tags', {
+export const letterIssueTags = lettersSchema.table('letter_issue_tags', {
   id: serial('id').primaryKey(),
   name: text('name').notNull().unique(),
   slug: text('slug').notNull().unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const letterContacts = pgTable('letter_contacts', {
+export const letterContacts = lettersSchema.table('letter_contacts', {
   id: serial('id').primaryKey(),
   displayName: text('display_name').notNull(),
   email: text('email').notNull().unique(),
@@ -18,14 +19,14 @@ export const letterContacts = pgTable('letter_contacts', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const letterTemplates = pgTable('letter_templates', {
+export const letterTemplates = lettersSchema.table('letter_templates', {
   id: serial('id').primaryKey(),
   name: text('name').notNull().unique(),
   html: text('html').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const letters = pgTable('letters', {
+export const letters = lettersSchema.table('letters', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
   subject: text('subject').notNull(),
@@ -47,7 +48,7 @@ export const letters = pgTable('letters', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const letterAnalytics = pgTable('letter_analytics', {
+export const letterAnalytics = analyticsSchema.table('letter_analytics', {
   letterId: integer('letter_id').notNull().references(() => letters.id, { onDelete: 'cascade' }),
   bucket: text('bucket').notNull(),
   total: integer('total').notNull().default(0),

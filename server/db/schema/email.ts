@@ -1,7 +1,8 @@
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { text, timestamp } from 'drizzle-orm/pg-core'
+import { emailSchema } from './schemas'
 
 // Editable email templates, keyed by name. '_layout' is the shared wrapper.
-export const emailTemplates = pgTable('email_templates', {
+export const emailTemplates = emailSchema.table('email_templates', {
   name: text('name').primaryKey(),          // 'invite' | 'bill_digest' | 'bill_digest_item' | '_layout'
   subject: text('subject').notNull().default(''),
   html: text('html').notNull(),
@@ -12,7 +13,7 @@ export const emailTemplates = pgTable('email_templates', {
 // (starts 'sent'/'failed', advanced to 'delivered'/'bounced'/... by the poller pulling
 // Resend's last_event); `last_status_at` is when that status was last observed. First table
 // trimmed under storage pressure.
-export const sentEmails = pgTable('sent_emails', {
+export const sentEmails = emailSchema.table('sent_emails', {
   id: text('id').primaryKey(),              // Resend message id, or `failed:<uuid>` on send error
   toEmail: text('to_email').notNull(),
   template: text('template').notNull(),
