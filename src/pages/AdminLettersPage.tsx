@@ -97,6 +97,7 @@ export default function AdminLettersPage() {
             <NewLetterForm
               templates={templates}
               beautifyEnabled={beautifyEnabled}
+              onOpen={async () => { setTemplates((await api.admin.letters.letterTemplates.list()).templates) }}
               onCreate={async (body) => { await api.admin.letters.create(body); refresh() }}
             />
             <table className="mt-6 w-full text-sm">
@@ -256,9 +257,10 @@ type NewLetterBody = {
   templateId: number | null
 }
 
-function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
+function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
   templates: LetterTemplate[]
   beautifyEnabled: boolean
+  onOpen: () => void | Promise<void>
   onCreate: (body: NewLetterBody) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
@@ -315,7 +317,7 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); onOpen() }}
         className="rounded border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary"
       >
         + New Letter

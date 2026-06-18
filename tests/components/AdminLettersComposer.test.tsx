@@ -52,4 +52,13 @@ describe('admin composer multi-recipient', () => {
     await user.click(screen.getByRole('button', { name: /Create Letter/ }))
     expect(api.admin.letters.create).not.toHaveBeenCalled()
   })
+
+  it('refetches templates when the composer opens', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await screen.findByRole('button', { name: /New Letter/ })
+    const before = vi.mocked(api.admin.letters.letterTemplates.list).mock.calls.length
+    await user.click(screen.getByRole('button', { name: /New Letter/ }))
+    expect(vi.mocked(api.admin.letters.letterTemplates.list).mock.calls.length).toBeGreaterThan(before)
+  })
 })
