@@ -185,9 +185,13 @@ src/data/*.json
 
 scripts/seed-data/*.json
   └─ curated baseline loaded via `npm run db:seed` (one-time setup)
-     — includes ministry-contacts.json (verified gov.il spokesperson mailboxes),
-       seeded into letter_contacts (category 'ministry') alongside MK emails
-       (category 'mk') via idempotent bulkUpsert on the UNIQUE email
+
+letter_contacts defaults (ministries + baseline MKs)
+  └─ seeded by migration 0020_seed_letter_contacts.sql, which runs automatically on
+     startup (runMigrations) — NOT by `npm run db:seed`. Idempotent (ON CONFLICT on the
+     UNIQUE email), so the address book is populated on a from-scratch boot and never
+     duplicated or clobbered. Ministry mailboxes are verified gov.il spokesperson role
+     addresses (provenance in the migration header).
 
 frontend actions
   └─ /api/* through Vite proxy
