@@ -1,7 +1,9 @@
 import { createRequire } from 'module'
+import fs from 'fs'
 import { drizzle as drizzleNodePg, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from './schema'
+import { PGLITE_SNAPSHOT_PATH } from './pglite-snapshot'
 
 export type DB = NodePgDatabase<typeof schema>
 
@@ -15,7 +17,13 @@ function createDb(): DB {
     const require = createRequire(import.meta.url)
     const { PGlite } = require('@electric-sql/pglite')
     const { drizzle: drizzlePglite } = require('drizzle-orm/pglite')
-    return drizzlePglite(new PGlite(), { schema }) as unknown as DB
+    // Load the pre-migrated snapshot written by tests/global-setup.ts when present,
+    // so each test file starts migrated without replaying migrations. Falls back to
+    // an empty instance (the harness then migrates) if no snapshot exists.
+    const opts = fs.existsSync(PGLITE_SNAPSHOT_PATH)
+      ? { loadDataDir: new Blob([fs.readFileSync(PGLITE_SNAPSHOT_PATH)]) }
+      : {}
+    return drizzlePglite(new PGlite(opts), { schema }) as unknown as DB
   }
   // One driver for both local Docker and Neon. SSL is driven by the connection
   // string (the Neon URL carries `?sslmode=require`; the local URL carries none).
