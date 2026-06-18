@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi, describe, it, expect } from 'vitest'
+import { vi, it, expect } from 'vitest'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import type { LetterContact } from '@/types'
 
