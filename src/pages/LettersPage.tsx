@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { api } from '@/lib/api-client'
+import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Letter, LetterIssueTag } from '@/types'
@@ -67,7 +68,8 @@ export default function LettersPage() {
     <div className="min-h-screen bg-background">
       <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
       <main className="mx-auto max-w-5xl px-4 py-10" dir="rtl">
-        <h1 className="mb-6 text-2xl font-bold">מכתבים לנבחרי ציבור</h1>
+        <h1 className="mb-2 text-2xl font-bold">מכתבים לנבחרי ציבור</h1>
+        <LetterPrivacyNotice className="mb-6" />
 
         {tags.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">

@@ -167,5 +167,9 @@
     "party_name": "Liberals in Likud",
     "cell_subtitle": "A liberal movement within Likud",
     "logo_initials": "LL"
+  },
+  "letters": {
+    "privacy_title": "Privacy",
+    "privacy_body": "We count how many times each letter is sent — anonymously and in aggregate only. Your identity is never linked to any individual send."
   }
 }
