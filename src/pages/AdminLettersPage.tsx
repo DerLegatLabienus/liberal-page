@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
-import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
+import RecipientEditor from '@/components/letters/RecipientEditor'
+import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterAddress } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
 
@@ -96,6 +97,7 @@ export default function AdminLettersPage() {
             <NewLetterForm
               templates={templates}
               beautifyEnabled={beautifyEnabled}
+              onOpen={async () => { setTemplates((await api.admin.letters.letterTemplates.list()).templates) }}
               onCreate={async (body) => { await api.admin.letters.create(body); refresh() }}
             />
             <table className="mt-6 w-full text-sm">
@@ -248,14 +250,17 @@ export default function AdminLettersPage() {
 
 type NewLetterBody = {
   title: string; subject: string; bodyHtml: string
-  toAddresses: { email: string; display_name: string }[]
+  toAddresses: LetterAddress[]
+  ccAddresses: LetterAddress[]
+  bccAddresses: LetterAddress[]
   status: Letter['status']; priority: Letter['priority']
   templateId: number | null
 }
 
-function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
+function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
   templates: LetterTemplate[]
   beautifyEnabled: boolean
+  onOpen: () => void | Promise<void>
   onCreate: (body: NewLetterBody) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
@@ -263,13 +268,18 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
   const [title, setTitle] = useState('')
   const [subject, setSubject] = useState('')
   const [bodyHtml, setBodyHtml] = useState('')
-  const [toEmail, setToEmail] = useState('')
-  const [toName, setToName] = useState('')
+  const [toAddresses, setToAddresses] = useState<LetterAddress[]>([])
+  const [ccAddresses, setCcAddresses] = useState<LetterAddress[]>([])
+  const [bccAddresses, setBccAddresses] = useState<LetterAddress[]>([])
+  const [showCc, setShowCc] = useState(false)
+  const [showBcc, setShowBcc] = useState(false)
   const [status, setStatus] = useState<Letter['status']>('published')
   const [priority, setPriority] = useState<Letter['priority']>('normal')
   const [templateId, setTemplateId] = useState<number | null>(null)
   const [beautifying, setBeautifying] = useState(false)
   const [beautifyError, setBeautifyError] = useState<string | null>(null)
+
+  const searchContacts = (q: string) => api.admin.letters.contacts.list(q).then((r) => r.contacts)
 
   async function beautify() {
     if (!bodyHtml.trim()) return
@@ -286,15 +296,17 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title || !subject || !bodyHtml || !toEmail || !toName) return
+    if (!title || !subject || !bodyHtml || toAddresses.length === 0) return
     setSaving(true)
     try {
       await onCreate({
         title, subject, bodyHtml,
-        toAddresses: [{ email: toEmail, display_name: toName }],
+        toAddresses, ccAddresses, bccAddresses,
         status, priority, templateId,
       })
-      setTitle(''); setSubject(''); setBodyHtml(''); setToEmail(''); setToName(''); setTemplateId(null)
+      setTitle(''); setSubject(''); setBodyHtml('')
+      setToAddresses([]); setCcAddresses([]); setBccAddresses([])
+      setShowCc(false); setShowBcc(false); setTemplateId(null)
       setOpen(false)
     } finally {
       setSaving(false)
@@ -305,7 +317,7 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); onOpen() }}
         className="rounded border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary"
       >
         + New Letter
@@ -320,6 +332,7 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
       </div>
       <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identify</div>
         <div className="col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} required
@@ -330,15 +343,17 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
           <input value={subject} onChange={(e) => setSubject(e.target.value)} required
             className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Re: ..." />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">To — Email *</label>
-          <input value={toEmail} onChange={(e) => setToEmail(e.target.value)} required type="email"
-            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="mk@knesset.gov.il" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">To — Display Name *</label>
-          <input value={toName} onChange={(e) => setToName(e.target.value)} required
-            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="ח&quot;כ ישראל ישראלי" />
+
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipients</div>
+        <div className="col-span-2 space-y-3">
+          <RecipientEditor label="To *" value={toAddresses} onChange={setToAddresses}
+            search={searchContacts} allowFreeForm />
+          {showCc
+            ? <RecipientEditor label="Cc" value={ccAddresses} onChange={setCcAddresses} search={searchContacts} allowFreeForm />
+            : <button type="button" onClick={() => setShowCc(true)} className="text-xs text-primary hover:underline">+ add Cc</button>}
+          {showBcc
+            ? <RecipientEditor label="Bcc" value={bccAddresses} onChange={setBccAddresses} search={searchContacts} allowFreeForm />
+            : <button type="button" onClick={() => setShowBcc(true)} className="text-xs text-primary hover:underline">+ add Bcc</button>}
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
@@ -357,6 +372,8 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
             <option value="urgent">Urgent</option>
           </select>
         </div>
+
+        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content</div>
         <div className="col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Template</label>
           <select
@@ -394,6 +411,16 @@ function NewLetterForm({ templates, beautifyEnabled, onCreate }: {
           {beautifyEnabled && (
             <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
           )}
+        </div>
+        <div className="col-span-2">
+          <p className="mb-1 text-xs text-muted-foreground">Live preview:</p>
+          <iframe
+            title="composer-preview"
+            srcDoc={(templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
+              .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>')}
+            className="h-48 w-full rounded border"
+            sandbox="allow-same-origin"
+          />
         </div>
       </div>
       <button type="submit" disabled={saving}

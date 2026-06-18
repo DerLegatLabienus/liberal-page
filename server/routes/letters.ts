@@ -4,6 +4,7 @@ import { LettersRepository } from '../repositories/letters-repository'
 import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
+import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
 import { renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../services/letter-utils'
 import type { LetterAddress } from '../db/schema'
 
@@ -12,6 +13,7 @@ const lettersRepo = new LettersRepository()
 const tagsRepo = new LetterIssueTagsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
+const contactsRepo = new LetterContactsRepository()
 
 router.use(requireAuth)
 
@@ -46,6 +48,19 @@ router.get('/tags', async (_req, res) => {
   } catch (err) {
     console.error('[letters] tags failed:', err)
     res.status(500).json({ error: 'Failed to load tags' })
+  }
+})
+
+// GET /api/letters/contacts — read-only address book for the member recipient picker.
+// MUST be declared before `/:id` so Express doesn't treat "contacts" as an id.
+router.get('/contacts', async (req, res) => {
+  try {
+    const q = req.query.q as string | undefined
+    const contacts = q ? await contactsRepo.search(q) : await contactsRepo.list()
+    res.json({ contacts })
+  } catch (err) {
+    console.error('[letters] contacts failed:', err)
+    res.status(500).json({ error: 'Failed to load contacts' })
   }
 })
 

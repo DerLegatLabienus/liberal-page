@@ -10,6 +10,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["server/**/*", "src/types.ts"],
+  "include": ["server/**/*", "src/types.ts", "src/lib/letter-urls.ts"],
   "exclude": ["node_modules"]
 }
