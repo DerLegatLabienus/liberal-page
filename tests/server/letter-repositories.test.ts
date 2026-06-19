@@ -194,6 +194,26 @@ describe('LettersRepository', () => {
     expect(published[0].title).toBe('Pinned')
   })
 
+  it('listPublished filters by tag with OR semantics', async () => {
+    const a = await lettersRepo.create({ ...BASE_LETTER, title: 'A', status: 'published', issueTagIds: [1, 2] })
+    const b = await lettersRepo.create({ ...BASE_LETTER, title: 'B', status: 'published', issueTagIds: [3] })
+    await lettersRepo.create({ ...BASE_LETTER, title: 'C', status: 'published', issueTagIds: [] })
+    // a draft with a matching tag must never surface
+    await lettersRepo.create({ ...BASE_LETTER, title: 'D-draft', issueTagIds: [1] })
+
+    const onlyTag1 = await lettersRepo.listPublished([1])
+    expect(onlyTag1.map((l) => l.id)).toEqual([a.id])
+
+    const tag2or3 = await lettersRepo.listPublished([2, 3])
+    expect(new Set(tag2or3.map((l) => l.id))).toEqual(new Set([a.id, b.id]))
+
+    const noFilter = await lettersRepo.listPublished()
+    expect(noFilter).toHaveLength(3)
+
+    const noMatch = await lettersRepo.listPublished([999])
+    expect(noMatch).toHaveLength(0)
+  })
+
   it('getById returns the letter', async () => {
     const created = await lettersRepo.create(BASE_LETTER)
     const found = await lettersRepo.getById(created.id)

@@ -29,14 +29,18 @@ export class LettersRepository {
   }
 
   async listPublished(tagIds?: number[]): Promise<Letter[]> {
-    const rows = await db.select().from(letters).where(eq(letters.status, 'published'))
-    const filtered = tagIds && tagIds.length > 0
-      ? rows.filter((l) => {
-          const ids = l.issueTagIds as number[]
-          return tagIds.some((t) => ids.includes(t))
-        })
-      : rows
-    return filtered.sort((a, b) => {
+    const conditions = [eq(letters.status, 'published')]
+    if (tagIds && tagIds.length > 0) {
+      // OR semantics: keep letters whose issue_tag_ids JSONB array contains ANY requested tag.
+      // jsonb_array_elements_text yields each element as text, so compare against the ids as
+      // strings (the column stores numbers). Pushed to SQL so the DB does the filtering.
+      const inList = sql.join(tagIds.map((t) => sql`${String(t)}`), sql`, `)
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM jsonb_array_elements_text(${letters.issueTagIds}) AS e(val) WHERE e.val IN (${inList}))`,
+      )
+    }
+    const rows = await db.select().from(letters).where(and(...conditions))
+    return rows.sort((a, b) => {
       const aPin = a.pinnedAt ? 1 : 0
       const bPin = b.pinnedAt ? 1 : 0
       if (aPin !== bPin) return bPin - aPin
