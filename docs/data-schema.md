@@ -170,6 +170,28 @@ interface ParsedUrl {
 
 Phases 1 and 2 of the JSON → Postgres migration are complete. `server/db/` contains a Drizzle ORM schema, repositories, a pglite test harness, startup migration wiring, and a `scripts/seed-db.ts` seed script. The curated parliament baseline lives in `scripts/seed-data/` and is loaded via `npm run db:seed`. The runtime JSON datastore (`src/data/bills.json`, `mks.json`, etc.) has been removed.
 
+### Domain schemas (§23 — 2026-06-19)
+
+The 28 tables live in **6 Postgres schemas** (not a single `public` schema), grouped by Low
+Coupling / High Cohesion:
+
+| Schema | Tables |
+|--------|--------|
+| `parliament` | `bills`, `committees`, `committee_sessions`, `mks`, `mk_knesset_terms`, `mk_roles`, `mk_activity`, `mk_votes`, `mk_annotations`, `tracked_bills`, `tracked_committees`, `tracked_mks`, `knesset_members_cache`, `knesset_committees_cache`, `summaries_cache`, `knesset_config` |
+| `auth` | `users`, `refresh_tokens`, `allowed_emails` |
+| `email` | `email_templates`, `sent_emails` |
+| `letters` | `letters`, `letter_contacts`, `letter_issue_tags`, `letter_templates` |
+| `analytics` | `join_analytics`, `letter_analytics` |
+| `config` | `feature_flags` |
+
+Schemas are declared in `server/db/schema/schemas.ts` via `pgSchema('<name>')`, and each table is
+defined with `<schema>.table(...)`. Drizzle emits schema-qualified SQL, so repositories need no
+changes. Migration `0021_domain_schemas.sql` moved the tables non-destructively
+(`CREATE SCHEMA` + `ALTER TABLE … SET SCHEMA`; FKs/indexes/sequences ride along). The only
+cross-schema foreign keys are `parliament.tracked_* → auth.users`,
+`letters.letters.created_by → auth.users`, and `analytics.letter_analytics → letters.letters`;
+everything else is intra-schema. Spec: `docs/superpowers/specs/2026-06-18-domain-schemas-design.md`.
+
 ### Design principles
 
 **Entity tables** hold objective Knesset facts: the bill as published, the committee as constituted, the MK as elected. They are never hard-deleted. All foreign-key constraints use `ON DELETE RESTRICT`.
