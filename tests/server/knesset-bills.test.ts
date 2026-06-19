@@ -18,7 +18,7 @@ vi.mock('../../server/repositories/committee-list-repository', () => ({
   })),
 }))
 
-import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, _resetProgressCache, fetchPolicyAlignedBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, _resetProgressCache, _resetTrendingCache, fetchPolicyAlignedBills, fetchTrendingBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response
@@ -206,5 +206,63 @@ describe('getTrendingBills (manual)', () => {
     expect(items[0].billId).toBe(1044632)
     expect(items[0].reason).toBe('סיבה')
     expect(items[0].status).toBe('הכנה לקריאה ראשונה')
+  })
+})
+
+describe('fetchTrendingBills (algorithmic)', () => {
+  const POOL = [
+    { BillID: 300, Name: 'ג', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+    { BillID: 200, Name: 'ב', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+    { BillID: 100, Name: 'א', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+  ]
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset()
+    vi.mocked(readFile).mockReset()
+    mockCommitteeListGet.mockReset()
+    mockCommitteeListGet.mockResolvedValue(null)
+    _resetBillsCache()
+    _resetCommitteeMapCache()
+    _resetTrendingCache()
+  })
+
+  it('ranks by co-sponsor count (sponsorship) and drops bills with no signal', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL)) // recent-bill pool
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([      // KNS_BillInitiator rows (one per initiator)
+      { BillID: 300 }, { BillID: 300 }, { BillID: 300 },
+      { BillID: 100 }, { BillID: 100 },
+    ]))
+    const items = await fetchTrendingBills('sponsorship')
+    expect(items.map((b) => b.billId)).toEqual([300, 100]) // 200 has 0 initiators → dropped
+    expect(items[0].reason).toBe('ח"כים יוזמים: 3')
+  })
+
+  it('ranks by merged-bill count (amendments) keyed on MainBillID', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL))
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([
+      { MainBillID: 200 }, { MainBillID: 200 }, { MainBillID: 300 },
+    ]))
+    const items = await fetchTrendingBills('amendments')
+    expect(items.map((b) => b.billId)).toEqual([200, 300])
+    expect(items[0].reason).toBe('הצעות שמוזגו: 2')
+  })
+
+  it('queries the algorithm-specific OData entity', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata(POOL))
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([]))
+    await fetchTrendingBills('sponsorship')
+    expect(String(vi.mocked(fetch).mock.calls[1][0])).toContain('KNS_BillInitiator')
+  })
+
+  it('falls back to the curated list for manual/unknown algorithms', async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify({ bills: [{ billId: 1044632, title: 'curated', reason: 'סיבה' }] }))
+    vi.mocked(fetch).mockResolvedValueOnce(mockOdata([
+      { BillID: 1044632, Name: 'הצעת חוק א', StatusID: 101, CommitteeID: null, LastUpdatedDate: '2026-05-01', SummaryLaw: '' },
+    ]))
+    const items = await fetchTrendingBills('manual')
+    expect(items[0].billId).toBe(1044632)
+    expect(items[0].reason).toBe('סיבה')
+    // the curated path reads JSON + hydrates by id — it never queries a trending pool
+    const poolCalls = vi.mocked(fetch).mock.calls.filter((c) => String(c[0]).includes('$orderby=BillID%20desc'))
+    expect(poolCalls).toHaveLength(0)
   })
 })

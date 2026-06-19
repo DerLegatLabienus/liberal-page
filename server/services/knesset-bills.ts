@@ -189,6 +189,72 @@ async function fetchBillsByIds(ids: number[]): Promise<Map<number, KnessetBillOv
   return new Map(mapped.map((b) => [b.billId, b]))
 }
 
+// Phase 2: algorithmic trending. 'manual' (default) uses the curated list below; the two
+// OData-backed algorithms rank a recent-bill pool by a "signal" count and are dormant until an
+// admin sets the `trendingAlgorithm` flag:
+//   sponsorship — co-sponsor count  (KNS_BillInitiator rows per BillID)
+//   amendments  — merged-bill count (KNS_BillUnion rows per MainBillID)
+// Both signals are sparse for a freshly-elected Knesset and accrue as the term matures.
+const TREND_POOL = 200
+const TREND_TTL = 30 * 60 * 1000
+const TREND_CHUNK = 40 // keep encoded filter URLs under OData's ~2000-char limit (cf. PROGRESS_CHUNK)
+const TREND_LIMIT = 20
+
+const TREND_SOURCE: Record<string, { entity: string; idField: 'BillID' | 'MainBillID'; label: string }> = {
+  sponsorship: { entity: 'KNS_BillInitiator', idField: 'BillID', label: 'ח"כים יוזמים' },
+  amendments: { entity: 'KNS_BillUnion', idField: 'MainBillID', label: 'הצעות שמוזגו' },
+}
+
+interface TrendCountCache { map: Map<number, number>; at: number; knesset: number; algorithm: string }
+let trendCountCache: TrendCountCache | null = null
+export function _resetTrendingCache() { trendCountCache = null }
+
+// Count, per bill, how many rows the chosen entity has for it (chunked + encoded like the
+// progress map). For sponsorship the row count is the number of initiators; for amendments
+// it is the number of bills merged into this one.
+async function getTrendCountMap(knesset: number, algorithm: string, billIds: number[]): Promise<Map<number, number>> {
+  if (trendCountCache && trendCountCache.knesset === knesset && trendCountCache.algorithm === algorithm
+      && Date.now() - trendCountCache.at < TREND_TTL) {
+    return trendCountCache.map
+  }
+  const { entity, idField } = TREND_SOURCE[algorithm]
+  const chunks: number[][] = []
+  for (let i = 0; i < billIds.length; i += TREND_CHUNK) chunks.push(billIds.slice(i, i + TREND_CHUNK))
+  const allRows = (await Promise.all(
+    chunks.map((chunk) => {
+      const filter = chunk.map((id) => `${idField} eq ${id}`).join(' or ')
+      const path = `${entity}?$filter=${encodeURIComponent(filter)}&$select=${idField}&$format=json`
+      return odataGetAllPages<Record<string, number>>(path)
+    }),
+  )).flat()
+  const map = new Map<number, number>()
+  for (const row of allRows) {
+    const id = row[idField]
+    if (typeof id === 'number') map.set(id, (map.get(id) ?? 0) + 1)
+  }
+  trendCountCache = { map, at: Date.now(), knesset, algorithm }
+  return map
+}
+
+/**
+ * Trending bills for the given algorithm. 'manual' (and any unknown value) returns the curated
+ * list; 'sponsorship'/'amendments' rank a recent-bill pool by their OData signal, surfacing only
+ * bills that actually carry the signal (count > 0), top {@link TREND_LIMIT}.
+ */
+export async function fetchTrendingBills(algorithm = 'manual'): Promise<KnessetBillOverviewItem[]> {
+  const source = TREND_SOURCE[algorithm]
+  if (!source) return getTrendingBills()
+  const k = getCurrentKnesset()
+  const poolPath = `KNS_Bill?$filter=KnessetNum%20eq%20${k}&$orderby=BillID%20desc&$top=${TREND_POOL}&$select=${SELECT}&$format=json`
+  const pool = await cachedQuery(`trend:${k}:${TREND_POOL}`, poolPath)
+  const countMap = await getTrendCountMap(k, algorithm, pool.map((b) => b.billId))
+  return [...pool]
+    .filter((b) => (countMap.get(b.billId) ?? 0) > 0)
+    .sort((a, b) => (countMap.get(b.billId) ?? 0) - (countMap.get(a.billId) ?? 0))
+    .slice(0, TREND_LIMIT)
+    .map((b) => ({ ...b, reason: `${source.label}: ${countMap.get(b.billId)}` }))
+}
+
 // Phase 1: only the 'manual' trending algorithm is implemented (curated list).
 export async function getTrendingBills(): Promise<KnessetBillOverviewItem[]> {
   const raw = await readFile(path.join(DATA_DIR, 'trending-bills.json'), 'utf-8')

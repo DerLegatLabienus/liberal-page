@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getCurrentKnesset } from '../services/knesset-config'
-import { fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills, searchBills } from '../services/knesset-bills'
+import { fetchRecentBills, fetchPolicyAlignedBills, fetchTrendingBills, searchBills } from '../services/knesset-bills'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { BillsRepository } from '../repositories/bills-repository'
 import { TrackedBillsRepository } from '../repositories/tracked-bills-repository'
@@ -66,7 +66,9 @@ router.get('/recent', async (req, res) => {
 
 router.get('/trending', async (_req, res) => {
   try {
-    res.json(await getTrendingBills())
+    const flags = await new FeatureFlagsRepository().getAll()
+    const algorithm = flags['trendingAlgorithm']?.value ?? 'manual'
+    res.json(await fetchTrendingBills(algorithm))
   } catch (err) {
     console.error('[bills] trending failed:', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Server error' })

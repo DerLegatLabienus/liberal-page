@@ -7,7 +7,7 @@ const mockGetAll = vi.fn().mockResolvedValue({})
 vi.mock('../../server/services/knesset-bills', () => ({
   fetchRecentBills: vi.fn(),
   fetchPolicyAlignedBills: vi.fn(),
-  getTrendingBills: vi.fn(),
+  fetchTrendingBills: vi.fn(),
 }))
 
 vi.mock('../../server/repositories/feature-flags-repository', () => ({
@@ -18,7 +18,7 @@ vi.mock('../../server/repositories/feature-flags-repository', () => ({
 
 import billsRouter from '../../server/routes/bills'
 import {
-  fetchRecentBills, fetchPolicyAlignedBills, getTrendingBills,
+  fetchRecentBills, fetchPolicyAlignedBills, fetchTrendingBills,
 } from '../../server/services/knesset-bills'
 
 const app = express()
@@ -57,11 +57,18 @@ describe('GET /api/bills/recent', () => {
 
 describe('GET /api/bills/trending', () => {
   beforeEach(() => vi.clearAllMocks())
-  it('returns trending bills', async () => {
-    vi.mocked(getTrendingBills).mockResolvedValue([{ ...ITEM, reason: 'r' }])
+  it('returns trending bills with default manual algorithm', async () => {
+    vi.mocked(fetchTrendingBills).mockResolvedValue([{ ...ITEM, reason: 'r' }])
     const res = await request(app).get('/api/bills/trending')
     expect(res.status).toBe(200)
     expect(res.body[0].reason).toBe('r')
+    expect(vi.mocked(fetchTrendingBills).mock.calls[0][0]).toBe('manual') // flag absent → default
+  })
+  it('forwards the trendingAlgorithm flag value', async () => {
+    mockGetAll.mockResolvedValueOnce({ trendingAlgorithm: { enabled: true, value: 'sponsorship' } })
+    vi.mocked(fetchTrendingBills).mockResolvedValue([])
+    await request(app).get('/api/bills/trending')
+    expect(vi.mocked(fetchTrendingBills).mock.calls[0][0]).toBe('sponsorship')
   })
 })
 
