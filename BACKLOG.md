@@ -426,9 +426,10 @@ Ranked by impact ÷ effort. Detail for each is in the dated pass below.
    ~~role-in-JWT instant-revocation~~ ✅ **SHIPPED 2026-06-17** (`requireAdmin` re-reads role from DB);
    ~~central error handler / 404~~ ✅ **SHIPPED 2026-06-17** (JSON 404 + final error handler in `index.ts`).
 
-   **Still deferred:** `listPublished` tag-filter-to-SQL + pagination (in-memory fine at current scale);
-   flag-gate flash (largely mitigated by the `useFeatureFlags` dedup); poller-in-web-process split
-   (deployment-topology change, unneeded now).
+   ~~`listPublished` tag-filter-to-SQL~~ ✅ **SHIPPED 2026-06-19** (`jsonb_array_elements_text` EXISTS
+   predicate, OR semantics preserved; sort still in memory). **Still deferred:** `listPublished`
+   pagination (in-memory fine at current scale); flag-gate flash (largely mitigated by the
+   `useFeatureFlags` dedup); poller-in-web-process split (deployment-topology change, unneeded now).
 
 ### 2026-06-14 — Review pass 1: server read paths + frontend bundle
 
