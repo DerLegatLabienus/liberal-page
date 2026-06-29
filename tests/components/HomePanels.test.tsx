@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// The merged "Who we are" section composes About + values + MK cards + Meet Us.
-// Each conditional sub-block keeps its own guard, so we mock their data sources.
+// One horizontally-snapping section composing four panels:
+// Who we are · Our MKs · FAQ · Meet us. MK and Meet-us panels are conditional,
+// so we mock their data sources and assert the dot count tracks visible panels.
 const { mockUseMkList, useAuthOptionalMock, useFeatureFlagsMock, bookingLink } = vi.hoisted(() => ({
   mockUseMkList: vi.fn(),
   useAuthOptionalMock: vi.fn(),
@@ -26,11 +28,11 @@ vi.mock('@/lib/api-client', async (importOriginal) => {
 vi.mock('@/contexts/AuthContext', () => ({ useAuthOptional: useAuthOptionalMock }))
 vi.mock('@/hooks/useFeatureFlags', () => ({ useFeatureFlags: useFeatureFlagsMock }))
 
-import WhoWeAreSection from '@/components/sections/WhoWeAreSection'
+import HomePanels from '@/components/sections/HomePanels'
 
 const LIBERAL_MK = { siteId: 1116, name: 'דן אילוז', party: 'הליכוד', photoUrl: null, isLiberal: true, isSupporter: false }
 
-describe('WhoWeAreSection', () => {
+describe('HomePanels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseMkList.mockReturnValue({ mks: [LIBERAL_MK], loading: false, error: null })
@@ -38,38 +40,38 @@ describe('WhoWeAreSection', () => {
     useFeatureFlagsMock.mockReturnValue({ meetUs: { enabled: true, value: 'et' } })
   })
 
-  it('renders all four sub-blocks in one section when data is present', () => {
-    const { container } = render(<WhoWeAreSection />)
-    // Exactly one <section> wrapper for the whole identity block.
+  it('renders the four panels in one section with one dot each', () => {
+    const { container } = render(<HomePanels />)
     expect(container.querySelectorAll('section')).toHaveLength(1)
-    // Who we are + what we follow
-    expect(screen.getByText('מי אנחנו')).toBeInTheDocument()
-    expect(screen.getByText('חירות הפרט')).toBeInTheDocument()
-    // Our MKs
-    expect(screen.getByText('ח"כים ליברלים בליכוד')).toBeInTheDocument()
-    expect(screen.getByTestId('mk-card')).toBeInTheDocument()
-    // Meet us
-    expect(screen.getByText('רוצים לפגוש אותנו?')).toBeInTheDocument()
-    expect(screen.getByText('google-verify')).toBeInTheDocument()
+    expect(screen.getByText('מי אנחנו')).toBeInTheDocument()        // who we are
+    expect(screen.getByText('ח"כים ליברלים בליכוד')).toBeInTheDocument() // our MKs
+    expect(screen.getByText('שאלות נפוצות')).toBeInTheDocument()    // FAQ
+    expect(screen.getByText('רוצים לפגוש אותנו?')).toBeInTheDocument() // meet us
+    expect(screen.getAllByTestId('panel-dot')).toHaveLength(4)
   })
 
-  it('hides the MK sub-block when there are no annotated MKs', () => {
+  it('drops the MK panel (and its dot) when no MKs are annotated', () => {
     mockUseMkList.mockReturnValue({
       mks: [{ ...LIBERAL_MK, isLiberal: false, isSupporter: false }],
       loading: false, error: null,
     })
-    render(<WhoWeAreSection />)
-    expect(screen.queryByTestId('mk-card')).not.toBeInTheDocument()
+    render(<HomePanels />)
     expect(screen.queryByText('ח"כים ליברלים בליכוד')).not.toBeInTheDocument()
-    // The rest of the identity section still renders.
-    expect(screen.getByText('מי אנחנו')).toBeInTheDocument()
+    expect(screen.getAllByTestId('panel-dot')).toHaveLength(3)
   })
 
-  it('hides the Meet Us sub-block when the meetUs flag is off', () => {
+  it('drops the Meet Us panel when the flag is off', () => {
     useFeatureFlagsMock.mockReturnValue({})
-    render(<WhoWeAreSection />)
-    expect(screen.queryByText('google-verify')).not.toBeInTheDocument()
+    render(<HomePanels />)
     expect(screen.queryByText('רוצים לפגוש אותנו?')).not.toBeInTheDocument()
-    expect(screen.getByText('מי אנחנו')).toBeInTheDocument()
+    expect(screen.getAllByTestId('panel-dot')).toHaveLength(3)
+  })
+
+  it('marks the next panel active when the next control is clicked', async () => {
+    render(<HomePanels />)
+    const dotsBefore = screen.getAllByTestId('panel-dot')
+    expect(dotsBefore[0]).toHaveAttribute('aria-current', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /הפאנל הבא/ }))
+    expect(screen.getAllByTestId('panel-dot')[1]).toHaveAttribute('aria-current', 'true')
   })
 })

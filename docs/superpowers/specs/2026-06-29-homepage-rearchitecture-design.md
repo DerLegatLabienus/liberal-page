@@ -1,7 +1,7 @@
 # Homepage Re-architecture — Design
 
 **Date:** 2026-06-29
-**Status:** Approved (first cut — expect to iterate after seeing it live)
+**Status:** Shipped, then revised — see "Revision (v2)" at the end.
 
 ## Goal
 
@@ -117,3 +117,18 @@ data-fetching logic changes.
 - Existing AboutSection / LiberalsShowcase / MeetUsSection / parliament tests keep
   passing after the section-shell refactor (logic unchanged).
 - `npm run build` clean; `npm test` green.
+
+## Revision (v2) — 2026-06-29
+
+After shipping v1, the identity block was reshaped per user request:
+
+- **Who we are · Our MKs · FAQ · Meet us** now live in **one horizontally-snapping
+  carousel** (`HomePanels`, owns `id="about"`) — full-width snap panels with
+  prev/next arrows (desktop) and clickable dots. Conditional panels (MKs, Meet us)
+  are included only when their data is present, so the dots track visible panels.
+- **Order:** Hero → HomePanels → Join → Knesset (He only) → **Gallery (last)**.
+  FAQ and Gallery are no longer their own funnel steps; FAQ folded into the carousel,
+  Gallery moved to the very end.
+- `WhoWeAreSection` (the v1 stacked merge) was removed and replaced by `HomePanels`.
+- `FaqSection` joined `AboutSection`/`LiberalsShowcase`/`MeetUsSection` as a shell-less
+  content block. Header nav dropped the `#faq` link (folded into `#about`).

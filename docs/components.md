@@ -4,26 +4,31 @@ Current components live under `src/components/`. Styling is Tailwind-based, with
 
 ## App Composition
 
-`src/App.tsx` mounts:
+`HomePage` (`src/pages/HomePage.tsx`) composes the homepage as a funnel —
+identity → join → tracker → gallery:
 
 | Component | Purpose |
 |-----------|---------|
 | `layout/Header` | Sticky nav, logo, Knesset drawer trigger, new-data badge |
-| `sections/HeroSection` | Main headline and CTAs |
-| `sections/ParliamentStrip` | Horizontal preview of active bills and one committee |
-| `sections/AboutSection` | About copy and values from `about.json` |
-| `sections/GallerySection` | Gallery grid from `gallery.json` |
-| `sections/FaqSection` | Accordion from `faq.json` |
+| `sections/HeroSection` | Headline + tagline; one primary CTA (Join) and a secondary Constitution link |
+| `sections/HomePanels` | Horizontally-snapping carousel of the identity panels: Who we are · Our MKs · FAQ · Meet us |
 | `sections/JoinSection` | Join selector and secure handoff to effective-soft |
-| `sections/MeetUsSection` | Calendly booking for external visitors (anonymous only; hidden when `meetUs` flag off) |
+| `sections/KnessetSection` | Hebrew-only: tracked strip teaser + all-bills overview in one section |
+| `sections/GallerySection` | Gallery grid from `gallery.json` (last section) |
 | `layout/Footer` | Footer content |
 | `layout/ParliamentDrawer` | Side drawer for tracked bills, committees, and MKs |
+
+`HomePanels`, `KnessetSection` compose smaller **content blocks** —
+`AboutSection`, `LiberalsShowcase`, `FaqSection`, `MeetUsSection` (in the
+carousel) and `ParliamentStrip`, `KnessetBillsOverview` (in the Knesset section).
+Those blocks no longer render their own `<section>` shell; their wrappers own the
+section element, background, and padding.
 
 ## Layout Components
 
 ### `Header`
 
-Reads `site.json` for logo and party name. The nav links are currently `#about`, `#gallery`, `#faq`, and `#join`.
+Reads `site.json` for logo and party name. The nav links are `#about`, `#gallery`, and `#join`. (FAQ has no standalone anchor — it lives inside the `#about` `HomePanels` carousel.)
 
 The "מעקב כנסת" button opens the drawer. If any bill, committee, or MK has `hasNewData: true`, the button shows a blue dot badge. The current implementation computes the badge but does not clear `hasNewData` when the drawer opens.
 
@@ -50,17 +55,42 @@ Renders simple site footer content using `site.json`.
 
 ### `HeroSection`
 
-Reads headline, subtitle, and tagline from `site.json`. It exposes CTAs for joining and opening the Knesset tracking drawer.
+Headline + tagline. One primary CTA (Join, anchors to `#join`) and a secondary
+Constitution text-link to `/constitution`. Takes no props (the tracker CTA was
+removed — it still lives in the header).
+
+### `HomePanels`
+
+The identity cluster as a horizontally-snapping carousel (owns `id="about"`). Full-width
+panels with scroll-snap, prev/next arrows (desktop) and clickable dots. Panels:
+
+1. **Who we are** — `AboutSection`
+2. **Our MKs** — `LiberalsShowcase` (included only when at least one MK is annotated)
+3. **FAQ** — `FaqSection`
+4. **Meet us** — `MeetUsSection` (included only when `meetUs` flag on and visitor anonymous)
+
+Visibility for the conditional panels is computed in `HomePanels` (via `useMkList`,
+`useFeatureFlags`, `useAuthOptional`) so the dot/arrow count tracks the visible panels.
+Active panel is tracked on scroll by nearest-centre (direction-robust for RTL); arrows
+use logical `start`/`end` positioning and direction-aware chevrons.
+
+### `KnessetSection`
+
+Hebrew-only wrapper composing `ParliamentStrip` (tracked-items teaser) above
+`KnessetBillsOverview` (browse all bills) in one section. Receives bills, committees,
+`onOpenDrawer`, and an optional `error`/`onRetry` for the load-failure banner.
 
 ### `ParliamentStrip`
 
-Receives bills and committees from `App.tsx`. It shows up to three active bills, one committee, and a button that opens the full drawer.
+Content block (no section shell). Receives bills and committees. Shows active bills,
+committees, and a button that opens the full drawer.
 
 Cards use `flex-wrap` so they wrap on narrow screens rather than causing horizontal scroll. Bill and committee cards have `min-w-[150px] sm:min-w-[180px]`. The "more" button is `w-full sm:w-auto` — full-width on mobile, auto on larger screens.
 
 ### `AboutSection`
 
-Reads `about.json`. Renders paragraphs, values, and optional leadership items if present.
+Content block (no section shell). Reads `about.json`. Renders the first two paragraphs,
+values, and optional leadership items if present.
 
 ### `GallerySection`
 
@@ -68,7 +98,7 @@ Reads `gallery.json` and renders image cards with captions and dates.
 
 ### `FaqSection`
 
-Reads `faq.json` and renders an accordion.
+Content block (no section shell). Reads `faq.json` and renders an accordion. Rendered as a panel inside `HomePanels`.
 
 ### `JoinSection`
 

@@ -31,10 +31,10 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
   // the homepage (with the section hash) so the link still works and returns home.
   const navHref = (hash: string) => (isHome ? hash : `${import.meta.env.BASE_URL}${hash}`)
 
+  // FAQ now lives inside the #about panels carousel, so it has no standalone anchor.
   const NAV_LINKS = [
     { label: t('ui.nav_about'), href: '#about' },
     { label: t('ui.nav_gallery'), href: '#gallery' },
-    { label: t('ui.nav_faq'), href: '#faq' },
     { label: t('ui.nav_join'), href: '#join' },
   ]
 

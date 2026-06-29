@@ -7,10 +7,9 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
 import HeroSection from '@/components/sections/HeroSection'
-import WhoWeAreSection from '@/components/sections/WhoWeAreSection'
+import HomePanels from '@/components/sections/HomePanels'
 import KnessetSection from '@/components/sections/KnessetSection'
 import GallerySection from '@/components/sections/GallerySection'
-import FaqSection from '@/components/sections/FaqSection'
 import JoinSection from '@/components/sections/JoinSection'
 
 export default function HomePage() {
@@ -53,11 +52,9 @@ export default function HomePage() {
         trackerEnabled={isHebrew}
       />
       <main>
-        {/* Funnel: identity → join → tracker. */}
+        {/* Funnel: identity (snap panels) → join → tracker → gallery. */}
         <HeroSection />
-        <WhoWeAreSection />
-        <GallerySection />
-        <FaqSection />
+        <HomePanels />
         <JoinSection />
         {isHebrew && (
           <KnessetSection
@@ -68,6 +65,7 @@ export default function HomePage() {
             onRetry={refresh}
           />
         )}
+        <GallerySection />
       </main>
       <Footer />
       {isHebrew && (

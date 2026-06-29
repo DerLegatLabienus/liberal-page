@@ -49,20 +49,18 @@ export default function FaqSection() {
   const items = t('faq.items', { returnObjects: true }) as FaqItemShape[]
 
   return (
-    <section id="faq" className="bg-white py-12">
-      <div className="container mx-auto max-w-4xl px-4">
-        <h2
-          dir={direction}
-          className="mb-8 text-start text-2xl font-bold text-foreground"
-        >
-          {t('faq.heading')}
-        </h2>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 shadow-sm">
-          {items.map((item, i) => (
-            <FaqRow key={i} item={item} direction={direction} />
-          ))}
-        </div>
+    <div>
+      <h2
+        dir={direction}
+        className="mb-8 text-start text-2xl font-bold text-foreground"
+      >
+        {t('faq.heading')}
+      </h2>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 shadow-sm">
+        {items.map((item, i) => (
+          <FaqRow key={i} item={item} direction={direction} />
+        ))}
       </div>
-    </section>
+    </div>
   )
 }
