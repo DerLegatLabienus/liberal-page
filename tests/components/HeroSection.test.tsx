@@ -4,15 +4,16 @@ import { describe, expect, it } from 'vitest'
 import HeroSection from '@/components/sections/HeroSection'
 
 describe('HeroSection', () => {
-  it('shows join, tracker, and constitution CTAs together', () => {
+  it('leads with join and keeps constitution as a secondary link, with no tracker CTA', () => {
     render(
       <MemoryRouter>
-        <HeroSection onOpenDrawer={() => {}} trackerEnabled />
+        <HeroSection />
       </MemoryRouter>,
     )
 
     expect(screen.getByRole('link', { name: /הצטרפו לליברלים בליכוד/ })).toHaveAttribute('href', '#join')
-    expect(screen.getByRole('button', { name: /מעקב כנסת/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /חוקת הליכוד/ })).toHaveAttribute('href', '/constitution')
+    // The tracker CTA was removed from the hero (it still lives in the header).
+    expect(screen.queryByRole('button', { name: /מעקב כנסת/ })).not.toBeInTheDocument()
   })
 })

@@ -28,17 +28,16 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
   const activeBills = bills.filter((b) => b.status !== 'עבר' && b.status !== 'נדחה')
 
   return (
-    <section className="border-y border-border bg-blue-50/60 py-8" dir={direction}>
-      <div className="container mx-auto max-w-4xl px-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
-            {t('ui.strip_heading')}
-          </h2>
-          <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
-            {t('ui.strip_see_all')}
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-3">
+    <div dir={direction}>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
+          {t('ui.strip_heading')}
+        </h2>
+        <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
+          {t('ui.strip_see_all')}
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-3">
           {activeBills.map((bill) => (
             <div
               key={bill.id}
@@ -71,8 +70,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           >
             {t('ui.strip_more')}
           </button>
-        </div>
       </div>
-    </section>
+    </div>
   )
 }

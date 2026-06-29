@@ -10,17 +10,17 @@ export default function AboutSection() {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
 
-  const paragraphs = t('about.paragraphs', { returnObjects: true }) as string[]
+  // Brief by design: show the first two paragraphs in the compact homepage layout.
+  const paragraphs = (t('about.paragraphs', { returnObjects: true }) as string[]).slice(0, 2)
   const values = t('about.values', { returnObjects: true }) as string[]
 
   return (
-    <section id="about" className="bg-white py-16" dir={direction}>
-      <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
-          {t('about.heading')}
-        </h2>
+    <div dir={direction}>
+      <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
+        {t('about.heading')}
+      </h2>
 
-        <div className="grid gap-12 md:grid-cols-2">
+      <div className="grid gap-12 md:grid-cols-2">
           <div className="space-y-4">
             {paragraphs.map((p, i) => (
               <p key={i} className="text-start leading-relaxed text-muted-foreground">
@@ -62,8 +62,7 @@ export default function AboutSection() {
               </div>
             </div>
           )}
-        </div>
       </div>
-    </section>
+    </div>
   )
 }

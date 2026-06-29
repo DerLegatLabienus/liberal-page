@@ -12,17 +12,15 @@ export default function LiberalsShowcase() {
   if (!annotated.length) return null
 
   return (
-    <section id="liberals" className="bg-slate-50 py-16" dir={direction}>
-      <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
-          {t('showcase.heading')}
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {annotated.map((mk) => (
-            <MkActivityCard key={mk.siteId} member={mk} />
-          ))}
-        </div>
+    <div dir={direction}>
+      <h3 className="mb-6 text-start text-lg font-semibold text-foreground">
+        {t('showcase.heading')}
+      </h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        {annotated.map((mk) => (
+          <MkActivityCard key={mk.siteId} member={mk} />
+        ))}
       </div>
-    </section>
+    </div>
   )
 }

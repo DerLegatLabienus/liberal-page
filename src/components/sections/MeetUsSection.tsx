@@ -91,10 +91,9 @@ export default function MeetUsSection() {
   }
 
   return (
-    <section id="meet-us" className="bg-slate-50 py-12">
-      <div className="container mx-auto max-w-4xl px-4 text-center">
-        <h2 className="mb-2 text-2xl font-bold text-foreground">{t('meetus.title')}</h2>
-        <p className="mb-6 text-muted-foreground">{t('meetus.blurb')}</p>
+    <div className="text-center">
+      <h3 className="mb-2 text-lg font-semibold text-foreground">{t('meetus.title')}</h3>
+      <p className="mb-6 text-muted-foreground">{t('meetus.blurb')}</p>
 
         {booked ? (
           <p className="font-medium text-green-700">{t('meetus.booked')}</p>
@@ -125,7 +124,6 @@ export default function MeetUsSection() {
             />
           </div>
         )}
-      </div>
-    </section>
+    </div>
   )
 }

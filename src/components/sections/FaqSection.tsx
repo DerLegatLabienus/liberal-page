@@ -49,7 +49,7 @@ export default function FaqSection() {
   const items = t('faq.items', { returnObjects: true }) as FaqItemShape[]
 
   return (
-    <section id="faq" className="bg-white py-16">
+    <section id="faq" className="bg-white py-12">
       <div className="container mx-auto max-w-4xl px-4">
         <h2
           dir={direction}

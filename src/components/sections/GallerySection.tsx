@@ -31,7 +31,7 @@ export default function GallerySection() {
   }
 
   return (
-    <section id="gallery" className="bg-slate-50 py-16" dir={direction}>
+    <section id="gallery" className="bg-slate-50 py-12" dir={direction}>
       <div className="container mx-auto max-w-4xl px-4">
         <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
           {t('gallery.heading')}

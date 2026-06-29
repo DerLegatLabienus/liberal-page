@@ -7,13 +7,10 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
 import HeroSection from '@/components/sections/HeroSection'
-import ParliamentStrip from '@/components/sections/ParliamentStrip'
-import KnessetBillsOverview from '@/components/sections/KnessetBillsOverview'
-import AboutSection from '@/components/sections/AboutSection'
-import LiberalsShowcase from '@/components/sections/LiberalsShowcase'
+import WhoWeAreSection from '@/components/sections/WhoWeAreSection'
+import KnessetSection from '@/components/sections/KnessetSection'
 import GallerySection from '@/components/sections/GallerySection'
 import FaqSection from '@/components/sections/FaqSection'
-import MeetUsSection from '@/components/sections/MeetUsSection'
 import JoinSection from '@/components/sections/JoinSection'
 
 export default function HomePage() {
@@ -56,24 +53,21 @@ export default function HomePage() {
         trackerEnabled={isHebrew}
       />
       <main>
-        <HeroSection onOpenDrawer={handleOpenDrawer} trackerEnabled={isHebrew} />
-        <AboutSection />
-        <LiberalsShowcase />
-        {isHebrew && (
-          <>
-            {parliamentError && (
-              <div className="bg-destructive/10 px-4 py-2 text-center text-sm text-destructive" dir="rtl">
-                שגיאה בטעינת נתוני הכנסת — <button type="button" onClick={refresh} className="underline">נסה שוב</button>
-              </div>
-            )}
-            <ParliamentStrip bills={bills} committees={committees} onOpenDrawer={handleOpenDrawer} />
-            <KnessetBillsOverview />
-          </>
-        )}
+        {/* Funnel: identity → join → tracker. */}
+        <HeroSection />
+        <WhoWeAreSection />
         <GallerySection />
         <FaqSection />
-        <MeetUsSection />
         <JoinSection />
+        {isHebrew && (
+          <KnessetSection
+            bills={bills}
+            committees={committees}
+            onOpenDrawer={handleOpenDrawer}
+            error={!!parliamentError}
+            onRetry={refresh}
+          />
+        )}
       </main>
       <Footer />
       {isHebrew && (

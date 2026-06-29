@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 import he from '../locales/he.json'
 
-function getNestedValue(obj: Record<string, unknown>, key: string): string {
+function getNestedRaw(obj: Record<string, unknown>, key: string): unknown {
   const parts = key.split('.')
   let current: unknown = obj
   for (const part of parts) {
@@ -11,10 +11,16 @@ function getNestedValue(obj: Record<string, unknown>, key: string): string {
       return key
     }
   }
-  return typeof current === 'string' ? current : key
+  return current
 }
 
-const useMock = ((k: string) => getNestedValue(he as Record<string, unknown>, k)) as (k: string, opts?: object) => string
+// Mirrors i18next's `returnObjects` option: with it set, arrays/objects are returned
+// as-is (e.g. about.paragraphs); otherwise non-string values fall back to the key.
+const useMock = ((k: string, opts?: { returnObjects?: boolean }) => {
+  const value = getNestedRaw(he as Record<string, unknown>, k)
+  if (opts?.returnObjects) return value
+  return typeof value === 'string' ? value : k
+}) as (k: string, opts?: object) => string
 
 export const useTranslation = () => ({
   t: useMock,
