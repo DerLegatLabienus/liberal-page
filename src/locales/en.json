@@ -32,6 +32,13 @@
     "cta_tracker": "📊 Knesset Tracker",
     "cta_constitution": "Likud Constitution"
   },
+  "panels": {
+    "about": "About",
+    "mks": "MKs",
+    "faq": "FAQ",
+    "meetus": "Meet us",
+    "gallery": "Gallery"
+  },
   "about": {
     "heading": "Who We Are",
     "paragraphs": [

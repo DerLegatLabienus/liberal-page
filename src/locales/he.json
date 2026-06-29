@@ -32,6 +32,13 @@
     "cta_tracker": "📊 מעקב כנסת",
     "cta_constitution": "חוקת הליכוד"
   },
+  "panels": {
+    "about": "מי אנחנו",
+    "mks": "ח\"כים",
+    "faq": "שאלות",
+    "meetus": "פגישה",
+    "gallery": "גלריה"
+  },
   "about": {
     "heading": "מי אנחנו",
     "paragraphs": [

@@ -2,9 +2,9 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// One horizontally-snapping section composing panels:
-// Who we are · Our MKs · FAQ · Meet us · Gallery. The MK and Meet-us panels are
-// conditional, so we mock their data sources and assert dot count tracks panels.
+// One fixed-height "stage" with a labeled section index (tabs) navigating panels:
+// Who we are · Our MKs · FAQ · Meet us · Gallery. MK and Meet-us are conditional,
+// so the tab count tracks the visible panels.
 const { mockUseMkList, useAuthOptionalMock, useFeatureFlagsMock, bookingLink } = vi.hoisted(() => ({
   mockUseMkList: vi.fn(),
   useAuthOptionalMock: vi.fn(),
@@ -38,55 +38,58 @@ describe('HomePanels', () => {
     mockUseMkList.mockReturnValue({ mks: [LIBERAL_MK], loading: false, error: null })
     useAuthOptionalMock.mockReturnValue({ user: null, ready: true })
     useFeatureFlagsMock.mockReturnValue({ meetUs: { enabled: true, value: 'et' } })
-    // Deterministic: report no reduced-motion preference so auto-scroll runs.
     window.matchMedia = vi.fn().mockReturnValue({
       matches: false, media: '', addEventListener: vi.fn(), removeEventListener: vi.fn(),
       addListener: vi.fn(), removeListener: vi.fn(), onchange: null, dispatchEvent: vi.fn(),
     }) as unknown as typeof window.matchMedia
   })
 
-  it('renders the five panels in one section with one dot each', () => {
+  it('renders five panels in one section with a labeled tab each', () => {
     const { container } = render(<HomePanels />)
     expect(container.querySelectorAll('section')).toHaveLength(1)
-    expect(screen.getByText('מי אנחנו')).toBeInTheDocument()        // who we are
-    expect(screen.getByText('ח"כים ליברלים בליכוד')).toBeInTheDocument() // our MKs
-    expect(screen.getByText('שאלות נפוצות')).toBeInTheDocument()    // FAQ
-    expect(screen.getByText('רוצים לפגוש אותנו?')).toBeInTheDocument() // meet us
-    expect(screen.getByText('גלריה')).toBeInTheDocument()          // gallery
-    expect(screen.getAllByTestId('panel-dot')).toHaveLength(5)
+    expect(screen.getAllByRole('tab')).toHaveLength(5)
+    // Tabs carry short section labels…
+    expect(screen.getByRole('tab', { name: 'שאלות' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'פגישה' })).toBeInTheDocument()
+    // …and the panel content is present (full headings differ from the tab labels).
+    expect(screen.getByRole('heading', { name: 'שאלות נפוצות' })).toBeInTheDocument()
+    expect(screen.getByText('רוצים לפגוש אותנו?')).toBeInTheDocument()
+    expect(screen.getByText('ח"כים ליברלים בליכוד')).toBeInTheDocument()
   })
 
-  it('drops the MK panel (and its dot) when no MKs are annotated', () => {
+  it('drops the MK tab when no MKs are annotated', () => {
     mockUseMkList.mockReturnValue({
       mks: [{ ...LIBERAL_MK, isLiberal: false, isSupporter: false }],
       loading: false, error: null,
     })
     render(<HomePanels />)
-    expect(screen.queryByText('ח"כים ליברלים בליכוד')).not.toBeInTheDocument()
-    expect(screen.getAllByTestId('panel-dot')).toHaveLength(4)
+    expect(screen.queryByRole('tab', { name: 'ח"כים' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
   })
 
-  it('drops the Meet Us panel when the flag is off', () => {
+  it('drops the Meet Us tab when the flag is off', () => {
     useFeatureFlagsMock.mockReturnValue({})
     render(<HomePanels />)
-    expect(screen.queryByText('רוצים לפגוש אותנו?')).not.toBeInTheDocument()
-    expect(screen.getAllByTestId('panel-dot')).toHaveLength(4)
+    expect(screen.queryByRole('tab', { name: 'פגישה' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
   })
 
-  it('marks the next panel active when the next control is clicked', async () => {
+  it('selects a panel when its tab is clicked', async () => {
     render(<HomePanels />)
-    expect(screen.getAllByTestId('panel-dot')[0]).toHaveAttribute('aria-current', 'true')
-    await userEvent.click(screen.getByRole('button', { name: /הפאנל הבא/ }))
-    expect(screen.getAllByTestId('panel-dot')[1]).toHaveAttribute('aria-current', 'true')
+    const faqTab = screen.getByRole('tab', { name: 'שאלות' })
+    expect(faqTab).toHaveAttribute('aria-selected', 'false')
+    await userEvent.click(faqTab)
+    expect(faqTab).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('auto-advances to the next panel after the interval', () => {
+  it('auto-advances to the next tab after the interval', () => {
     vi.useFakeTimers()
     try {
       render(<HomePanels />)
-      expect(screen.getAllByTestId('panel-dot')[0]).toHaveAttribute('aria-current', 'true')
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
       act(() => { vi.advanceTimersByTime(6000) })
-      expect(screen.getAllByTestId('panel-dot')[1]).toHaveAttribute('aria-current', 'true')
+      expect(screen.getAllByRole('tab')[1]).toHaveAttribute('aria-selected', 'true')
     } finally {
       vi.useRealTimers()
     }

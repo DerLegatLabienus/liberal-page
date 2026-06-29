@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import { useMkList } from '@/hooks/useMkList'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
@@ -17,12 +17,15 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * The identity cluster as a horizontally-snapping carousel: Who we are · Our MKs ·
- * FAQ · Meet us, one full-width panel each. The MK and Meet-us panels are included
- * only when their data is present, so the dots/arrows track the visible panels.
- * Keeps the `#about` anchor the header nav points at.
+ * The identity cluster as a fixed-height "stage": a labeled section index (tabs)
+ * navigates between full-width panels (Who we are · Our MKs · FAQ · Meet us ·
+ * Gallery) that snap-scroll horizontally and auto-advance. The stage has one fixed
+ * height so the section is always ~one screen regardless of the active panel; tall
+ * panels scroll inside their own frame, short panels centre. The MK and Meet-us
+ * panels are included only when their data is present. Owns the `#about` anchor.
  */
 export default function HomePanels() {
+  const { t } = useTranslation()
   const direction = useDirection()
   const { mks } = useMkList()
   const flags = useFeatureFlags()
@@ -75,8 +78,6 @@ export default function HomePanels() {
     return () => clearTimeout(id)
   }, [active, paused, panels.length, goTo])
 
-  const PrevIcon = direction === 'rtl' ? ChevronRightIcon : ChevronLeftIcon
-  const NextIcon = direction === 'rtl' ? ChevronLeftIcon : ChevronRightIcon
   const multi = panels.length > 1
 
   return (
@@ -89,59 +90,55 @@ export default function HomePanels() {
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className="relative mx-auto max-w-5xl px-4">
+      <div className="mx-auto max-w-5xl px-4">
+        {/* Labeled section index — names every panel and acts as the nav. */}
         {multi && (
-          <>
-            <button
-              type="button"
-              aria-label="הפאנל הקודם"
-              onClick={() => goTo(active - 1)}
-              disabled={active === 0}
-              className="absolute start-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-border bg-white/90 p-2 text-foreground shadow-sm hover:bg-white disabled:opacity-30 sm:block"
-            >
-              <PrevIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              aria-label="הפאנל הבא"
-              onClick={() => goTo(active + 1)}
-              disabled={active === panels.length - 1}
-              className="absolute end-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-border bg-white/90 p-2 text-foreground shadow-sm hover:bg-white disabled:opacity-30 sm:block"
-            >
-              <NextIcon className="h-5 w-5" />
-            </button>
-          </>
-        )}
-
-        <div
-          ref={trackRef}
-          onScroll={handleScroll}
-          className="flex snap-x snap-mandatory gap-0 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {panels.map((panel) => (
-            <div key={panel.id} className="w-full shrink-0 snap-center px-2 sm:px-8">
-              {panel.node}
-            </div>
-          ))}
-        </div>
-
-        {multi && (
-          <div className="mt-6 flex justify-center gap-2">
+          <div
+            role="tablist"
+            aria-label={t('panels.about')}
+            className="mb-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
+          >
             {panels.map((panel, i) => (
               <button
                 key={panel.id}
-                type="button"
-                data-testid="panel-dot"
-                aria-current={i === active}
-                aria-label={`פאנל ${i + 1}`}
+                role="tab"
+                id={`tab-${panel.id}`}
+                aria-controls={`panel-${panel.id}`}
+                aria-selected={i === active}
+                tabIndex={i === active ? 0 : -1}
                 onClick={() => goTo(i)}
-                className={`h-2.5 rounded-full transition-all ${
-                  i === active ? 'w-6 bg-primary' : 'w-2.5 bg-slate-300 hover:bg-slate-400'
+                className={`border-b-2 pb-1 text-sm transition-colors ${
+                  i === active
+                    ? 'border-primary font-semibold text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
-              />
+              >
+                {t(`panels.${panel.id}`)}
+              </button>
             ))}
           </div>
         )}
+
+        {/* Fixed-height stage: one screen tall regardless of the active panel. */}
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          className="flex h-[clamp(440px,72vh,620px)] snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {panels.map((panel) => (
+            <div
+              key={panel.id}
+              role="tabpanel"
+              id={`panel-${panel.id}`}
+              aria-labelledby={`tab-${panel.id}`}
+              className="h-full w-full shrink-0 snap-center overflow-y-auto overscroll-contain px-2 sm:px-8"
+            >
+              <div className="flex min-h-full flex-col">
+                <div className="my-auto w-full py-2">{panel.node}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )
