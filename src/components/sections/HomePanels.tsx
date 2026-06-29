@@ -36,7 +36,7 @@ export default function HomePanels() {
     ...(hasLiberalMks ? [{ id: 'mks', node: <LiberalsShowcase /> }] : []),
     { id: 'faq', node: <FaqSection /> },
     ...(showMeetUs ? [{ id: 'meetus', node: <MeetUsSection /> }] : []),
-    { id: 'gallery', node: <GallerySection /> },
+    { id: 'gallery', node: <GallerySection maxItems={4} /> },
   ]
 
   const trackRef = useRef<HTMLDivElement>(null)

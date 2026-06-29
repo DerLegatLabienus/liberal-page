@@ -13,10 +13,18 @@ function resolveImageSrc(src: string): string {
   return src.startsWith('/') ? `${import.meta.env.BASE_URL}${src.slice(1)}` : src
 }
 
-export default function GallerySection() {
+interface GallerySectionProps {
+  /** Cap the number of thumbnails in the grid (keeps the carousel panel short on
+   *  mobile). The lightbox still cycles through every image. */
+  maxItems?: number
+}
+
+export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  const shown = maxItems != null ? gallery.slice(0, maxItems) : gallery
 
   const selected = selectedIndex !== null ? gallery[selectedIndex] : null
   const caption = selected
@@ -39,7 +47,7 @@ export default function GallerySection() {
           <p className="text-start text-muted-foreground">{t('gallery.empty')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {gallery.map((item, i) => (
+            {shown.map((item, i) => (
               <div
                 key={item.id}
                 className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-white shadow-sm"

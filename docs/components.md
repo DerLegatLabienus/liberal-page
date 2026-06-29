@@ -67,7 +67,7 @@ panels with scroll-snap, prev/next arrows (desktop) and clickable dots. Panels:
 2. **Our MKs** — `LiberalsShowcase` (included only when at least one MK is annotated)
 3. **FAQ** — `FaqSection`
 4. **Meet us** — `MeetUsSection` (included only when `meetUs` flag on and visitor anonymous)
-5. **Gallery** — `GallerySection`
+5. **Gallery** — `GallerySection` with `maxItems={4}` (keeps the panel short on mobile; lightbox still cycles all images)
 
 Visibility for the conditional panels is computed in `HomePanels` (via `useMkList`,
 `useFeatureFlags`, `useAuthOptional`) so the dot/arrow count tracks the visible panels.
