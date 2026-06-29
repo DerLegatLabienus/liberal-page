@@ -31,8 +31,7 @@ export default function GallerySection() {
   }
 
   return (
-    <section id="gallery" className="bg-slate-50 py-12" dir={direction}>
-      <div className="container mx-auto max-w-4xl px-4">
+    <div dir={direction}>
         <h2 className="mb-8 text-start text-2xl font-bold text-foreground">
           {t('gallery.heading')}
         </h2>
@@ -63,7 +62,6 @@ export default function GallerySection() {
             ))}
           </div>
         )}
-      </div>
 
       <Dialog open={selectedIndex !== null} onOpenChange={(open) => { if (!open) setSelectedIndex(null) }}>
         <DialogContent>
@@ -103,6 +101,6 @@ export default function GallerySection() {
           </div>
         </DialogContent>
       </Dialog>
-    </section>
+    </div>
   )
 }

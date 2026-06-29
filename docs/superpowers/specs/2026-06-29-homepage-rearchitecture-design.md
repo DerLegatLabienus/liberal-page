@@ -132,3 +132,12 @@ After shipping v1, the identity block was reshaped per user request:
 - `WhoWeAreSection` (the v1 stacked merge) was removed and replaced by `HomePanels`.
 - `FaqSection` joined `AboutSection`/`LiberalsShowcase`/`MeetUsSection` as a shell-less
   content block. Header nav dropped the `#faq` link (folded into `#about`).
+
+## Revision (v3) — 2026-06-29
+
+- **Gallery moved into the carousel** as a 5th panel (Who we are · Our MKs · FAQ ·
+  Meet us · Gallery). The standalone trailing Gallery section is gone; `GallerySection`
+  is now a shell-less content block. Header nav dropped `#gallery` (now `#about`, `#join`).
+- **Auto-scroll:** `HomePanels` auto-advances every 6s (`AUTO_ADVANCE_MS`), wrapping at
+  the end, paused on hover/focus and disabled under `prefers-reduced-motion`.
+- Meet us stays a carousel panel (an earlier "move it below Join" request was retracted).

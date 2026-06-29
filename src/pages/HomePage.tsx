@@ -9,7 +9,6 @@ import ParliamentDrawer from '@/components/layout/ParliamentDrawer'
 import HeroSection from '@/components/sections/HeroSection'
 import HomePanels from '@/components/sections/HomePanels'
 import KnessetSection from '@/components/sections/KnessetSection'
-import GallerySection from '@/components/sections/GallerySection'
 import JoinSection from '@/components/sections/JoinSection'
 
 export default function HomePage() {
@@ -52,7 +51,7 @@ export default function HomePage() {
         trackerEnabled={isHebrew}
       />
       <main>
-        {/* Funnel: identity (snap panels) → join → tracker → gallery. */}
+        {/* Funnel: identity (snap panels, incl. gallery) → join → tracker. */}
         <HeroSection />
         <HomePanels />
         <JoinSection />
@@ -65,7 +64,6 @@ export default function HomePage() {
             onRetry={refresh}
           />
         )}
-        <GallerySection />
       </main>
       <Footer />
       {isHebrew && (

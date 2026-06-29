@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { useDirection } from '@/hooks/useDirection'
 import { useMkList } from '@/hooks/useMkList'
@@ -8,6 +8,13 @@ import AboutSection from '@/components/sections/AboutSection'
 import LiberalsShowcase from '@/components/sections/LiberalsShowcase'
 import FaqSection from '@/components/sections/FaqSection'
 import MeetUsSection from '@/components/sections/MeetUsSection'
+import GallerySection from '@/components/sections/GallerySection'
+
+const AUTO_ADVANCE_MS = 6000
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
 
 /**
  * The identity cluster as a horizontally-snapping carousel: Who we are · Our MKs ·
@@ -29,10 +36,12 @@ export default function HomePanels() {
     ...(hasLiberalMks ? [{ id: 'mks', node: <LiberalsShowcase /> }] : []),
     { id: 'faq', node: <FaqSection /> },
     ...(showMeetUs ? [{ id: 'meetus', node: <MeetUsSection /> }] : []),
+    { id: 'gallery', node: <GallerySection /> },
   ]
 
   const trackRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
+  const [paused, setPaused] = useState(false)
 
   const goTo = useCallback((i: number) => {
     const clamped = Math.max(0, Math.min(i, panels.length - 1))
@@ -57,12 +66,29 @@ export default function HomePanels() {
     setActive(nearest)
   }, [])
 
+  // Auto-advance through the panels, wrapping at the end. Paused on hover/focus
+  // and disabled when the user prefers reduced motion. Re-arms whenever `active`
+  // changes, so a manual nav simply restarts the dwell timer.
+  useEffect(() => {
+    if (paused || panels.length <= 1 || prefersReducedMotion()) return
+    const id = setTimeout(() => goTo((active + 1) % panels.length), AUTO_ADVANCE_MS)
+    return () => clearTimeout(id)
+  }, [active, paused, panels.length, goTo])
+
   const PrevIcon = direction === 'rtl' ? ChevronRightIcon : ChevronLeftIcon
   const NextIcon = direction === 'rtl' ? ChevronLeftIcon : ChevronRightIcon
   const multi = panels.length > 1
 
   return (
-    <section id="about" className="bg-white py-12" dir={direction}>
+    <section
+      id="about"
+      className="bg-white py-12"
+      dir={direction}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
       <div className="relative mx-auto max-w-5xl px-4">
         {multi && (
           <>

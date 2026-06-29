@@ -11,16 +11,15 @@ identity → join → tracker → gallery:
 |-----------|---------|
 | `layout/Header` | Sticky nav, logo, Knesset drawer trigger, new-data badge |
 | `sections/HeroSection` | Headline + tagline; one primary CTA (Join) and a secondary Constitution link |
-| `sections/HomePanels` | Horizontally-snapping carousel of the identity panels: Who we are · Our MKs · FAQ · Meet us |
+| `sections/HomePanels` | Auto-scrolling horizontal carousel of: Who we are · Our MKs · FAQ · Meet us · Gallery |
 | `sections/JoinSection` | Join selector and secure handoff to effective-soft |
 | `sections/KnessetSection` | Hebrew-only: tracked strip teaser + all-bills overview in one section |
-| `sections/GallerySection` | Gallery grid from `gallery.json` (last section) |
 | `layout/Footer` | Footer content |
 | `layout/ParliamentDrawer` | Side drawer for tracked bills, committees, and MKs |
 
 `HomePanels`, `KnessetSection` compose smaller **content blocks** —
-`AboutSection`, `LiberalsShowcase`, `FaqSection`, `MeetUsSection` (in the
-carousel) and `ParliamentStrip`, `KnessetBillsOverview` (in the Knesset section).
+`AboutSection`, `LiberalsShowcase`, `FaqSection`, `MeetUsSection`, `GallerySection`
+(in the carousel) and `ParliamentStrip`, `KnessetBillsOverview` (in the Knesset section).
 Those blocks no longer render their own `<section>` shell; their wrappers own the
 section element, background, and padding.
 
@@ -28,7 +27,7 @@ section element, background, and padding.
 
 ### `Header`
 
-Reads `site.json` for logo and party name. The nav links are `#about`, `#gallery`, and `#join`. (FAQ has no standalone anchor — it lives inside the `#about` `HomePanels` carousel.)
+Reads `site.json` for logo and party name. The nav links are `#about` and `#join`. (FAQ and Gallery have no standalone anchors — they are panels inside the `#about` `HomePanels` carousel.)
 
 The "מעקב כנסת" button opens the drawer. If any bill, committee, or MK has `hasNewData: true`, the button shows a blue dot badge. The current implementation computes the badge but does not clear `hasNewData` when the drawer opens.
 
@@ -68,11 +67,16 @@ panels with scroll-snap, prev/next arrows (desktop) and clickable dots. Panels:
 2. **Our MKs** — `LiberalsShowcase` (included only when at least one MK is annotated)
 3. **FAQ** — `FaqSection`
 4. **Meet us** — `MeetUsSection` (included only when `meetUs` flag on and visitor anonymous)
+5. **Gallery** — `GallerySection`
 
 Visibility for the conditional panels is computed in `HomePanels` (via `useMkList`,
 `useFeatureFlags`, `useAuthOptional`) so the dot/arrow count tracks the visible panels.
 Active panel is tracked on scroll by nearest-centre (direction-robust for RTL); arrows
 use logical `start`/`end` positioning and direction-aware chevrons.
+
+**Auto-scroll:** advances to the next panel every `AUTO_ADVANCE_MS` (6s), wrapping at the
+end. Paused on hover and focus-within, and disabled when the user prefers reduced motion.
+The dwell timer re-arms whenever the active panel changes, so a manual nav restarts it.
 
 ### `KnessetSection`
 
@@ -94,7 +98,7 @@ values, and optional leadership items if present.
 
 ### `GallerySection`
 
-Reads `gallery.json` and renders image cards with captions and dates.
+Content block (no section shell). Reads `gallery.json` and renders image cards with captions and dates, plus the lightbox dialog. Rendered as the last panel inside `HomePanels`.
 
 ### `FaqSection`
 
