@@ -104,7 +104,8 @@
   },
   "gallery": {
     "heading": "Gallery",
-    "empty": "Photos coming soon."
+    "empty": "Photos coming soon.",
+    "view_all": "View all {{count}} photos →"
   },
   "tracker": {
     "add_new": "+ Add new tracking",
