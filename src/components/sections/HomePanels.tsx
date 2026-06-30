@@ -141,7 +141,7 @@ export default function HomePanels() {
         <div
           ref={trackRef}
           onScroll={handleScroll}
-          className="flex h-[clamp(440px,72vh,620px)] snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex h-[clamp(440px,72vh,620px)] snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {panels.map((panel) => (
             <div
@@ -149,7 +149,7 @@ export default function HomePanels() {
               role="tabpanel"
               id={`panel-${panel.id}`}
               aria-labelledby={`tab-${panel.id}`}
-              className="h-full w-full shrink-0 snap-center overflow-y-auto overscroll-contain px-2 sm:px-8"
+              className="h-full w-full shrink-0 snap-center overflow-y-auto overscroll-x-contain px-2 sm:px-8"
             >
               <div className="flex min-h-full flex-col">
                 <div className="my-auto w-full py-2">{panel.node}</div>

@@ -101,6 +101,17 @@ describe('HomePanels', () => {
     expect(screen.getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true')
   })
 
+  // Regression: a fixed-height panel with `overflow-y-auto overscroll-contain`
+  // traps vertical page scroll on mobile (overscroll-behavior: contain blocks the
+  // swipe from chaining to <body>). Contain only the horizontal carousel axis.
+  it('does not trap vertical page scroll (no vertical overscroll containment on panels)', () => {
+    render(<HomePanels />)
+    for (const panel of screen.getAllByRole('tabpanel')) {
+      expect(panel.className).not.toMatch(/overscroll-contain\b/)
+      expect(panel.className).not.toMatch(/overscroll-y-contain\b/)
+    }
+  })
+
   it('auto-advances to the next tab after the interval', () => {
     vi.useFakeTimers()
     try {
