@@ -48,6 +48,16 @@ export const letters = lettersSchema.table('letters', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const letterMediaAssets = lettersSchema.table('letter_media_assets', {
+  id: serial('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  filename: text('filename').notNull(),
+  contentType: text('content_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  uploadedBy: integer('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const letterAnalytics = analyticsSchema.table('letter_analytics', {
   letterId: integer('letter_id').notNull().references(() => letters.id, { onDelete: 'cascade' }),
   bucket: text('bucket').notNull(),

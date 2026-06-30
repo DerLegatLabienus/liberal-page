@@ -209,6 +209,17 @@ export interface LetterTemplate {
   updatedAt: string
 }
 
+export interface LetterMediaAsset {
+  id: number
+  key: string
+  url: string
+  filename: string
+  contentType: string
+  sizeBytes: number
+  uploadedBy: number | null
+  createdAt: string
+}
+
 export interface Letter {
   id: number
   title: string
