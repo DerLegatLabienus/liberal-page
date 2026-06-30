@@ -12,6 +12,8 @@ describe('validateImage', () => {
     expect(validateImage(png)).toMatchObject({ ok: true, contentType: 'image/png', ext: 'png' })
     expect(validateImage(jpeg)).toMatchObject({ ok: true, contentType: 'image/jpeg', ext: 'jpg' })
     expect(validateImage(gif)).toMatchObject({ ok: true, contentType: 'image/gif', ext: 'gif' })
+    const gif87 = Buffer.from('GIF87a___', 'ascii')
+    expect(validateImage(gif87)).toMatchObject({ ok: true, contentType: 'image/gif', ext: 'gif' })
     expect(validateImage(webp)).toMatchObject({ ok: true, contentType: 'image/webp', ext: 'webp' })
   })
 
@@ -23,5 +25,8 @@ describe('validateImage', () => {
   it('rejects buffers over the size cap', () => {
     const big = Buffer.concat([png, Buffer.alloc(MAX_IMAGE_BYTES + 1)])
     expect(validateImage(big)).toMatchObject({ ok: false, reason: 'too large' })
+    const exact = Buffer.alloc(MAX_IMAGE_BYTES)
+    exact.set(Buffer.from([0x89, 0x50, 0x4e, 0x47])) // PNG magic at the start
+    expect(validateImage(exact).ok).toBe(true)
   })
 })
