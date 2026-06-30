@@ -35,7 +35,15 @@ describe('r2-client', () => {
     await r2.putObject('letters/abc.png', Buffer.from([1, 2, 3]), 'image/png')
     expect(sendMock).toHaveBeenCalledTimes(1)
     const cmd = sendMock.mock.calls[0][0]
-    expect(cmd.input).toMatchObject({ Bucket: 'prod', Key: 'letters/abc.png', ContentType: 'image/png' })
+    expect(cmd.input).toMatchObject({ Bucket: 'prod', Key: 'letters/abc.png', ContentType: 'image/png', Body: expect.any(Buffer) })
+  })
+
+  it('deleteObject sends a DeleteObjectCommand with bucket/key', async () => {
+    await r2.deleteObject('letters/abc.png')
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    const cmd = sendMock.mock.calls[0][0]
+    expect(cmd.__type).toBe('Delete')
+    expect(cmd.input).toMatchObject({ Bucket: 'prod', Key: 'letters/abc.png' })
   })
 
   it('throws R2NotConfiguredError when env missing', async () => {
