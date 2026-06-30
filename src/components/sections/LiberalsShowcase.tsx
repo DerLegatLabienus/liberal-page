@@ -18,7 +18,7 @@ export default function LiberalsShowcase() {
       </h3>
       <div className="grid gap-4 md:grid-cols-2">
         {annotated.map((mk) => (
-          <MkActivityCard key={mk.siteId} member={mk} />
+          <MkActivityCard key={mk.siteId} member={mk} maxActivity={2} />
         ))}
       </div>
     </div>

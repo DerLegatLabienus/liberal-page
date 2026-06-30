@@ -10,8 +10,8 @@ export default function AboutSection() {
   const { t, i18n } = useTranslation()
   const direction = useDirection()
 
-  // Brief by design: show the first two paragraphs in the compact homepage layout.
-  const paragraphs = (t('about.paragraphs', { returnObjects: true }) as string[]).slice(0, 2)
+  // Brief by design: the lead paragraph only — the rest is restated in the FAQ panel.
+  const paragraphs = (t('about.paragraphs', { returnObjects: true }) as string[]).slice(0, 1)
   const values = t('about.values', { returnObjects: true }) as string[]
 
   return (

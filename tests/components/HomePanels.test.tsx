@@ -82,6 +82,25 @@ describe('HomePanels', () => {
     expect(faqTab).toHaveAttribute('aria-selected', 'true')
   })
 
+  it('navigates tabs with arrow keys (RTL: Left = forward, Right = back)', async () => {
+    render(<HomePanels />)
+    screen.getAllByRole('tab')[0].focus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(screen.getAllByRole('tab')[1]).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('jumps to first/last tab with Home/End', async () => {
+    render(<HomePanels />)
+    screen.getAllByRole('tab')[0].focus()
+    await userEvent.keyboard('{End}')
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs[tabs.length - 1]).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{Home}')
+    expect(screen.getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('auto-advances to the next tab after the interval', () => {
     vi.useFakeTimers()
     try {

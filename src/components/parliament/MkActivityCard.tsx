@@ -4,9 +4,10 @@ import type { KnessetMember, Mk } from '@/types'
 
 interface MkActivityCardProps {
   member: KnessetMember
+  maxActivity?: number
 }
 
-export default function MkActivityCard({ member }: MkActivityCardProps) {
+export default function MkActivityCard({ member, maxActivity }: MkActivityCardProps) {
   const { activity, loading, error } = useMkActivity(member.siteId)
 
   if (error) {
@@ -34,7 +35,7 @@ export default function MkActivityCard({ member }: MkActivityCardProps) {
 
   return (
     <div className="relative">
-      <MkCard mk={mk} />
+      <MkCard mk={mk} maxActivity={maxActivity} />
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/70">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

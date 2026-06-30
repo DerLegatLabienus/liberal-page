@@ -223,6 +223,26 @@ describe('MkCard — edge cases', () => {
   })
 })
 
+describe('MkCard — activity cap (maxActivity)', () => {
+  const sixBills = Array.from({ length: 6 }, (_, i) => ({
+    type: 'bill_initiated' as const,
+    date: `2026-0${i + 1}-01T00:00:00`,
+    title: `הצעת חוק ${i + 1}`,
+    sourceUrl: `https://example.com/bill/${i + 1}`,
+  }))
+
+  it('caps activity rows to maxActivity when provided', () => {
+    render(<MkCard mk={mkFixture({ name: 'דן אילוז', activity: sixBills })} maxActivity={2} />)
+    expect(screen.getAllByText('📋')).toHaveLength(2)
+    expect(screen.queryByText('הצעת חוק 3')).not.toBeInTheDocument()
+  })
+
+  it('defaults to 4 rows when maxActivity is omitted', () => {
+    render(<MkCard mk={mkFixture({ name: 'דן אילוז', activity: sixBills })} />)
+    expect(screen.getAllByText('📋')).toHaveLength(4)
+  })
+})
+
 describe('MkCard — inactive MK', () => {
   it('shows inactive banner when mk.inactive is true', () => {
     const inactiveMk = mkFixture({ inactive: true })

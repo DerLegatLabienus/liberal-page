@@ -21,6 +21,8 @@ const ACTIVITY_ICONS: Record<string, string> = {
 interface MkCardProps {
   mk: Mk
   onRemove?: (id: number) => void
+  /** Max recent-activity rows to show. Defaults to 4 (drawer/full-size). */
+  maxActivity?: number
 }
 
 function ActivityItem({ item }: { item: MkActivity }) {
@@ -46,7 +48,7 @@ function ActivityItem({ item }: { item: MkActivity }) {
   )
 }
 
-export default function MkCard({ mk, onRemove }: MkCardProps) {
+export default function MkCard({ mk, onRemove, maxActivity = 4 }: MkCardProps) {
   const { t } = useTranslation()
   const direction = useDirection()
   const activity = mk.activity ?? []
@@ -91,7 +93,7 @@ export default function MkCard({ mk, onRemove }: MkCardProps) {
         {activity.length > 0 && (
           <div className="mb-3 space-y-2">
             <p className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('tracker.recent_activity')}</p>
-            {activity.slice(0, 4).map((item, i) => (
+            {activity.slice(0, maxActivity).map((item, i) => (
               <ActivityItem key={i} item={item} />
             ))}
           </div>

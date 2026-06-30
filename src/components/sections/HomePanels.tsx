@@ -78,6 +78,22 @@ export default function HomePanels() {
     return () => clearTimeout(id)
   }, [active, paused, panels.length, goTo])
 
+  // Roving-tabindex keyboard nav for the tab row (RTL: Left = forward).
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const focusTab = useCallback((i: number) => {
+    const clamped = Math.max(0, Math.min(i, panels.length - 1))
+    goTo(clamped)
+    tabRefs.current[clamped]?.focus()
+  }, [goTo, panels.length])
+  const onTabKeyDown = (e: React.KeyboardEvent) => {
+    const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
+    const backward = direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft'
+    if (e.key === forward) { e.preventDefault(); focusTab(active + 1) }
+    else if (e.key === backward) { e.preventDefault(); focusTab(active - 1) }
+    else if (e.key === 'Home') { e.preventDefault(); focusTab(0) }
+    else if (e.key === 'End') { e.preventDefault(); focusTab(panels.length - 1) }
+  }
+
   const multi = panels.length > 1
 
   return (
@@ -96,11 +112,13 @@ export default function HomePanels() {
           <div
             role="tablist"
             aria-label={t('panels.about')}
+            onKeyDown={onTabKeyDown}
             className="mb-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
           >
             {panels.map((panel, i) => (
               <button
                 key={panel.id}
+                ref={(el) => { tabRefs.current[i] = el }}
                 role="tab"
                 id={`tab-${panel.id}`}
                 aria-controls={`panel-${panel.id}`}
