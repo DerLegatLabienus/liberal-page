@@ -4,6 +4,7 @@ import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import RecipientEditor from '@/components/letters/RecipientEditor'
+import MediaPanel from '@/components/letters/MediaPanel'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterAddress } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
@@ -226,21 +227,24 @@ export default function AdminLettersPage() {
         )}
 
         {!loading && tab === 'templates' && (
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Letter Templates ({templates.length})</h2>
+          <div className="space-y-8">
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Letter Templates ({templates.length})</h2>
+              </div>
+              <NewTemplateForm onCreate={async (name, html) => { await api.admin.letters.letterTemplates.create({ name, html }); refresh() }} />
+              <div className="mt-6 space-y-4">
+                {templates.map((tpl) => (
+                  <TemplateRow
+                    key={tpl.id}
+                    template={tpl}
+                    onSave={async (name, html) => { await api.admin.letters.letterTemplates.update(tpl.id, { name, html }); refresh() }}
+                    onDelete={async () => { if (confirm('Delete this template?')) { await api.admin.letters.letterTemplates.delete(tpl.id); refresh() } }}
+                  />
+                ))}
+              </div>
             </div>
-            <NewTemplateForm onCreate={async (name, html) => { await api.admin.letters.letterTemplates.create({ name, html }); refresh() }} />
-            <div className="mt-6 space-y-4">
-              {templates.map((tpl) => (
-                <TemplateRow
-                  key={tpl.id}
-                  template={tpl}
-                  onSave={async (name, html) => { await api.admin.letters.letterTemplates.update(tpl.id, { name, html }); refresh() }}
-                  onDelete={async () => { if (confirm('Delete this template?')) { await api.admin.letters.letterTemplates.delete(tpl.id); refresh() } }}
-                />
-              ))}
-            </div>
+            <MediaPanel />
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags, Letter, LetterWithStats, LetterDetailResponse, LetterIssueTag, LetterContact, LetterTemplate } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags, Letter, LetterWithStats, LetterDetailResponse, LetterIssueTag, LetterContact, LetterTemplate, LetterMediaAsset } from '@/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
@@ -184,6 +184,29 @@ export const api = {
         update: (id: number, body: { name?: string; html?: string }) =>
           apiFetch<{ ok: boolean }>(`/admin/letters/templates/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
         delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/templates/${id}`, { method: 'DELETE' }),
+      },
+      media: {
+        list: () => apiFetch<{ assets: LetterMediaAsset[] }>('/admin/letters/media'),
+        delete: (id: number) =>
+          apiFetch<{ ok: boolean }>(`/admin/letters/media/${id}`, { method: 'DELETE' }),
+        upload: async (file: File): Promise<{ asset: LetterMediaAsset }> => {
+          const fd = new FormData()
+          fd.append('file', file)
+          // Multipart must NOT set Content-Type (the browser sets the boundary), so this
+          // bypasses apiFetch's JSON wrapper and attaches the token directly.
+          const res = await fetch(`${API_BASE}/admin/letters/media`, {
+            method: 'POST',
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+            body: fd,
+          })
+          if (!res.ok) {
+            const b = (await res.json().catch(() => ({}))) as { error?: string }
+            const e = new Error(b.error ?? `API error ${res.status}`) as Error & { status?: number }
+            e.status = res.status
+            throw e
+          }
+          return res.json() as Promise<{ asset: LetterMediaAsset }>
+        },
       },
     },
   },
