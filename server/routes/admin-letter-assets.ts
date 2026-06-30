@@ -140,6 +140,7 @@ router.post('/media', uploadSingle, async (req, res) => {
 })
 
 router.delete('/media/:id', async (req, res) => {
+  if (!r2.isConfigured()) return res.status(503).json({ error: 'R2 not configured' })
   const id = Number(req.params.id)
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' })
   const row = await mediaRepo.getById(id)

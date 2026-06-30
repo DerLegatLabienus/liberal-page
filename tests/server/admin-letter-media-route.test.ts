@@ -74,10 +74,49 @@ describe('admin letter media routes', () => {
     expect(res.status).toBe(503)
   })
 
+  it('503 on POST when R2 is not configured', async () => {
+    ;(r2.isConfigured as unknown as ReturnType<typeof vi.fn>).mockReturnValue(false)
+    const res = await request(app)
+      .post('/api/admin/letters/media')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', png, 'logo.png')
+    expect(res.status).toBe(503)
+    expect(r2.putObject).not.toHaveBeenCalled()
+  })
+
+  it('503 on DELETE when R2 is not configured', async () => {
+    // Upload with R2 configured to create a row
+    const up = await request(app)
+      .post('/api/admin/letters/media')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', png, 'logo.png')
+    expect(up.status).toBe(201)
+    const id = up.body.asset.id
+
+    // Now disable R2 and attempt DELETE
+    ;(r2.isConfigured as unknown as ReturnType<typeof vi.fn>).mockReturnValue(false)
+    const del = await request(app).delete(`/api/admin/letters/media/${id}`).set('Authorization', `Bearer ${adminToken}`)
+    expect(del.status).toBe(503)
+    expect(r2.deleteObject).not.toHaveBeenCalled()
+  })
+
+  it('400 for oversize upload (>5MB)', async () => {
+    ;(r2.isConfigured as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true)
+    const big = Buffer.alloc(6 * 1024 * 1024)
+    const res = await request(app)
+      .post('/api/admin/letters/media')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', big, 'big.png')
+    expect(res.status).toBe(400)
+    expect(r2.putObject).not.toHaveBeenCalled()
+  })
+
   it('deletes an asset (R2 + row)', async () => {
     const up = await request(app).post('/api/admin/letters/media').set('Authorization', `Bearer ${adminToken}`).attach('file', png, 'logo.png')
     const del = await request(app).delete(`/api/admin/letters/media/${up.body.asset.id}`).set('Authorization', `Bearer ${adminToken}`)
     expect(del.status).toBe(200)
     expect(r2.deleteObject).toHaveBeenCalledTimes(1)
+    const list = await request(app).get('/api/admin/letters/media').set('Authorization', `Bearer ${adminToken}`)
+    expect(list.body.assets).toHaveLength(0)
   })
 })
