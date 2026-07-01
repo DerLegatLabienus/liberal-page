@@ -61,6 +61,14 @@ curl http://localhost:3001/api/health
 
 When in doubt: `pkill -f "vite|tsx server" && npm run dev`
 
+## Git & Deploy Workflow
+
+Solo developer, single branch. Work **directly on `master`** — no feature branches, PRs, or merge/finish menus.
+
+**Auto-push after implementing.** This is an early-stage product, not a mature one. Once a change is implemented and the gate passes (`npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`), **push to `master` without asking** — don't treat push as a separate step to confirm. The only exception is a **completely breaking change** (e.g. a migration/deploy-ordering hazard, or something that takes the live site down): pause and confirm first.
+
+Pushing `master` **deploys**: GitHub Pages (frontend) via CI, and the Render backend redeploys on commit. So "done" means committed, gated, and pushed.
+
 ## Key Ports
 
 | Service  | Port | URL                    |
