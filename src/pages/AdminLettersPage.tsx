@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
+import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterAddress } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
@@ -408,9 +409,12 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
               </button>
             )}
           </div>
-          <textarea value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} required rows={6}
-            className="w-full rounded border px-3 py-1.5 text-sm font-mono"
-            placeholder="<p>לכבוד ח&quot;כ...</p>" />
+          <HtmlCodeEditor
+            value={bodyHtml}
+            onChange={setBodyHtml}
+            ariaLabel="Body HTML"
+            placeholder={'<p>לכבוד ח"כ...</p>'}
+          />
           {beautifyError && <p className="mt-1 text-xs text-destructive">{beautifyError}</p>}
           {beautifyEnabled && (
             <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
@@ -468,7 +472,7 @@ function NewTemplateForm({ onCreate }: { onCreate: (name: string, html: string) 
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
       </div>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Template name" className="w-full rounded border px-3 py-1.5 text-sm" />
-      <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={6} placeholder={`<div dir="rtl">${PLACEHOLDER}</div>`} className="w-full rounded border px-3 py-1.5 font-mono text-sm" />
+      <HtmlCodeEditor value={html} onChange={setHtml} ariaLabel="Template HTML" placeholder={`<div dir="rtl">${PLACEHOLDER}</div>`} />
       {!html.includes(PLACEHOLDER) && html.length > 0 && (
         <p className="text-xs text-destructive">HTML must contain the <code>{PLACEHOLDER}</code> placeholder.</p>
       )}
@@ -519,7 +523,9 @@ function TemplateRow({ template, onSave, onDelete }: {
         </div>
       </div>
       {editing && (
-        <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={6} className="mb-2 w-full rounded border px-3 py-1.5 font-mono text-sm" />
+        <div className="mb-2">
+          <HtmlCodeEditor value={html} onChange={setHtml} ariaLabel="Template HTML" />
+        </div>
       )}
       {editing && !html.includes(PLACEHOLDER) && (
         <p className="mb-2 text-xs text-destructive">HTML must contain <code>{PLACEHOLDER}</code>.</p>

@@ -14,6 +14,13 @@ vi.mock('@/lib/api-client', () => ({
 }))
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { role: 'admin' }, ready: true }) }))
 vi.mock('@/hooks/useFeatureFlags', () => ({ useFeatureFlags: () => ({}) }))
+// CodeMirror doesn't run under happy-dom; mock the editor to a plain textarea that
+// forwards placeholder/value/onChange so the existing typing assertions keep working.
+vi.mock('@/components/admin/HtmlCodeEditor', () => ({
+  default: ({ value, onChange, placeholder, ariaLabel }: { value: string; onChange: (v: string) => void; placeholder?: string; ariaLabel?: string }) => (
+    <textarea aria-label={ariaLabel} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}))
 
 import AdminLettersPage from '@/pages/AdminLettersPage'
 import { MemoryRouter } from 'react-router-dom'
