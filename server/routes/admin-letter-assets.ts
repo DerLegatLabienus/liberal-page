@@ -127,7 +127,7 @@ router.post('/media', uploadSingle, async (req, res) => {
   if (!file) return res.status(400).json({ error: 'file required' })
   const v = validateImage(file.buffer)
   if (!v.ok) return res.status(400).json({ error: v.reason ?? 'invalid image' })
-  const key = `letters/${randomUUID()}.${v.ext}`
+  const key = `${randomUUID()}.${v.ext}`
   await r2.putObject(key, file.buffer, v.contentType!)
   const row = await mediaRepo.create({
     key,

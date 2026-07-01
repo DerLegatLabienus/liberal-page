@@ -54,7 +54,7 @@ describe('admin letter media routes', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .attach('file', png, 'logo.png')
     expect(res.status).toBe(201)
-    expect(res.body.asset.url).toMatch(/^https:\/\/pub-x\.r2\.dev\/letters\/.+\.png$/)
+    expect(res.body.asset.url).toMatch(/^https:\/\/pub-x\.r2\.dev\/[^/]+\.png$/)
     expect(r2.putObject).toHaveBeenCalledTimes(1)
     expect((await request(app).get('/api/admin/letters/media').set('Authorization', `Bearer ${adminToken}`)).body.assets).toHaveLength(1)
   })
