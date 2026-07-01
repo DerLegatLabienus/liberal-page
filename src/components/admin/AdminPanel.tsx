@@ -8,6 +8,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { api, type AuthUser, type Invite, type EmailTemplate, type JoinAnalyticsData } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
+import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
 
 export default function AdminPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth()
@@ -151,12 +152,13 @@ export default function AdminPanel({ open, onClose }: { open: boolean; onClose: 
                           <TabsTrigger value="preview">Preview</TabsTrigger>
                         </TabsList>
                         <TabsContent value="source">
-                          <textarea
-                            className="mt-1 w-full rounded border px-2 py-1 font-mono text-xs"
-                            rows={6}
-                            value={tpl.html}
-                            onChange={(e) => editTemplate(tpl.name, { html: e.target.value })}
-                          />
+                          <div className="mt-1">
+                            <HtmlCodeEditor
+                              value={tpl.html}
+                              onChange={(html) => editTemplate(tpl.name, { html })}
+                              ariaLabel={`${tpl.name} HTML`}
+                            />
+                          </div>
                         </TabsContent>
                         <TabsContent value="preview">
                           <iframe
