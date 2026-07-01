@@ -40,8 +40,13 @@ export default function MediaPanel() {
 
   const onDelete = async (a: LetterMediaAsset) => {
     if (!window.confirm('Delete this image? Letters already using it will show a broken image.')) return
-    await api.admin.letters.media.delete(a.id)
-    setAssets((prev) => prev.filter((x) => x.id !== a.id))
+    setError(null)
+    try {
+      await api.admin.letters.media.delete(a.id)
+      setAssets((prev) => prev.filter((x) => x.id !== a.id))
+    } catch (err) {
+      setError(String((err as Error)?.message ?? err))
+    }
   }
 
   return (
@@ -55,6 +60,7 @@ export default function MediaPanel() {
             <img src={a.url} alt={a.filename} className="mb-1 h-24 w-full object-contain" />
             <p className="truncate" title={a.filename}>{a.filename}</p>
             <p className="text-muted-foreground">{Math.round(a.sizeBytes / 1024)} KB</p>
+            <p className="text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</p>
             <div className="mt-1 flex gap-2">
               <button type="button" onClick={() => onCopy(a)} className="text-primary hover:underline">
                 {copiedId === a.id ? 'Copied!' : 'Copy <img> snippet'}
