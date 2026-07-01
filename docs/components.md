@@ -141,6 +141,16 @@ Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.
 | **Join analytics** | All-time click count, per-combo breakdown sorted by count, and a collapsible last-14-days list. Read-only; sourced from `GET /api/admin/analytics/join`. |
 | **Feature flags** | Combobox (select) chooses the flag; checkbox for `enabled`; text input for `value` (e.g. Calendly event-type URI for `meetUs`). Save commits to DB via `PUT /api/admin/feature-flags/:name`. |
 
+### `MediaPanel`
+
+Admin-only panel for managing the R2-hosted letter image library. Rendered as a section inside `AdminPanel`.
+
+- **Upload:** file picker (raster images only) → `POST /api/admin/letters/media`. Byte-sniff validation and the 5 MB cap are enforced server-side; the panel shows an inline error on rejection.
+- **Asset list:** thumbnails with filename, size, and upload date. Each row has a "Copy `<img>` snippet" button that puts a ready-to-paste HTML tag (pointing at the public R2 URL) on the clipboard, and a delete button that calls `DELETE /api/admin/letters/media/:id`.
+- **503 state:** when R2 env vars are absent, all three endpoints return `503`; the panel renders an "R2 not configured" notice in place of the upload form and list.
+
+Images from this library are intended for insertion into letter body HTML (copy-rich / preview paths). They are not embedded in the plain-text mailto / Gmail one-click send paths.
+
 ## Parliament Components
 
 ### `JoinSelector`

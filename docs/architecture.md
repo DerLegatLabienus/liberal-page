@@ -248,6 +248,16 @@ Outreach booking for **external visitors** (e.g. politicians) — they verify a 
 - **`MeetUsSection`** — homepage, **anonymous visitors only** (signed-in members are the hosts; hidden for them and when the `meetUs` flag is off). Google button → booking link → Calendly popup embed prefilled with the verified name/email; confirmation on the embed's `event_scheduled` message.
 - **Config:** the Calendly **event-type URI** lives in the `meetUs` feature flag value (admin panel, live — switching 1-on-1 / round-robin / panel is a config edit); only the API token is an env var.
 
+## R2 Media (Letter Images)
+
+Admins can upload raster images (PNG/JPEG/GIF/WebP, ≤ 5 MB) to a Cloudflare R2 bucket for use in letter body HTML. These images are served publicly; they appear in copy-rich / preview paths only — **not** in the plain-text mailto / Gmail one-click sends.
+
+- **`server/services/r2-client.ts`** — lazy S3-compatible client built from `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_BUCKET`. Unset = client is null; all routes that need it return `503 R2 not configured`.
+- **`letter_media_assets` table** — stores `id`, `filename`, `mime_type`, `size_bytes`, `r2_key`, and timestamps. The **public URL is derived on read** (`R2_PUBLIC_BASE_URL + '/' + r2_key`) and never stored in the DB, so updating the public origin requires no data migration.
+- **Byte-sniff validation** — uploads are validated by magic-byte inspection (not Content-Type) before being forwarded to R2. Non-raster types and files over 5 MB are rejected at the route layer.
+- **Operator prerequisite** — the R2 bucket must have **public read** enabled and `R2_PUBLIC_BASE_URL` must point to the real public origin (`https://pub-<hash>.r2.dev` or a custom domain). Setting `R2_PUBLIC_BASE_URL` to the Cloudflare dashboard URL produces broken image links.
+- **API:** `GET /api/admin/letters/media` (list), `POST /api/admin/letters/media` (upload), `DELETE /api/admin/letters/media/:id` (delete from R2 + DB). All three are admin-only and return `503` when R2 is unconfigured.
+
 ## DB Module (`server/db/`)
 
 Phase 2 of the JSON → Postgres migration is complete. All routes, poller, and services read/write Postgres.
