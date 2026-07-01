@@ -151,6 +151,15 @@ Admin-only panel for managing the R2-hosted letter image library. Rendered as a 
 
 Images from this library are intended for insertion into letter body HTML (copy-rich / preview paths). They are not embedded in the plain-text mailto / Gmail one-click send paths.
 
+### `HtmlCodeEditor`
+
+Shared syntax-highlighting code editor (CodeMirror 6) for the admin's raw-HTML fields: the letter body, letter templates (new/edit) in `AdminLettersPage`, and the email-template editor in `AdminPanel`. Props: `{ value, onChange, placeholder?, ariaLabel?, minHeight? }` — a drop-in replacement for the old `<textarea>` (plain `string` in/out).
+
+- HTML syntax highlighting, line numbers, auto-indent, bracket matching + auto-close, line wrapping.
+- **`dir="ltr"`** on the editor container (the app document is `dir="rtl"`, so the editor forces LTR); Hebrew renders right-to-left within lines via bidi.
+- **Lazy-loaded:** CodeMirror is `React.lazy`-imported so it code-splits into its own chunk (not the main bundle); a plain-`<textarea>` `FallbackTextarea` renders during load / if the chunk fails.
+- Emits raw HTML; server-side sanitization on save is unchanged. Because CodeMirror does not run under happy-dom, page tests mock this component to a plain textarea.
+
 ## Parliament Components
 
 ### `JoinSelector`
