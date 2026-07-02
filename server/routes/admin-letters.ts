@@ -6,6 +6,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { stripHtml } from '../services/letter-utils'
 import { sanitizeLetterHtml } from '../services/html-sanitizer'
 import { beautifyLetterHtml } from '../services/letter-beautifier'
+import { syncShareForLetter, removeShareForLetter } from '../services/share-publisher'
 import type { LetterAddress } from '../db/schema'
 
 const router = Router()
@@ -44,6 +45,7 @@ router.post('/', async (req, res) => {
     }
     const bodyHtml = sanitizeLetterHtml(body.bodyHtml)
     const letter = await lettersRepo.create({ ...body, bodyHtml, bodyPlain: stripHtml(bodyHtml) })
+    setImmediate(() => { syncShareForLetter(letter.id) })
     res.status(201).json({ letter })
   } catch (err) {
     console.error('[admin/letters] create failed:', err)
@@ -68,6 +70,7 @@ router.put('/:id', async (req, res) => {
     }
     await lettersRepo.update(id, update)
     const letter = await lettersRepo.getById(id)
+    setImmediate(() => { syncShareForLetter(id) })
     res.json({ letter })
   } catch (err) {
     console.error('[admin/letters] update failed:', err)
@@ -79,6 +82,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     await lettersRepo.delete(Number(req.params.id))
+    setImmediate(() => { removeShareForLetter(Number(req.params.id)) })
     res.json({ ok: true })
   } catch (err) {
     console.error('[admin/letters] delete failed:', err)

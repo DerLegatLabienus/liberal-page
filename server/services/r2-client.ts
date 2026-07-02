@@ -32,7 +32,7 @@ export function publicUrl(key: string): string {
   return `${base.replace(/\/$/, '')}/${key}`
 }
 
-export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
+export async function putObject(key: string, body: Buffer | string, contentType: string): Promise<void> {
   await client().send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key, Body: body, ContentType: contentType }))
 }
 
