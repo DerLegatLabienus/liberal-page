@@ -37,10 +37,12 @@ describe('renderShareHtml', () => {
 
 describe('buildOgCardNode', () => {
   it('reorders the card title to visual order', () => {
-    // buildOgCardNode only reads `title`; cast a partial view so this test doesn't
-    // couple to unrelated ShareLetterView fields (which grow in Task 3).
-    const node: any = buildOgCardNode({ id: 1, title: 'חוק הבריאות 2026' } as any)
-    expect(node.props.children[1].props.children).toBe(toVisualOrder('חוק הבריאות 2026'))
+    const node = buildOgCardNode({
+      id: 1, title: 'חוק הבריאות 2026', subject: '', bodyHtml: '', bodyPlain: '',
+      recipientNames: [], issueTags: [],
+    })
+    const children = node.props.children as Array<{ props: { children: string } }>
+    expect(children[1].props.children).toBe(toVisualOrder('חוק הבריאות 2026'))
   })
 })
 
