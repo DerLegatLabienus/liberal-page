@@ -16,6 +16,7 @@ import authRouter from './routes/auth'
 import adminRouter from './routes/admin'
 import meetingsRouter from './routes/meetings'
 import lettersRouter from './routes/letters'
+import publicLettersRouter from './routes/public-letters'
 import adminLettersRouter from './routes/admin-letters'
 import adminLetterAssetsRouter from './routes/admin-letter-assets'
 import { startPoller, stopPoller } from './services/poller'
@@ -59,6 +60,7 @@ app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/letters', lettersRouter)
+app.use('/api/public/letters', publicLettersRouter)
 // Both share the /api/admin/letters base: adminLettersRouter owns the letter CRUD
 // (/, /:id, /:id/pin); adminLetterAssetsRouter owns /tags, /contacts, /templates.
 // Keep this order, and do NOT add a `GET /:id` to adminLettersRouter — it would shadow
