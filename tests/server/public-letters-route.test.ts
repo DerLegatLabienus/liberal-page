@@ -64,4 +64,13 @@ describe('POST /api/public/letters/:id/send', () => {
     const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Origin', 'https://pub-x.r2.dev')
     expect(res.status).toBe(204)
   })
+
+  it('204s without recording when lettersEnabled is off', async () => {
+    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    await flags.setFlag('lettersEnabled', false, 'False', 'x')
+    const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`)
+    expect(res.status).toBe(204)
+    await flush()
+    expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)).toBeUndefined()
+  })
 })
