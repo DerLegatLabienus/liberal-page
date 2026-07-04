@@ -35,6 +35,11 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
   .split(',')
   .map((o) => o.trim().toLowerCase())
 
+// Public share-page endpoints accept ANY origin (called cross-origin from the
+// R2-hosted share pages). Mount with permissive CORS BEFORE the global restrictive
+// cors so the allowlist doesn't 500 the beacon. No body parsing needed (query-param action).
+app.use('/api/public/letters', cors(), publicLettersRouter)
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, server-to-server)
@@ -60,7 +65,6 @@ app.use('/api/analytics', analyticsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/letters', lettersRouter)
-app.use('/api/public/letters', publicLettersRouter)
 // Both share the /api/admin/letters base: adminLettersRouter owns the letter CRUD
 // (/, /:id, /:id/pin); adminLetterAssetsRouter owns /tags, /contacts, /templates.
 // Keep this order, and do NOT add a `GET /:id` to adminLettersRouter — it would shadow

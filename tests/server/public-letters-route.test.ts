@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
+import cors from 'cors'
 import request from 'supertest'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
@@ -10,7 +11,9 @@ import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-
 import publicLettersRouter from '../../server/routes/public-letters'
 
 const app = express()
-app.use('/api/public/letters', publicLettersRouter)
+// Mirror server/index.ts: permissive public mount BEFORE a restrictive global cors.
+app.use('/api/public/letters', cors(), publicLettersRouter)
+app.use(cors({ origin: (origin, cb) => (origin ? cb(new Error('blocked')) : cb(null, true)) }))
 
 const lettersRepo = new LettersRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
@@ -54,5 +57,11 @@ describe('POST /api/public/letters/:id/send', () => {
     await request(app).post(`/api/public/letters/${l.id}/send?action=copy`)
     await flush()
     expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_copy).toBe(1)
+  })
+
+  it('accepts a cross-origin beacon (foreign Origin) — not blocked by the restrictive global cors', async () => {
+    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Origin', 'https://pub-x.r2.dev')
+    expect(res.status).toBe(204)
   })
 })
