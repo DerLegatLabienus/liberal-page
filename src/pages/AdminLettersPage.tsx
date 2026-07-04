@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { splitSends } from '@/lib/letter-sends'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
 import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
@@ -139,7 +140,13 @@ export default function AdminLettersPage() {
                         {letter.pinnedAt ? '📌 unpin' : 'pin'}
                       </button>
                     </td>
-                    <td className="py-2 pr-4">{letter.totalSends}</td>
+                    <td className="py-2 pr-4">
+                      {(() => { const s = splitSends(letter.breakdown); return (
+                        <span title={`${s.member} member · ${s.public} public`}>
+                          {s.total} <span className="text-xs text-muted-foreground">({s.public} public)</span>
+                        </span>
+                      ) })()}
+                    </td>
                     <td className="py-2">
                       <button
                         type="button"
