@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import { toVisualOrder } from './bidi'
+import { buildMailtoUrl, buildGmailComposeUrl } from './letter-utils'
+import type { LetterAddress } from '../db/schema'
 
 export interface ShareLetterView {
   id: number
@@ -10,6 +12,9 @@ export interface ShareLetterView {
   bodyPlain: string
   recipientNames: string[]
   issueTags: string[]
+  toAddresses?: LetterAddress[]
+  ccAddresses?: LetterAddress[]
+  bccAddresses?: LetterAddress[]
 }
 
 /** Escape a string for safe use inside an HTML attribute. */
@@ -30,13 +35,19 @@ function description(bodyPlain: string): string {
   return flat.length > 150 ? flat.slice(0, 149).trimEnd() + '…' : flat
 }
 
-export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string }): string {
+export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string; apiBaseUrl: string }): string {
   const shareUrl = `${opts.shareBaseUrl}/letter/${view.id}.html`
   const imageUrl = `${opts.shareBaseUrl}/letter/${view.id}.png`
-  const ctaUrl = `${opts.appBaseUrl}/letters/${view.id}?src=share`
+  const learnMoreUrl = `${opts.appBaseUrl}/letters/${view.id}?src=share`
   const desc = description(view.bodyPlain)
   const tags = view.issueTags.map((t) => `<span class="tag">${esc(t)}</span>`).join(' ')
   const recipients = view.recipientNames.map(esc).join(', ')
+  const to = view.toAddresses ?? []
+  const cc = view.ccAddresses ?? []
+  const bcc = view.bccAddresses ?? []
+  const mailtoUrl = buildMailtoUrl(to, cc, bcc, view.subject, view.bodyPlain)
+  const gmailUrl = buildGmailComposeUrl(to, cc, bcc, view.subject, view.bodyPlain)
+  const track = `${opts.apiBaseUrl}/api/public/letters/${view.id}/send`
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -60,8 +71,11 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
   h1 { font-size:24px; margin:12px 0; }
   .to { color:#475569; font-size:14px; margin-bottom:16px; }
   .body { line-height:1.7; }
-  .cta { display:block; text-align:center; margin-top:24px; background:#1d4ed8; color:#fff; text-decoration:none; padding:14px; border-radius:8px; font-weight:600; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+  .btn { flex:1 1 160px; text-align:center; background:#1d4ed8; color:#fff; text-decoration:none; padding:14px; border-radius:8px; font-weight:600; border:0; font-size:16px; cursor:pointer; }
+  .btn.secondary { background:#e2e8f0; color:#0f172a; }
   .note { color:#64748b; font-size:12px; margin-top:16px; text-align:center; }
+  .learn { display:block; text-align:center; margin-top:12px; color:#1d4ed8; font-size:13px; }
 </style>
 </head>
 <body>
@@ -70,9 +84,35 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
     <h1>${esc(view.title)}</h1>
     <div class="to">אל: ${recipients}</div>
     <div class="body">${view.bodyHtml}</div>
-    <a class="cta" href="${ctaUrl}">הצטרפו ושלחו לחבר הכנסת</a>
-    <p class="note">המשלוחים נספרים באופן אנונימי בלבד — הפלטפורמה אינה מתעדת מי שלח מכתב.</p>
+    <div class="actions">
+      <a class="btn" id="send-mailto" href="${escAttr(mailtoUrl)}">שלחו במייל</a>
+      <a class="btn" id="send-gmail" href="${escAttr(gmailUrl)}" target="_blank" rel="noopener">פתחו ב-Gmail</a>
+      <button class="btn secondary" id="copy-btn" type="button">העתקת המכתב</button>
+    </div>
+    <p class="note">המשלוחים נספרים באופן אנונימי ומצרפי בלבד — הפלטפורמה אינה מתעדת מי שלח מכתב.</p>
+    <a class="learn" href="${learnMoreUrl}">על הליברלים בליכוד ←</a>
   </div>
+  <script>
+    (function () {
+      var track = ${JSON.stringify(track)};
+      function ping(action) { try { navigator.sendBeacon(track + '?action=' + action); } catch (e) {} }
+      var m = document.getElementById('send-mailto'); if (m) m.addEventListener('click', function () { ping('mailto'); });
+      var g = document.getElementById('send-gmail'); if (g) g.addEventListener('click', function () { ping('gmail'); });
+      var c = document.getElementById('copy-btn');
+      if (c) c.addEventListener('click', function () {
+        var body = document.querySelector('.body');
+        var rtlHtml = '<div dir="rtl" style="text-align:right">' + body.innerHTML + '</div>';
+        var plain = body.innerText;
+        var done = function () { ping('copy'); c.textContent = 'הועתק ✓'; };
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+          navigator.clipboard.write([new ClipboardItem({
+            'text/html': new Blob([rtlHtml], { type: 'text/html' }),
+            'text/plain': new Blob([plain], { type: 'text/plain' }),
+          })]).then(done).catch(function () { navigator.clipboard.writeText(plain).then(done); });
+        } else { navigator.clipboard.writeText(plain).then(done); }
+      });
+    })();
+  </script>
 </body>
 </html>`
 }

@@ -43,3 +43,33 @@ describe('buildOgCardNode', () => {
     expect(node.props.children[1].props.children).toBe(toVisualOrder('חוק הבריאות 2026'))
   })
 })
+
+describe('renderShareHtml (public send page)', () => {
+  const view = {
+    id: 7, title: 'חוק הבריאות', subject: 'נושא', bodyHtml: '<p>גוף המכתב</p>', bodyPlain: 'גוף המכתב',
+    recipientNames: ['ח"כ פלוני'], issueTags: ['בריאות'],
+    toAddresses: [{ email: 'mk@knesset.gov.il', display_name: 'ח"כ פלוני' }], ccAddresses: [], bccAddresses: [],
+  }
+  const html = renderShareHtml(view, { shareBaseUrl: 'https://pub.r2.dev', appBaseUrl: 'https://app', apiBaseUrl: 'https://api' })
+
+  it('has the OG image meta', () => {
+    expect(html).toContain('property="og:image"')
+    expect(html).toContain('https://pub.r2.dev/letter/7.png')
+  })
+  it('has a mailto send link to the MK with the subject and body', () => {
+    expect(html).toContain('href="mailto:mk@knesset.gov.il?')
+    expect(html).toContain('subject=' + encodeURIComponent('נושא'))
+  })
+  it('has a Gmail compose link', () => {
+    expect(html).toContain('https://mail.google.com/mail/?')
+  })
+  it('embeds the letter body and a copy control', () => {
+    expect(html).toContain('גוף המכתב')
+    expect(html).toContain('id="copy-btn"')
+  })
+  it('tracks sends via sendBeacon to the public endpoint (action appended at runtime)', () => {
+    expect(html).toContain('navigator.sendBeacon')
+    expect(html).toContain('https://api/api/public/letters/7/send')
+    expect(html).toContain("'?action=' + action")
+  })
+})

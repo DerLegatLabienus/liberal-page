@@ -2,6 +2,7 @@ export interface ShareConfig {
   r2: { accountId: string; accessKeyId: string; secretAccessKey: string; bucket: string } | null
   publicBaseUrl: string
   appBaseUrl: string
+  apiBaseUrl: string
 }
 
 const DEFAULT_APP_URL = 'https://derlegatlabienus.github.io/liberal-page'
@@ -17,6 +18,7 @@ export function getShareConfig(): ShareConfig {
     r2,
     publicBaseUrl: trimSlash(process.env.R2_PUBLIC_BASE_URL ?? ''),
     appBaseUrl: trimSlash(process.env.APP_PUBLIC_URL ?? DEFAULT_APP_URL),
+    apiBaseUrl: trimSlash(process.env.API_PUBLIC_URL ?? 'https://liberal-page.onrender.com'),
   }
 }
 
