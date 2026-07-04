@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { toVisualOrder } from './bidi'
 
 export interface ShareLetterView {
   id: number
@@ -84,12 +85,10 @@ function getFont(): Buffer {
 
 function clamp(s: string, n: number): string { return s.length > n ? s.slice(0, n - 1) + '…' : s }
 
-/** 1200x630 branded share card: wordmark + letter title + CTA line. Hebrew/RTL. */
-export async function renderShareImage(view: ShareLetterView): Promise<Buffer> {
-  const { default: satori } = await import('satori')
-  const { Resvg } = await import('@resvg/resvg-js')
-  // satori accepts a React-element-shaped plain object (no JSX needed).
-  const node = {
+/** Build the satori node for the 1200x630 OG card, with every text run reordered to
+ *  VISUAL order (satori has no bidi, so Hebrew would otherwise render reversed). */
+export function buildOgCardNode(view: ShareLetterView) {
+  return {
     type: 'div',
     props: {
       style: {
@@ -98,13 +97,19 @@ export async function renderShareImage(view: ShareLetterView): Promise<Buffer> {
         color: '#ffffff', direction: 'rtl', textAlign: 'right', fontFamily: 'Heebo',
       },
       children: [
-        { type: 'div', props: { style: { fontSize: 32, opacity: 0.85 }, children: 'הליברלים בליכוד' } },
-        { type: 'div', props: { style: { fontSize: 72, fontWeight: 700, lineHeight: 1.15 }, children: clamp(view.title, 90) } },
-        { type: 'div', props: { style: { fontSize: 36, opacity: 0.95 }, children: 'הצטרפו ושלחו לחבר הכנסת ←' } },
+        { type: 'div', props: { style: { fontSize: 32, opacity: 0.85 }, children: toVisualOrder('הליברלים בליכוד') } },
+        { type: 'div', props: { style: { fontSize: 72, fontWeight: 700, lineHeight: 1.15 }, children: toVisualOrder(clamp(view.title, 90)) } },
+        { type: 'div', props: { style: { fontSize: 36, opacity: 0.95 }, children: toVisualOrder('הצטרפו ושלחו לחבר הכנסת ←') } },
       ],
     },
   }
-  const svg = await satori(node as Parameters<typeof satori>[0], {
+}
+
+/** 1200x630 branded share card: wordmark + letter title + CTA line. Hebrew/RTL. */
+export async function renderShareImage(view: ShareLetterView): Promise<Buffer> {
+  const { default: satori } = await import('satori')
+  const { Resvg } = await import('@resvg/resvg-js')
+  const svg = await satori(buildOgCardNode(view) as Parameters<typeof satori>[0], {
     width: 1200, height: 630,
     fonts: [{ name: 'Heebo', data: getFont(), weight: 700, style: 'normal' }],
   })

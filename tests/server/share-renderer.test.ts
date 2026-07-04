@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { renderShareHtml, type ShareLetterView } from '../../server/services/share-renderer'
+import { renderShareHtml, buildOgCardNode, type ShareLetterView } from '../../server/services/share-renderer'
+import { toVisualOrder } from '../../server/services/bidi'
 
 const view: ShareLetterView = {
   id: 42,
@@ -31,5 +32,14 @@ describe('renderShareHtml', () => {
   it('includes the sanitized body and recipient names', () => {
     expect(html).toContain('<p>שלום רב, אנו פונים אליך</p>')
     expect(html).toContain('ח"כ ישראל ישראלי')
+  })
+})
+
+describe('buildOgCardNode', () => {
+  it('reorders the card title to visual order', () => {
+    // buildOgCardNode only reads `title`; cast a partial view so this test doesn't
+    // couple to unrelated ShareLetterView fields (which grow in Task 3).
+    const node: any = buildOgCardNode({ id: 1, title: 'חוק הבריאות 2026' } as any)
+    expect(node.props.children[1].props.children).toBe(toVisualOrder('חוק הבריאות 2026'))
   })
 })
