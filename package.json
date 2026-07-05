@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx scripts/seed-db.ts",
+    "letters:regen": "tsx --env-file=.env scripts/regen-share-pages.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d db"
