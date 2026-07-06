@@ -142,7 +142,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `POST`   | `/api/admin/letters/media`         | upload raster image to R2 (admin; byte-sniff raster-only + 5 MB; 503 when R2 unconfigured) |
 | `DELETE` | `/api/admin/letters/media/:id`     | delete image from R2 + DB (admin; 503 when R2 unconfigured) |
 | `GET`    | `/api/letters/contacts`            | **requireAuth + `lettersEnabled`.** Read-only address book for the member recipient picker (optional `?q=` search). |
-| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages; records `public_*` analytics buckets (gated by `lettersEnabled` + letter published). |
+| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages; records `public_*` analytics buckets (gated by `lettersEnabled` + letter published). When the `publicSendTurnstile` flag is on, verifies a Cloudflare Turnstile token (sent in the request body) via `siteverify` before counting; fails open when `TURNSTILE_SECRET_KEY` is unset. |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
