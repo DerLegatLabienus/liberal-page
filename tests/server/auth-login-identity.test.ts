@@ -50,5 +50,9 @@ describe('loginWithIdentity', () => {
     expect(result.user.role).toBe('member')
     expect(result.accessToken).toBeTruthy()
     expect(result.refreshToken).toBeTruthy()
+
+    const rows = await db.select().from(userIdentities).where(eq(userIdentities.userId, existing.id))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ provider: 'google', providerSub: 'g-existing', userId: existing.id })
   })
 })

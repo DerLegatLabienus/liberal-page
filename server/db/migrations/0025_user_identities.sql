@@ -11,3 +11,7 @@ CREATE TABLE IF NOT EXISTS "auth"."user_identities" (
 INSERT INTO "auth"."user_identities" ("user_id", "provider", "provider_sub", "created_at")
 SELECT "id", 'google', "google_sub", now() FROM "auth"."users" WHERE "google_sub" IS NOT NULL
 ON CONFLICT ("provider", "provider_sub") DO NOTHING;
+--> statement-breakpoint
+UPDATE "auth"."users" SET "email" = lower("email") WHERE "email" IS NOT NULL AND "email" <> lower("email");
+--> statement-breakpoint
+UPDATE "auth"."allowed_emails" SET "email" = lower("email") WHERE "email" <> lower("email");
