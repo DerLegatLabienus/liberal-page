@@ -12,6 +12,7 @@ interface AuthContextValue {
   user: AuthUser | null
   ready: boolean            // initial session-restore finished
   signIn: (googleIdToken: string) => Promise<void>
+  verifyMagicLink: (token: string) => Promise<void>
   signOut: () => Promise<void>
   updateUser: (patch: Partial<AuthUser>) => void
 }
@@ -88,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     apply(res.accessToken, res.refreshToken, res.user)
   }, [apply])
 
+  // Same session-establishment path as signIn — verify the token server-side and apply
+  // whatever session it returns (also broadcasts to sibling tabs via `apply`).
+  const verifyMagicLink = useCallback(async (token: string) => {
+    const res = await api.auth.magicLink.verify(token)
+    apply(res.accessToken, res.refreshToken, res.user)
+  }, [apply])
+
   const signOut = useCallback(async () => {
     const token = refreshToken.current
     clear()
@@ -128,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   return (
-    <AuthContext.Provider value={{ user, ready, signIn, signOut, updateUser }}>
+    <AuthContext.Provider value={{ user, ready, signIn, verifyMagicLink, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

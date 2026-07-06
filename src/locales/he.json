@@ -142,7 +142,12 @@
     "sign_in_failed": "ההתחברות נכשלה. נסו שוב.",
     "email_alerts": "התראות במייל",
     "preferences_saved": "ההעדפה נשמרה",
-    "preferences_failed": "שמירת ההעדפה נכשלה"
+    "preferences_failed": "שמירת ההעדפה נכשלה",
+    "email_placeholder": "כתובת אימייל",
+    "magic_link_button": "שלחו לי קישור התחברות",
+    "magic_link_sent": "אם הכתובת רשומה אצלנו, נשלח אליה קישור התחברות. בדקו את תיבת הדואר שלכם.",
+    "magic_link_verifying": "מתחברים...",
+    "magic_link_invalid": "הקישור אינו תקין או שפג תוקפו. נסו לבקש קישור חדש."
   },
   "admin": {
     "title": "ניהול",

@@ -123,6 +123,12 @@ export const api = {
     oauth: (provider: string, idToken: string) =>
       apiFetch<AuthResponse>(`/auth/${provider}`, { method: 'POST', body: JSON.stringify({ idToken }) }),
     google: (idToken: string) => api.auth.oauth('google', idToken),
+    magicLink: {
+      request: (email: string) =>
+        apiFetch<{ ok: boolean }>('/auth/magic-link/request', { method: 'POST', body: JSON.stringify({ email }) }),
+      verify: (token: string) =>
+        apiFetch<AuthResponse>('/auth/magic-link/verify', { method: 'POST', body: JSON.stringify({ token }) }),
+    },
     refresh: (refreshToken: string) =>
       apiFetch<AuthResponse>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     logout: (refreshToken: string) =>

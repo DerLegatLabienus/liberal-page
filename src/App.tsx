@@ -8,6 +8,7 @@ const ConstitutionPage = lazy(() => import('@/pages/ConstitutionPage'))
 const LettersPage = lazy(() => import('@/pages/LettersPage'))
 const LetterDetailPage = lazy(() => import('@/pages/LetterDetailPage'))
 const AdminLettersPage = lazy(() => import('@/pages/AdminLettersPage'))
+const MagicLinkPage = lazy(() => import('@/pages/MagicLinkPage'))
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/letters" element={<LettersPage />} />
         <Route path="/letters/:id" element={<LetterDetailPage />} />
         <Route path="/admin/letters" element={<AdminLettersPage />} />
+        <Route path="/auth/magic-link" element={<MagicLinkPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,4 +1,4 @@
-import { eq, lt, ne, count, and } from 'drizzle-orm'
+import { eq, lt, ne, count, and, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { users, allowedEmails, refreshTokens, userIdentities } from '../db/schema'
 
@@ -49,6 +49,10 @@ export class AuthRepository {
    * (provider, sub) pair in `user_identities`. Generalizes `upsertUserFromGoogle` to
    * arbitrary providers; on first insert the given `role` is applied, on a returning
    * login the role is left untouched (only profile fields + lastLoginAt refresh).
+   *
+   * `name` is coalesced, not overwritten: a provider that doesn't carry a name (magic-link
+   * always passes `null`; Apple only on first login) must not blank out a name a prior
+   * provider already set for this account.
    */
   async upsertUserFromIdentity(input: {
     email: string; provider: string; sub: string; name: string | null; role: string
@@ -63,7 +67,7 @@ export class AuthRepository {
       })
       .onConflictDoUpdate({
         target: users.email,
-        set: { name: input.name, lastLoginAt: now },
+        set: { name: sql`coalesce(${input.name}, ${users.name})`, lastLoginAt: now },
       })
       .returning()
     await db.insert(userIdentities)

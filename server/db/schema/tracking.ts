@@ -29,6 +29,17 @@ export const userIdentities = authSchema.table('user_identities', {
   uniqProviderSub: unique('user_identities_provider_sub_unique').on(t.provider, t.providerSub),
 }))
 
+// Single-use email magic-link tokens. `token_hash` (sha256 of the raw token) is stored, never
+// the raw token — the raw value only ever lives in the emailed link. Consumed (deleted) on
+// verify; expired rows are inert (checked, not swept) until the next request/verify touches them.
+export const magicLinkTokens = authSchema.table('magic_link_tokens', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const trackedBills = parliamentSchema.table('tracked_bills', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),

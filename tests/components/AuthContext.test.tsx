@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('@/lib/api-client', () => ({
-  api: { auth: { google: vi.fn(), refresh: vi.fn(), logout: vi.fn() } },
+  api: { auth: { google: vi.fn(), refresh: vi.fn(), logout: vi.fn(), magicLink: { verify: vi.fn() } } },
   setAccessToken: vi.fn(),
   setRefreshHandler: vi.fn(),
 }))
@@ -53,6 +53,24 @@ describe('AuthProvider', () => {
     render(<AuthProvider><Harness /></AuthProvider>)
     await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('a@x.com'))
     expect(api.auth.refresh).toHaveBeenCalledWith('stored-ref')
+  })
+
+  it('verifies a magic-link token and applies the returned session, like signIn', async () => {
+    vi.mocked(api.auth.magicLink.verify).mockResolvedValue(RESP)
+    function Harness2() {
+      const { user, verifyMagicLink } = useAuth()
+      return (
+        <div>
+          <span data-testid="user2">{user ? user.email : 'none'}</span>
+          <button onClick={() => void verifyMagicLink('tok')}>verify</button>
+        </div>
+      )
+    }
+    render(<AuthProvider><Harness2 /></AuthProvider>)
+    await userEvent.click(screen.getByText('verify'))
+    await waitFor(() => expect(screen.getByTestId('user2').textContent).toBe('a@x.com'))
+    expect(api.auth.magicLink.verify).toHaveBeenCalledWith('tok')
+    expect(localStorage.getItem(REFRESH_KEY)).toBe('ref')
   })
 
   it('propagates a sign-in failure so the caller can surface it (e.g. uninvited 403)', async () => {

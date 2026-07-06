@@ -183,6 +183,13 @@
       "when": 1783161600000,
       "tag": "0025_user_identities",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783248000000,
+      "tag": "0026_magic_link_tokens",
+      "breakpoints": true
     }
   ]
 }

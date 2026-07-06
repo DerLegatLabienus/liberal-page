@@ -19,6 +19,9 @@ export default function AuthControl() {
   const auth = useAuthOptional()
   const toastCtx = useToastOptional()
   const [adminOpen, setAdminOpen] = useState(false)
+  const [magicEmail, setMagicEmail] = useState('')
+  const [magicSending, setMagicSending] = useState(false)
+  const [magicSent, setMagicSent] = useState(false)
 
   if (!auth || !auth.ready) return null
   const { user, signIn, signOut, updateUser } = auth
@@ -31,6 +34,21 @@ export default function AuthControl() {
         const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
         toastCtx?.toast(msg, 'error')
       })
+  }
+
+  const handleMagicLinkRequest = async () => {
+    const email = magicEmail.trim()
+    if (!email || magicSending) return
+    setMagicSending(true)
+    try {
+      await api.auth.magicLink.request(email)
+    } catch {
+      // Neutral by design server-side; a network/transport failure still shows the same
+      // neutral confirmation rather than leaking whether the email exists.
+    } finally {
+      setMagicSending(false)
+      setMagicSent(true)
+    }
   }
 
   if (user) {
@@ -83,12 +101,35 @@ export default function AuthControl() {
   }
 
   return (
-    <GoogleLogin
-      onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
-      onError={() => toastCtx?.toast(t('auth.sign_in_failed'), 'error')}
-      useOneTap={false}
-      shape="pill"
-      size="medium"
-    />
+    <div className="flex flex-col items-end gap-2">
+      <GoogleLogin
+        onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
+        onError={() => toastCtx?.toast(t('auth.sign_in_failed'), 'error')}
+        useOneTap={false}
+        shape="pill"
+        size="medium"
+      />
+      {magicSent ? (
+        <span className="max-w-[220px] text-end text-xs text-muted-foreground">{t('auth.magic_link_sent')}</span>
+      ) : (
+        <div className="flex items-center gap-1">
+          <input
+            type="email"
+            value={magicEmail}
+            onChange={(e) => setMagicEmail(e.target.value)}
+            placeholder={t('auth.email_placeholder')}
+            aria-label={t('auth.email_placeholder')}
+            className="w-40 rounded border border-input bg-background px-2 py-1 text-xs"
+          />
+          <button
+            onClick={() => { void handleMagicLinkRequest() }}
+            disabled={!magicEmail.trim() || magicSending}
+            className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
+          >
+            {t('auth.magic_link_button')}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

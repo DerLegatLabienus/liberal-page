@@ -142,7 +142,12 @@
     "sign_in_failed": "Sign-in failed. Please try again.",
     "email_alerts": "Email alerts",
     "preferences_saved": "Preference saved",
-    "preferences_failed": "Could not save preference"
+    "preferences_failed": "Could not save preference",
+    "email_placeholder": "Email address",
+    "magic_link_button": "Send me a sign-in link",
+    "magic_link_sent": "If that address is registered, we've sent a sign-in link. Check your email.",
+    "magic_link_verifying": "Signing you in...",
+    "magic_link_invalid": "This link is invalid or has expired. Try requesting a new one."
   },
   "admin": {
     "title": "Admin",
