@@ -1,7 +1,8 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import { LettersRepository } from '../repositories/letters-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
+import { verifyTurnstile } from '../services/turnstile'
 
 const router = Router()
 const lettersRepo = new LettersRepository()
@@ -26,7 +27,7 @@ function throttled(key: string): boolean {
 
 // POST /api/public/letters/:id/send?action=mailto|gmail|copy
 // No auth. Fire-and-forget: always 204; records only for a published letter when lettersEnabled.
-router.post('/:id/send', async (req, res) => {
+router.post('/:id/send', express.text({ type: '*/*', limit: '4kb' }), async (req, res) => {
   const id = Number(req.params.id)
   const action = String(req.query.action || '') as PublicAction
   if (!Number.isInteger(id) || id <= 0 || !(action in BUCKET)) return res.status(204).end()
@@ -36,8 +37,14 @@ router.post('/:id/send', async (req, res) => {
     if (!letter || letter.status !== 'published') return res.status(204).end()
     const ip = ((req.headers['x-forwarded-for'] as string) || req.ip || '').split(',')[0].trim()
     if (throttled(`${ip}:${id}:${action}`)) return res.status(204).end()
+    const enforce = await flagsRepo.isEnabled('publicSendTurnstile')
+    const token = typeof req.body === 'string' ? req.body : ''
     setImmediate(async () => {
       try {
+        if (enforce) {
+          const result = await verifyTurnstile(token, ip)
+          if (result === 'rejected') return // human not confirmed → do not count
+        }
         await analyticsRepo.record(id, BUCKET[action])
         await lettersRepo.incrementActivityScore(id)
       } catch (err) {

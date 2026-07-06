@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import express from 'express'
 import cors from 'cors'
 import request from 'supertest'
@@ -9,6 +9,10 @@ import { LettersRepository } from '../../server/repositories/letters-repository'
 import { LetterAnalyticsRepository } from '../../server/repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
 import publicLettersRouter from '../../server/routes/public-letters'
+import { verifyTurnstile } from '../../server/services/turnstile'
+
+vi.mock('../../server/services/turnstile', () => ({ verifyTurnstile: vi.fn() }))
+const mockedVerify = vi.mocked(verifyTurnstile)
 
 const app = express()
 // Mirror server/index.ts: permissive public mount BEFORE a restrictive global cors.
@@ -72,5 +76,43 @@ describe('POST /api/public/letters/:id/send', () => {
     expect(res.status).toBe(204)
     await flush()
     expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)).toBeUndefined()
+  })
+
+  describe('with publicSendTurnstile enforcement', () => {
+    beforeEach(async () => { await flags.setFlag('publicSendTurnstile', true, 'True', 'x'); mockedVerify.mockReset() })
+
+    it('records when the token verifies', async () => {
+      mockedVerify.mockResolvedValue('verified')
+      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Content-Type','text/plain').send('tok')
+      await flush()
+      expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_mailto).toBe(1)
+    })
+
+    it('does NOT record when the token is rejected', async () => {
+      mockedVerify.mockResolvedValue('rejected')
+      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Content-Type','text/plain').send('bad')
+      expect(res.status).toBe(204)
+      await flush()
+      expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)).toBeUndefined()
+    })
+
+    it('records (fail-open) when verification is skipped (secret unset)', async () => {
+      mockedVerify.mockResolvedValue('skip')
+      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      await request(app).post(`/api/public/letters/${l.id}/send?action=copy`).set('Content-Type','text/plain').send('')
+      await flush()
+      expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_copy).toBe(1)
+    })
+
+    it('does not verify at all when the flag is off (regression)', async () => {
+      await flags.setFlag('publicSendTurnstile', false, 'False', 'x')
+      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`)
+      await flush()
+      expect(mockedVerify).not.toHaveBeenCalled()
+      expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_mailto).toBe(1)
+    })
   })
 })
