@@ -39,8 +39,8 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
       ccAddresses: letter.ccAddresses as LetterAddress[],
       bccAddresses: letter.bccAddresses as LetterAddress[],
     }
-    const { publicBaseUrl, appBaseUrl, apiBaseUrl } = getShareConfig()
-    const html = renderShareHtml(view, { shareBaseUrl: publicBaseUrl, appBaseUrl, apiBaseUrl })
+    const { publicBaseUrl, appBaseUrl, apiBaseUrl, turnstileSiteKey } = getShareConfig()
+    const html = renderShareHtml(view, { shareBaseUrl: publicBaseUrl, appBaseUrl, apiBaseUrl, turnstileSiteKey })
     const png = await renderShareImage(view)
     await putObject(htmlKey(letter.id), html, 'text/html; charset=utf-8')
     await putObject(imageKey(letter.id), png, 'image/png')

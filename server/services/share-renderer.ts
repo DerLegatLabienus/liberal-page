@@ -35,7 +35,7 @@ function description(bodyPlain: string): string {
   return flat.length > 150 ? flat.slice(0, 149).trimEnd() + '…' : flat
 }
 
-export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string; apiBaseUrl: string }): string {
+export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string; apiBaseUrl: string; turnstileSiteKey?: string }): string {
   const shareUrl = `${opts.shareBaseUrl}/letter/${view.id}.html`
   const imageUrl = `${opts.shareBaseUrl}/letter/${view.id}.png`
   const learnMoreUrl = `${opts.appBaseUrl}/letters/${view.id}?src=share`
@@ -48,6 +48,22 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
   const mailtoUrl = buildMailtoUrl(to, cc, bcc, view.subject, view.bodyPlain)
   const gmailUrl = buildGmailComposeUrl(to, cc, bcc, view.subject, view.bodyPlain)
   const track = `${opts.apiBaseUrl}/api/public/letters/${view.id}/send`
+  const siteKey = opts.turnstileSiteKey ?? ''
+  const gated = siteKey !== ''
+  const hiddenAttr = gated ? ' hidden' : ''
+  const turnstileScript = gated
+    ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>'
+    : ''
+  const gateCallbacks = gated
+    ? `<script>function tsSolved(){var c=document.getElementById('letter-content');if(c)c.removeAttribute('hidden');var g=document.getElementById('gate');if(g)g.setAttribute('hidden','');}function tsError(){var f=document.getElementById('gate-fallback');if(f)f.removeAttribute('hidden');}</script>`
+    : ''
+  const gateBlock = gated
+    ? `<div id="gate">
+       <p class="note">לפני הצפייה, אנא אשרו שאינכם רובוט.</p>
+       <div class="cf-turnstile" data-sitekey="${escAttr(siteKey)}" data-callback="tsSolved" data-error-callback="tsError" data-timeout-callback="tsError"></div>
+     </div>
+     <div id="gate-fallback" hidden><a class="learn" href="${learnMoreUrl}">לצפייה במכתב באתר ←</a></div>`
+    : ''
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -77,9 +93,13 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
   .note { color:#64748b; font-size:12px; margin-top:16px; text-align:center; }
   .learn { display:block; text-align:center; margin-top:12px; color:#1d4ed8; font-size:13px; }
 </style>
+${gateCallbacks}
+${turnstileScript}
 </head>
 <body>
   <div class="card">
+    ${gateBlock}
+    <div id="letter-content"${hiddenAttr}>
     <div>${tags}</div>
     <h1>${esc(view.title)}</h1>
     <div class="to">אל: ${recipients}</div>
@@ -91,11 +111,12 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
     </div>
     <p class="note">המשלוחים נספרים באופן אנונימי ומצרפי בלבד — הפלטפורמה אינה מתעדת מי שלח מכתב.</p>
     <a class="learn" href="${learnMoreUrl}">על הליברלים בליכוד ←</a>
+    </div>
   </div>
   <script>
     (function () {
       var track = ${JSON.stringify(track)};
-      function ping(action) { try { navigator.sendBeacon(track + '?action=' + action); } catch (e) {} }
+      function ping(action) { try { var t = (window.turnstile && turnstile.getResponse()) || ''; navigator.sendBeacon(track + '?action=' + action, t); } catch (e) {} }
       var m = document.getElementById('send-mailto'); if (m) m.addEventListener('click', function () { ping('mailto'); });
       var g = document.getElementById('send-gmail'); if (g) g.addEventListener('click', function () { ping('gmail'); });
       var c = document.getElementById('copy-btn');

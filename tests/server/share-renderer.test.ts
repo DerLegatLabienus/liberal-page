@@ -75,3 +75,29 @@ describe('renderShareHtml (public send page)', () => {
     expect(html).toContain("'?action=' + action")
   })
 })
+
+describe('renderShareHtml (Turnstile interstitial)', () => {
+  const base = {
+    id: 9, title: 'חוק', subject: 'נ', bodyHtml: '<p>גוף</p>', bodyPlain: 'גוף',
+    recipientNames: ['ח"כ'], issueTags: ['בריאות'],
+    toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], ccAddresses: [], bccAddresses: [],
+  }
+  const optsBase = { shareBaseUrl: 'https://pub.r2.dev', appBaseUrl: 'https://app', apiBaseUrl: 'https://api' }
+
+  it('bakes the widget + hidden content when a sitekey is provided', () => {
+    const html = renderShareHtml(base, { ...optsBase, turnstileSiteKey: '0xSITEKEY' })
+    expect(html).toContain('challenges.cloudflare.com/turnstile/v0/api.js')
+    expect(html).toContain('data-sitekey="0xSITEKEY"')
+    expect(html).toContain('id="letter-content" hidden')
+    expect(html).toContain('id="gate-fallback"')            // fallback escape hatch
+    expect(html).toContain('turnstile.getResponse')          // token read at send time
+  })
+
+  it('renders no wall and visible content when the sitekey is absent (unchanged)', () => {
+    const html = renderShareHtml(base, optsBase)
+    expect(html).not.toContain('cf-turnstile')
+    expect(html).not.toContain('turnstile/v0/api.js')
+    expect(html).toContain('id="letter-content"')            // present but NOT hidden
+    expect(html).not.toContain('id="letter-content" hidden')
+  })
+})
