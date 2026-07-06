@@ -57,6 +57,13 @@ router.patch('/me', requireAuth, async (req, res) => {
 // Request a magic sign-in link. Always 200 — neutral response, never reveals whether the
 // email is invited/registered (see requestMagicLink). Rate-limited per (IP, email) so it
 // can't be used to spam an inbox or brute-force-probe the allowlist.
+//
+// The lookup + insert + email send happen AFTER the response is sent (via setImmediate),
+// not before it. This closes a timing side-channel: previously an invited email did a DB
+// lookup, a DB insert, and an awaited Resend network call before responding, while an
+// unknown email returned immediately — the response latency itself revealed whether the
+// email was known. Responding first and doing the work off the response path makes the
+// response time independent of which branch `requestMagicLink` takes internally.
 router.post('/magic-link/request', async (req, res) => {
   const { email } = req.body as { email?: string }
   if (!email || typeof email !== 'string') return res.status(400).json({ error: 'email required' })
@@ -64,13 +71,14 @@ router.post('/magic-link/request', async (req, res) => {
   const key = `${req.ip ?? 'unknown'}:${email.trim().toLowerCase()}`
   if (!magicLinkLimiter.allow(key)) return res.status(429).json({ error: 'rate_limited' })
 
-  try {
-    await requestMagicLink(email)
-  } catch (err) {
-    // Never let a send/storage failure leak through as a distinguishable response.
-    console.error('[auth] magic-link request failed', err)
-  }
   res.json({ ok: true })
+  setImmediate(() => {
+    requestMagicLink(email).catch((err) => {
+      // Never let a send/storage failure leak through as a distinguishable response —
+      // the response has already been sent by the time this runs.
+      console.error('[magic-link] request failed:', err)
+    })
+  })
 })
 
 // Verify a magic-link token and log in. Single-use (verifyMagicLink deletes the row);

@@ -11,6 +11,7 @@ const { sendEmailMock } = vi.hoisted(() => ({ sendEmailMock: vi.fn() }))
 vi.mock('../../server/services/email', () => ({ sendEmail: sendEmailMock }))
 
 import authRouter, { _resetMagicLinkLimiter } from '../../server/routes/auth'
+import { verifyMagicLink } from '../../server/services/auth-providers/magic-link'
 
 const app = express()
 app.use(express.json())
@@ -41,14 +42,19 @@ describe('auth: email magic-link', () => {
       expect(res.status).toBe(200)
       expect(res.body).toEqual({ ok: true })
 
-      expect(sendEmailMock).toHaveBeenCalledTimes(1)
+      // The response returns before the DB/email work runs (off the response path, see
+      // magic-link/request handler), so wait for it to land instead of asserting immediately.
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
       const [args] = sendEmailMock.mock.calls[0] as [{ to: string; template: string; params: { link: string } }]
       expect(args.to).toBe('a@x.com')
       expect(args.template).toBe('magic_link')
 
       const token = extractToken()
-      const rows = await db.select().from(magicLinkTokens)
-      expect(rows).toHaveLength(1)
+      const rows = await vi.waitFor(async () => {
+        const r = await db.select().from(magicLinkTokens)
+        expect(r).toHaveLength(1)
+        return r
+      })
       expect(rows[0].email).toBe('a@x.com')
       expect(rows[0].tokenHash).toBe(createHash('sha256').update(token).digest('hex'))
       // The raw token must never be persisted — only its hash.
@@ -71,8 +77,8 @@ describe('auth: email magic-link', () => {
       })
       const res = await request(app).post('/api/auth/magic-link/request').send({ email: 'ghost@x.com' })
       expect(res.status).toBe(200)
-      expect(sendEmailMock).toHaveBeenCalledTimes(1)
-      expect(await db.select().from(magicLinkTokens)).toHaveLength(1)
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
+      await vi.waitFor(async () => expect(await db.select().from(magicLinkTokens)).toHaveLength(1))
     })
 
     it('400s when email is missing', async () => {
@@ -95,6 +101,7 @@ describe('auth: email magic-link', () => {
     it('logs in via loginWithIdentity for a verified allowlisted email', async () => {
       await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'admin', createdAt: new Date() })
       await request(app).post('/api/auth/magic-link/request').send({ email: 'a@x.com' })
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
       const token = extractToken()
 
       const res = await request(app).post('/api/auth/magic-link/verify').send({ token })
@@ -107,6 +114,7 @@ describe('auth: email magic-link', () => {
     it('is single-use: a second verify with the same token fails', async () => {
       await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'member', createdAt: new Date() })
       await request(app).post('/api/auth/magic-link/request').send({ email: 'a@x.com' })
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
       const token = extractToken()
 
       const first = await request(app).post('/api/auth/magic-link/verify').send({ token })
@@ -114,6 +122,25 @@ describe('auth: email magic-link', () => {
 
       const second = await request(app).post('/api/auth/magic-link/verify').send({ token })
       expect(second.status).toBe(401)
+    })
+
+    it('is single-use under concurrency: two simultaneous verifies race for one winner', async () => {
+      await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'member', createdAt: new Date() })
+      await request(app).post('/api/auth/magic-link/request').send({ email: 'a@x.com' })
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
+      const token = extractToken()
+
+      // Fire both verifies concurrently (no await between them) so they race for the same
+      // token row. The atomic DELETE ... RETURNING in verifyMagicLink means the DB itself
+      // arbitrates: exactly one caller can get the row back, the other gets zero rows.
+      const results = await Promise.allSettled([verifyMagicLink(token), verifyMagicLink(token)])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect((fulfilled[0] as PromiseFulfilledResult<{ email: string }>).value.email).toBe('a@x.com')
+      expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({ code: 'invalid_token' })
     })
 
     it('rejects an unknown token', async () => {
@@ -144,6 +171,7 @@ describe('auth: email magic-link', () => {
         label: 'a@x.com', email: 'a@x.com', name: 'Alice', role: 'member', createdAt: new Date(),
       })
       await request(app).post('/api/auth/magic-link/request').send({ email: 'a@x.com' })
+      await vi.waitFor(() => expect(sendEmailMock).toHaveBeenCalledTimes(1))
       const token = extractToken()
 
       const res = await request(app).post('/api/auth/magic-link/verify').send({ token })

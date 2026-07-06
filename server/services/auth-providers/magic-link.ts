@@ -45,18 +45,19 @@ export async function requestMagicLink(email: string): Promise<void> {
 }
 
 /**
- * Verifies a magic-link token: hashes it, looks up the row, and — if present and unexpired —
- * deletes it (single-use) and returns the email it was issued for. Throws `AuthError('invalid_token')`
- * for a missing, already-used, or expired token; the caller cannot tell which case it was
- * (same anti-enumeration reasoning as `requestMagicLink`).
+ * Verifies a magic-link token: hashes it, then atomically deletes-and-returns the matching row
+ * (single-use). Using a single DELETE ... RETURNING instead of SELECT-then-DELETE closes the
+ * replay window where two concurrent verifies could both read the row before either deleted it —
+ * here at most one caller can ever receive the row; the other gets zero rows back. Throws
+ * `AuthError('invalid_token')` for a missing, already-used, or expired token; the caller cannot
+ * tell which case it was (same anti-enumeration reasoning as `requestMagicLink`).
  */
 export async function verifyMagicLink(token: string): Promise<{ email: string }> {
   const tokenHash = hashToken(token)
-  const [row] = await db.select().from(magicLinkTokens).where(eq(magicLinkTokens.tokenHash, tokenHash))
+  // Delete regardless of expiry so a stale row can never be replayed twice.
+  const [row] = await db.delete(magicLinkTokens).where(eq(magicLinkTokens.tokenHash, tokenHash)).returning()
 
   if (!row) throw new AuthError('invalid_token')
-  // Delete regardless of expiry so a stale row can never be replayed twice.
-  await db.delete(magicLinkTokens).where(eq(magicLinkTokens.id, row.id))
   if (row.expiresAt.getTime() < Date.now()) throw new AuthError('invalid_token')
 
   return { email: row.email }
