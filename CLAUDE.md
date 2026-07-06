@@ -121,7 +121,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `GET`    | `/api/mks/activity`           | fetch MK activity by `siteId` |
 | `GET`    | `/api/feature-flags`          | all feature flags for the frontend |
 | `POST`   | `/api/analytics/join`         | fire-and-forget join click-through event |
-| `POST`   | `/api/auth/google`            | exchange Google ID token for access + refresh tokens |
+| `POST`   | `/api/auth/:provider`         | exchange a provider ID token (`google` \| `microsoft`) for access + refresh tokens, gated by the invite allowlist (`loginWithIdentity`). Unknown provider → 400; unconfigured provider (e.g. `MICROSOFT_CLIENT_ID` unset) → 503. |
 | `POST`   | `/api/auth/magic-link/request` | **Public.** Neutral (always `200`); emails a single-use 15-min sign-in link if the email is invited/known. Rate-limited per (IP, email). |
 | `POST`   | `/api/auth/magic-link/verify` | exchange a magic-link token (single-use) for access + refresh tokens |
 | `POST`   | `/api/auth/refresh`           | refresh access token |

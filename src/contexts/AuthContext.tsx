@@ -11,7 +11,7 @@ type BroadcastMsg =
 interface AuthContextValue {
   user: AuthUser | null
   ready: boolean            // initial session-restore finished
-  signIn: (googleIdToken: string) => Promise<void>
+  signIn: (idToken: string, provider?: string) => Promise<void>
   verifyMagicLink: (token: string) => Promise<void>
   signOut: () => Promise<void>
   updateUser: (patch: Partial<AuthUser>) => void
@@ -84,8 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return refreshInFlight.current
   }, [apply, clear])
 
-  const signIn = useCallback(async (googleIdToken: string) => {
-    const res = await api.auth.google(googleIdToken)
+  // `provider` defaults to 'google' so existing callers (e.g. the GIS button) are unaffected —
+  // routed through `api.auth.google` specifically (rather than `api.auth.oauth('google', ...)`,
+  // its equivalent) to keep that call target stable for existing tests/mocks. Other providers
+  // (Microsoft, later Apple/Facebook) go through the generalized `api.auth.oauth`.
+  const signIn = useCallback(async (idToken: string, provider = 'google') => {
+    const res = provider === 'google' ? await api.auth.google(idToken) : await api.auth.oauth(provider, idToken)
     apply(res.accessToken, res.refreshToken, res.user)
   }, [apply])
 

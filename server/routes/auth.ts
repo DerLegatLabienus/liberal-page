@@ -6,6 +6,7 @@ import {
   type ProviderIdentity,
 } from '../services/auth-service'
 import { requestMagicLink, verifyMagicLink } from '../services/auth-providers/magic-link'
+import { verifyMicrosoftIdToken } from '../services/auth-providers/microsoft'
 import { SlidingWindowLimiter } from '../services/rate-limit'
 
 const router = Router()
@@ -103,6 +104,21 @@ router.post('/magic-link/verify', async (req, res) => {
   }
 })
 
+// One verifier per supported provider, each resolving to a `ProviderIdentity` or throwing
+// `AuthError`. A registry (rather than an if-chain) keeps adding a provider to a one-line
+// addition here plus its own adapter module.
+const verifiers: Record<string, (idToken: string) => Promise<ProviderIdentity>> = {
+  google: async (idToken) => {
+    try {
+      const g = await verifyGoogleIdToken(idToken)
+      return { provider: 'google', sub: g.sub, email: g.email, name: g.name }
+    } catch {
+      throw new AuthError('invalid_token')
+    }
+  },
+  microsoft: verifyMicrosoftIdToken,
+}
+
 // Exchange a verified provider ID token for our session tokens. Gated by the invite
 // allowlist via loginWithIdentity — the single choke point for every provider.
 router.post('/:provider', async (req, res) => {
@@ -110,19 +126,11 @@ router.post('/:provider', async (req, res) => {
   const { idToken } = req.body as { idToken?: string }
   if (!idToken) return res.status(400).json({ error: 'idToken required' })
 
-  let identity: ProviderIdentity
-  if (provider === 'google') {
-    try {
-      const g = await verifyGoogleIdToken(idToken)
-      identity = { provider: 'google', sub: g.sub, email: g.email, name: g.name }
-    } catch {
-      return res.status(401).json({ error: 'Invalid Google token' })
-    }
-  } else {
-    return res.status(400).json({ error: `Unknown provider: ${provider}` })
-  }
+  const verify = verifiers[provider]
+  if (!verify) return res.status(400).json({ error: `Unknown provider: ${provider}` })
 
   try {
+    const identity = await verify(idToken)
     const { user, accessToken, refreshToken } = await loginWithIdentity(identity)
     res.json({ accessToken, refreshToken, user: publicUser(user) })
   } catch (err) {

@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
+import type { PublicClientApplication } from '@azure/msal-browser'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
@@ -8,6 +9,31 @@ import { api, errorStatus } from '@/lib/api-client'
 // Admin-only and heavy (tabs, accordion, analytics) — lazy-loaded so the ~99% of visitors who
 // never open it (and every non-admin) don't pay for it in the main bundle.
 const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
+
+// Microsoft (MSAL) sign-in is entirely optional: the button only renders when this is set, so
+// unconfigured deployments never load/initialize the SDK.
+const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID as string | undefined
+
+// One instance for the app's lifetime, created lazily on first click (not at module load) —
+// `@azure/msal-browser` is a sizeable SDK, so it's dynamically imported here rather than at
+// the top of the file, keeping it out of the main bundle for every visitor who never clicks
+// the Microsoft button (the vast majority, especially while unconfigured). `initialize()` is
+// required before any other MSAL call and is itself idempotent-safe to await repeatedly, so we
+// cache that promise too.
+let msalInstance: PublicClientApplication | null = null
+let msalReady: Promise<void> | null = null
+async function getMsalInstance(): Promise<PublicClientApplication> {
+  if (!msalInstance) {
+    const { PublicClientApplication: Msal } = await import('@azure/msal-browser')
+    msalInstance = new Msal({
+      auth: { clientId: MICROSOFT_CLIENT_ID!, authority: 'https://login.microsoftonline.com/common' },
+      cache: { cacheLocation: 'sessionStorage' },
+    })
+    msalReady = msalInstance.initialize()
+  }
+  await msalReady
+  return msalInstance
+}
 
 /**
  * Header auth control: Google sign-in button when logged out; name + sign-out when in.
@@ -34,6 +60,19 @@ export default function AuthControl() {
         const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
         toastCtx?.toast(msg, 'error')
       })
+  }
+
+  const handleMicrosoftSignIn = async () => {
+    try {
+      const pca = await getMsalInstance()
+      const result = await pca.loginPopup({ scopes: ['openid', 'profile', 'email'] })
+      if (!result.idToken) throw new Error('Microsoft sign-in returned no id token')
+      await signIn(result.idToken, 'microsoft')
+      toastCtx?.toast(t('auth.signed_in'), 'success')
+    } catch (err: unknown) {
+      const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
+      toastCtx?.toast(msg, 'error')
+    }
   }
 
   const handleMagicLinkRequest = async () => {
@@ -109,6 +148,14 @@ export default function AuthControl() {
         shape="pill"
         size="medium"
       />
+      {MICROSOFT_CLIENT_ID && (
+        <button
+          onClick={() => { void handleMicrosoftSignIn() }}
+          className="rounded border border-input bg-background px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
+        >
+          {t('auth.microsoft_sign_in')}
+        </button>
+      )}
       {magicSent ? (
         <span className="max-w-[220px] text-end text-xs text-muted-foreground">{t('auth.magic_link_sent')}</span>
       ) : (

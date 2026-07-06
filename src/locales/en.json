@@ -138,6 +138,7 @@
   "auth": {
     "sign_out": "Sign out",
     "signed_in": "Signed in",
+    "microsoft_sign_in": "Sign in with Microsoft",
     "not_invited": "This email isn't on the invite list. Ask an admin for an invitation.",
     "sign_in_failed": "Sign-in failed. Please try again.",
     "email_alerts": "Email alerts",

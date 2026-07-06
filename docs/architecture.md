@@ -125,7 +125,9 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 | `POST` | `/api/analytics/join` | fire-and-forget join click-through event |
 | `POST` | `/api/meetings/booking-link` | **Public.** Verify Google identity, check Calendly for active booking, return single-use link. Rate-limited 10/min/IP + 5/min/email; `409` with existing meeting on repeat |
 | `POST` | `/api/knesset/transition` | trigger Knesset transition (bump current number, re-stamp MK terms) |
-| `POST` | `/api/auth/google` | exchange Google ID token for access + refresh tokens |
+| `POST` | `/api/auth/:provider` | exchange a provider ID token (`google` \| `microsoft`) for access + refresh tokens, gated by the invite allowlist. Unknown provider → 400; unconfigured provider → 503 |
+| `POST` | `/api/auth/magic-link/request` | **Public.** Neutral (always `200`); emails a single-use 15-min sign-in link if the email is invited/known. Rate-limited per (IP, email) |
+| `POST` | `/api/auth/magic-link/verify` | exchange a magic-link token (single-use) for access + refresh tokens |
 | `POST` | `/api/auth/refresh` | refresh access token |
 | `POST` | `/api/auth/logout` | revoke refresh token |
 | `GET` | `/api/auth/me` | current user profile (`requireAuth`) |
@@ -142,12 +144,27 @@ The parliamentary drawer opens from the header and parliament strip. It has thre
 
 ## Auth & multi-user
 
-Closed, invite-only accounts via **Google sign-in** (GIS ID token → `POST /api/auth/google`,
-verified server-side, gated by the `allowed_emails` allowlist). Sessions are **bearer JWTs**:
-a short-lived access token (`Authorization: Bearer`) plus a rotating refresh token whose
-sha256 hash is stored in `refresh_tokens` (invalidation = row deletion; reuse of a rotated
-token revokes all of a user's sessions). Roles: `admin`, `member`, and an internal `group`
-account that owns the public list. Middleware: `requireAuth` / `requireAdmin` / `optionalAuth`.
+Closed, invite-only accounts, reachable via multiple **front doors** that all funnel through
+one gate: `loginWithIdentity(identity)` (`server/services/auth-service.ts`) checks the
+`allowed_emails` allowlist (or an already-existing user, i.e. "grandfathered" access), then
+upserts the user by email and records the `(provider, provider_sub)` pair in `user_identities`
+for auditability — email is the account key, so an invited person signing in with a different
+provider links to the same account.
+
+Front doors: **Google** (GIS ID token) and **Microsoft** (MSAL ID token) both dispatch through
+`POST /api/auth/:provider`, each verified server-side by its own adapter in
+`server/services/auth-providers/` — Google via `google-auth-library`, Microsoft via the shared
+`oidc.ts` helper (`jose`: signature against the provider's live JWKS + `iss` + `aud` + `exp`).
+An **email magic-link** (`POST /api/auth/magic-link/request` + `/verify`) authenticates the
+email directly (no provider identity) via a hashed, single-use, 15-minute token emailed
+through Resend. Each provider is independently optional: unset config → 503 from the route,
+button hidden on the frontend.
+
+Sessions are **bearer JWTs**: a short-lived access token (`Authorization: Bearer`) plus a
+rotating refresh token whose sha256 hash is stored in `refresh_tokens` (invalidation = row
+deletion; reuse of a rotated token revokes all of a user's sessions). Roles: `admin`, `member`,
+and an internal `group` account that owns the public list. Middleware: `requireAuth` /
+`requireAdmin` / `optionalAuth`.
 
 Auth and admin API routes are listed in the Backend API table above.
 
