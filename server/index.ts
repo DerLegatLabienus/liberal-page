@@ -37,7 +37,8 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
 
 // Public share-page endpoints accept ANY origin (called cross-origin from the
 // R2-hosted share pages). Mount with permissive CORS BEFORE the global restrictive
-// cors so the allowlist doesn't 500 the beacon. No body parsing needed (query-param action).
+// cors so the allowlist doesn't 500 the beacon. The router parses its own text/plain
+// body (the Turnstile token) per-route; `action` stays a query param.
 app.use('/api/public/letters', cors(), publicLettersRouter)
 
 app.use(cors({
