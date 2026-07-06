@@ -160,6 +160,8 @@ export const api = {
         apiFetch<{ letter: Letter }>(`/admin/letters/${id}/pin`, { method: 'PATCH', body: JSON.stringify({ pinned }) }),
       beautify: (html: string) =>
         apiFetch<{ html: string }>('/admin/letters/beautify', { method: 'POST', body: JSON.stringify({ html }) }),
+      regenerateShares: () =>
+        apiFetch<{ regenerated: number }>('/admin/letters/regenerate-shares', { method: 'POST' }),
       tags: {
         list: () => apiFetch<{ tags: LetterIssueTag[] }>('/admin/letters/tags'),
         create: (body: { name: string; slug: string }) =>

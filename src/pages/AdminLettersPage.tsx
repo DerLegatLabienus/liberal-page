@@ -22,6 +22,9 @@ export default function AdminLettersPage() {
   const [contacts, setContacts] = useState<LetterContact[]>([])
   const [templates, setTemplates] = useState<LetterTemplate[]>([])
   const [loading, setLoading] = useState(false)
+  const [editingLetter, setEditingLetter] = useState<Letter | null>(null)
+  const [regenBusy, setRegenBusy] = useState(false)
+  const [regenResult, setRegenResult] = useState<string | null>(null)
 
   // Only fetch once the session is restored and confirmed admin — otherwise the request
   // fires before there's an access token and 401s on a fresh page load / deep link.
@@ -96,12 +99,41 @@ export default function AdminLettersPage() {
           <div>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-semibold">All Letters ({letters.length})</h2>
+              <div className="flex items-center gap-3">
+                {regenResult && <span className="text-xs text-muted-foreground">{regenResult}</span>}
+                <button
+                  type="button"
+                  disabled={regenBusy}
+                  onClick={async () => {
+                    setRegenBusy(true); setRegenResult(null)
+                    try {
+                      const { regenerated } = await api.admin.letters.regenerateShares()
+                      setRegenResult(`Regenerated ${regenerated} share pages`)
+                    } catch {
+                      setRegenResult('Regenerate failed')
+                    } finally {
+                      setRegenBusy(false)
+                    }
+                  }}
+                  className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+                  title="Rebuild the public R2 share page for every published letter"
+                >
+                  {regenBusy ? 'Regenerating…' : 'Regenerate share pages'}
+                </button>
+              </div>
             </div>
             <NewLetterForm
+              key={editingLetter?.id ?? 'new'}
               templates={templates}
               beautifyEnabled={beautifyEnabled}
+              initialLetter={editingLetter ?? undefined}
               onOpen={async () => { setTemplates((await api.admin.letters.letterTemplates.list()).templates) }}
-              onCreate={async (body) => { await api.admin.letters.create(body); refresh() }}
+              onCancel={() => setEditingLetter(null)}
+              onSubmit={async (body) => {
+                if (editingLetter) { await api.admin.letters.update(editingLetter.id, body); setEditingLetter(null) }
+                else { await api.admin.letters.create(body) }
+                refresh()
+              }}
             />
             <table className="mt-6 w-full text-sm">
               <thead>
@@ -147,7 +179,18 @@ export default function AdminLettersPage() {
                         </span>
                       ) })()}
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 space-x-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setTemplates((await api.admin.letters.letterTemplates.list()).templates)
+                          setEditingLetter(letter)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         onClick={async () => {
@@ -269,25 +312,28 @@ type NewLetterBody = {
   templateId: number | null
 }
 
-function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
+function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLetter, onCancel }: {
   templates: LetterTemplate[]
   beautifyEnabled: boolean
   onOpen: () => void | Promise<void>
-  onCreate: (body: NewLetterBody) => Promise<void>
+  onSubmit: (body: NewLetterBody) => Promise<void>
+  initialLetter?: Letter
+  onCancel?: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const isEdit = !!initialLetter
+  const [open, setOpen] = useState(isEdit)
   const [saving, setSaving] = useState(false)
-  const [title, setTitle] = useState('')
-  const [subject, setSubject] = useState('')
-  const [bodyHtml, setBodyHtml] = useState('')
-  const [toAddresses, setToAddresses] = useState<LetterAddress[]>([])
-  const [ccAddresses, setCcAddresses] = useState<LetterAddress[]>([])
-  const [bccAddresses, setBccAddresses] = useState<LetterAddress[]>([])
-  const [showCc, setShowCc] = useState(false)
-  const [showBcc, setShowBcc] = useState(false)
-  const [status, setStatus] = useState<Letter['status']>('published')
-  const [priority, setPriority] = useState<Letter['priority']>('normal')
-  const [templateId, setTemplateId] = useState<number | null>(null)
+  const [title, setTitle] = useState(initialLetter?.title ?? '')
+  const [subject, setSubject] = useState(initialLetter?.subject ?? '')
+  const [bodyHtml, setBodyHtml] = useState(initialLetter?.bodyHtml ?? '')
+  const [toAddresses, setToAddresses] = useState<LetterAddress[]>(initialLetter?.toAddresses ?? [])
+  const [ccAddresses, setCcAddresses] = useState<LetterAddress[]>(initialLetter?.ccAddresses ?? [])
+  const [bccAddresses, setBccAddresses] = useState<LetterAddress[]>(initialLetter?.bccAddresses ?? [])
+  const [showCc, setShowCc] = useState((initialLetter?.ccAddresses?.length ?? 0) > 0)
+  const [showBcc, setShowBcc] = useState((initialLetter?.bccAddresses?.length ?? 0) > 0)
+  const [status, setStatus] = useState<Letter['status']>(initialLetter?.status ?? 'published')
+  const [priority, setPriority] = useState<Letter['priority']>(initialLetter?.priority ?? 'normal')
+  const [templateId, setTemplateId] = useState<number | null>(initialLetter?.templateId ?? null)
   const [beautifying, setBeautifying] = useState(false)
   const [beautifyError, setBeautifyError] = useState<string | null>(null)
 
@@ -311,15 +357,19 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
     if (!title || !subject || !bodyHtml || toAddresses.length === 0) return
     setSaving(true)
     try {
-      await onCreate({
+      await onSubmit({
         title, subject, bodyHtml,
         toAddresses, ccAddresses, bccAddresses,
         status, priority, templateId,
       })
-      setTitle(''); setSubject(''); setBodyHtml('')
-      setToAddresses([]); setCcAddresses([]); setBccAddresses([])
-      setShowCc(false); setShowBcc(false); setTemplateId(null)
-      setOpen(false)
+      // Create mode resets the form for the next letter; edit mode is torn down by the
+      // parent (clears editingLetter → the keyed remount resets everything).
+      if (!isEdit) {
+        setTitle(''); setSubject(''); setBodyHtml('')
+        setToAddresses([]); setCcAddresses([]); setBccAddresses([])
+        setShowCc(false); setShowBcc(false); setTemplateId(null)
+        setOpen(false)
+      }
     } finally {
       setSaving(false)
     }
@@ -340,8 +390,8 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
   return (
     <form onSubmit={submit} className="mb-6 space-y-3 rounded-lg border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">New Letter</h3>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+        <h3 className="font-semibold">{isEdit ? 'Edit Letter' : 'New Letter'}</h3>
+        <button type="button" onClick={() => { setOpen(false); onCancel?.() }} className="text-xs text-muted-foreground hover:underline">Cancel</button>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identify</div>
@@ -440,7 +490,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onCreate }: {
       </div>
       <button type="submit" disabled={saving}
         className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-        {saving ? 'Saving...' : 'Create Letter'}
+        {saving ? 'Saving...' : (isEdit ? 'Save' : 'Create Letter')}
       </button>
     </form>
   )

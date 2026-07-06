@@ -54,4 +54,18 @@ describe('admin-letters share hooks', () => {
     await flush()
     expect(remove).toHaveBeenCalledWith(created.body.letter.id)
   })
+
+  it('regenerate-shares syncs every published letter (and skips drafts)', async () => {
+    const p1 = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`).send(body)
+    const p2 = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`).send({ ...body, title: 't2' })
+    await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`).send({ ...body, title: 'd', status: 'draft' })
+    await flush()        // drain the create-time setImmediate syncs...
+    sync.mockClear()     // ...so we count only the regenerate calls
+    const res = await request(app).post('/api/admin/letters/regenerate-shares').set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.regenerated).toBe(2)
+    expect(sync).toHaveBeenCalledTimes(2)
+    const ids = sync.mock.calls.map((c) => c[0] as number).sort((a, b) => a - b)
+    expect(ids).toEqual([p1.body.letter.id, p2.body.letter.id].sort((a, b) => a - b))
+  })
 })

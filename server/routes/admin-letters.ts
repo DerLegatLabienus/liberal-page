@@ -90,6 +90,21 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+// POST /api/admin/letters/regenerate-shares — rebuild the R2 public share page for
+// every published letter. Per-letter no-op when R2 is unconfigured or publicSharePages
+// is off. Used to roll share-page template changes (e.g. the Turnstile interstitial)
+// onto existing letters without editing them. Literal path — no collision with /:id.
+router.post('/regenerate-shares', async (_req, res) => {
+  try {
+    const published = await lettersRepo.listPublished()
+    for (const l of published) await syncShareForLetter(l.id)
+    res.json({ regenerated: published.length })
+  } catch (err) {
+    console.error('[admin/letters] regenerate-shares failed:', err)
+    res.status(500).json({ error: 'Failed to regenerate shares' })
+  }
+})
+
 // PATCH /api/admin/letters/:id/pin — toggle pin
 router.patch('/:id/pin', async (req, res) => {
   try {

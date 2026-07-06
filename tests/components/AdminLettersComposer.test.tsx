@@ -5,6 +5,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 vi.mock('@/lib/api-client', () => ({
   api: { admin: { letters: {
     create: vi.fn().mockResolvedValue({ letter: {} }),
+    update: vi.fn().mockResolvedValue({ letter: {} }),
+    regenerateShares: vi.fn().mockResolvedValue({ regenerated: 3 }),
     list: vi.fn().mockResolvedValue({ letters: [] }),
     contacts: { list: vi.fn().mockResolvedValue({ contacts: [
       { id: 1, displayName: 'דובר חינוך', email: 'dover@education.gov.il', category: 'ministry', createdAt: '' },
@@ -25,8 +27,16 @@ vi.mock('@/components/admin/HtmlCodeEditor', () => ({
 import AdminLettersPage from '@/pages/AdminLettersPage'
 import { MemoryRouter } from 'react-router-dom'
 import { api } from '@/lib/api-client'
+import type { LetterWithStats } from '@/types'
 
 const renderPage = () => render(<MemoryRouter><AdminLettersPage /></MemoryRouter>)
+
+const existingLetter: LetterWithStats = {
+  id: 7, title: 'כותרת קיימת', subject: 'נושא קיים', bodyHtml: '<p>גוף קיים</p>', bodyPlain: 'גוף קיים',
+  templateId: null, toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], ccAddresses: [], bccAddresses: [],
+  issueTagIds: [], status: 'published', priority: 'normal', pinnedAt: null, activityScore: 0,
+  publishedAt: null, createdAt: '', updatedAt: '', totalSends: 0, breakdown: {},
+}
 
 describe('admin composer multi-recipient', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -75,5 +85,30 @@ describe('admin composer multi-recipient', () => {
     await user.click(await screen.findByRole('button', { name: /New Letter/ }))
     await user.type(screen.getByPlaceholderText(/<p>/), '<p>שלום</p>')
     expect(screen.getByTitle('composer-preview')).toBeInTheDocument()
+  })
+
+  it('edits an existing letter: opens the composer prefilled and PUTs on Save', async () => {
+    vi.mocked(api.admin.letters.list).mockResolvedValue({ letters: [existingLetter] })
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /^Edit$/ }))
+    // composer opens in edit mode, pre-filled with the standard editor + fields
+    expect(await screen.findByRole('heading', { name: /Edit Letter/ })).toBeInTheDocument()
+    const titleInput = screen.getByDisplayValue('כותרת קיימת')
+    expect(titleInput).toBeInTheDocument()
+    expect(screen.getByDisplayValue('<p>גוף קיים</p>')).toBeInTheDocument() // body HTML pre-filled in the (mocked) editor
+    await user.clear(titleInput)
+    await user.type(titleInput, 'כותרת חדשה')
+    await user.click(screen.getByRole('button', { name: /^Save$/ }))
+    expect(api.admin.letters.update).toHaveBeenCalledWith(7, expect.objectContaining({ title: 'כותרת חדשה' }))
+    expect(api.admin.letters.create).not.toHaveBeenCalled()
+  })
+
+  it('regenerate-share-pages button calls the endpoint and shows the result', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /Regenerate share pages/ }))
+    expect(api.admin.letters.regenerateShares).toHaveBeenCalled()
+    expect(await screen.findByText(/Regenerated 3 share pages/)).toBeInTheDocument()
   })
 })
