@@ -118,8 +118,11 @@ export const api = {
       }),
   },
   auth: {
-    google: (idToken: string) =>
-      apiFetch<AuthResponse>('/auth/google', { method: 'POST', body: JSON.stringify({ idToken }) }),
+    // Generalized provider login: POST /auth/:provider { idToken }. `google` is a thin
+    // wrapper kept for existing callers (AuthContext.signIn et al.).
+    oauth: (provider: string, idToken: string) =>
+      apiFetch<AuthResponse>(`/auth/${provider}`, { method: 'POST', body: JSON.stringify({ idToken }) }),
+    google: (idToken: string) => api.auth.oauth('google', idToken),
     refresh: (refreshToken: string) =>
       apiFetch<AuthResponse>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     logout: (refreshToken: string) =>

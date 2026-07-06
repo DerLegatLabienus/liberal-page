@@ -1,6 +1,6 @@
 import { eq, lt, ne, count, and } from 'drizzle-orm'
 import { db } from '../db/client'
-import { users, allowedEmails, refreshTokens } from '../db/schema'
+import { users, allowedEmails, refreshTokens, userIdentities } from '../db/schema'
 
 export interface AuthUser {
   id: number
@@ -41,6 +41,37 @@ export class AuthRepository {
         set: { googleSub: input.googleSub, name: input.name, lastLoginAt: now },
       })
       .returning()
+    return toUser(row)
+  }
+
+  /**
+   * Insert or update a user from any verified provider identity, and link the
+   * (provider, sub) pair in `user_identities`. Generalizes `upsertUserFromGoogle` to
+   * arbitrary providers; on first insert the given `role` is applied, on a returning
+   * login the role is left untouched (only profile fields + lastLoginAt refresh).
+   */
+  async upsertUserFromIdentity(input: {
+    email: string; provider: string; sub: string; name: string | null; role: string
+  }): Promise<AuthUser> {
+    const now = new Date()
+    const [row] = await db
+      .insert(users)
+      .values({
+        label: input.email, email: input.email, name: input.name, role: input.role,
+        createdAt: now, lastLoginAt: now,
+        ...(input.provider === 'google' ? { googleSub: input.sub } : {}),
+      })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: { name: input.name, lastLoginAt: now },
+      })
+      .returning()
+    await db.insert(userIdentities)
+      .values({ userId: row.id, provider: input.provider, providerSub: input.sub, createdAt: now })
+      .onConflictDoUpdate({
+        target: [userIdentities.provider, userIdentities.providerSub],
+        set: { userId: row.id },
+      })
     return toUser(row)
   }
 

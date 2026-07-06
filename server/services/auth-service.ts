@@ -45,6 +45,35 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleIdenti
   return { email: payload.email, sub: payload.sub, name: payload.name ?? null }
 }
 
+// --- Provider-agnostic login choke point -------------------------------------------------
+
+/** A verified identity from any auth provider, ready to be logged in. */
+export interface ProviderIdentity { provider: string; sub: string; email: string; name: string | null }
+
+export class AuthError extends Error {
+  constructor(public code: 'not_invited' | 'no_email' | 'invalid_token' | 'provider_unconfigured') {
+    super(code)
+  }
+}
+
+/**
+ * The single gate every provider's login flows through: enforces the invite-only
+ * allowlist (or grandfathers an existing user), then upserts the user + identity link
+ * and issues session tokens. Identical semantics to the previous Google-only handler.
+ */
+export async function loginWithIdentity(id: ProviderIdentity) {
+  const email = id.email?.trim().toLowerCase()
+  if (!email) throw new AuthError('no_email')
+
+  const allowed = await authRepo.getAllowedEmail(email)
+  const existing = await authRepo.findUserByEmail(email)
+  if (!allowed && !existing) throw new AuthError('not_invited')
+
+  const role = existing?.role ?? allowed?.role ?? 'member'
+  const user = await authRepo.upsertUserFromIdentity({ email, provider: id.provider, sub: id.sub, name: id.name, role })
+  return { user, accessToken: issueAccessToken(user), refreshToken: await issueRefreshToken(user.id) }
+}
+
 // --- Access tokens (JWT) ----------------------------------------------------------------
 
 export function issueAccessToken(user: AuthUser): string {

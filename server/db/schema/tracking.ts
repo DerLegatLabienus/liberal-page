@@ -16,6 +16,19 @@ export const users = authSchema.table('users', {
   emailAlerts: boolean('email_alerts').notNull().default(true),
 })
 
+// One row per (provider, provider_sub) link to a user — the foundation for multi-provider
+// login. `google_sub` on `users` remains for now (existing callers/tests); this table is the
+// source of truth going forward and is backfilled from it in migration 0025.
+export const userIdentities = authSchema.table('user_identities', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(),
+  providerSub: text('provider_sub').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqProviderSub: unique('user_identities_provider_sub_unique').on(t.provider, t.providerSub),
+}))
+
 export const trackedBills = parliamentSchema.table('tracked_bills', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),

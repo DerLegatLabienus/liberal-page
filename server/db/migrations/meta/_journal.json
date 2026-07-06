@@ -176,6 +176,13 @@
       "when": 1783075000000,
       "tag": "0024_public_send_turnstile_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783161600000,
+      "tag": "0025_user_identities",
+      "breakpoints": true
     }
   ]
 }
