@@ -138,12 +138,12 @@
   "auth": {
     "sign_out": "Sign out",
     "signed_in": "Signed in",
-    "microsoft_sign_in": "Sign in with Microsoft",
     "not_invited": "This email isn't on the invite list. Ask an admin for an invitation.",
     "sign_in_failed": "Sign-in failed. Please try again.",
     "email_alerts": "Email alerts",
     "preferences_saved": "Preference saved",
     "preferences_failed": "Could not save preference",
+    "or": "or",
     "email_placeholder": "Email address",
     "magic_link_button": "Send me a sign-in link",
     "magic_link_sent": "If that address is registered, we've sent a sign-in link. Check your email.",

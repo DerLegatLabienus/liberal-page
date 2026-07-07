@@ -138,12 +138,12 @@
   "auth": {
     "sign_out": "התנתק",
     "signed_in": "התחברת בהצלחה",
-    "microsoft_sign_in": "התחברות עם Microsoft",
     "not_invited": "כתובת האימייל אינה מורשית. פנו למנהל לקבלת הזמנה.",
     "sign_in_failed": "ההתחברות נכשלה. נסו שוב.",
     "email_alerts": "התראות במייל",
     "preferences_saved": "ההעדפה נשמרה",
     "preferences_failed": "שמירת ההעדפה נכשלה",
+    "or": "או",
     "email_placeholder": "כתובת אימייל",
     "magic_link_button": "שלחו לי קישור התחברות",
     "magic_link_sent": "אם הכתובת רשומה אצלנו, נשלח אליה קישור התחברות. בדקו את תיבת הדואר שלכם.",

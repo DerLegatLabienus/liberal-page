@@ -3,6 +3,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
+import { useDirection } from '@/hooks/useDirection'
 import { api, errorStatus } from '@/lib/api-client'
 
 // Admin-only and heavy (tabs, accordion, analytics) — lazy-loaded so the ~99% of visitors who
@@ -24,6 +25,7 @@ const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
  */
 export default function AuthControl() {
   const { t } = useTranslation()
+  const dir = useDirection()
   const auth = useAuthOptional()
   const toastCtx = useToastOptional()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -108,35 +110,62 @@ export default function AuthControl() {
     )
   }
 
+  // Two ways into the same invite-only account, given equal footing and a shared 240px rhythm:
+  // Google one-click, or a passwordless email link. The email field is one control — type,
+  // then press the inset send button (or Enter). The arrow points the reading-forward way so
+  // it reads as "send" in both Hebrew (RTL) and English (LTR).
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex w-60 max-w-[80vw] flex-col gap-3">
       <GoogleLogin
         onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
         onError={() => toastCtx?.toast(t('auth.sign_in_failed'), 'error')}
         useOneTap={false}
         shape="pill"
-        size="medium"
+        size="large"
+        width="240"
+        text="signin_with"
+        logo_alignment="center"
       />
+
       {magicSent ? (
-        <span className="max-w-[220px] text-end text-xs text-muted-foreground">{t('auth.magic_link_sent')}</span>
-      ) : (
-        <div className="flex items-center gap-1">
-          <input
-            type="email"
-            value={magicEmail}
-            onChange={(e) => setMagicEmail(e.target.value)}
-            placeholder={t('auth.email_placeholder')}
-            aria-label={t('auth.email_placeholder')}
-            className="w-40 rounded border border-input bg-background px-2 py-1 text-xs"
-          />
-          <button
-            onClick={() => { void handleMagicLinkRequest() }}
-            disabled={!magicEmail.trim() || magicSending}
-            className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
-          >
-            {t('auth.magic_link_button')}
-          </button>
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-2.5 text-xs leading-snug text-muted-foreground"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          <span>{t('auth.magic_link_sent')}</span>
         </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2.5" aria-hidden>
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">{t('auth.or')}</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <form
+            onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }}
+            className="flex h-11 items-center gap-1 rounded-full border border-input bg-background ps-4 pe-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25"
+          >
+            <input
+              type="email"
+              value={magicEmail}
+              onChange={(e) => setMagicEmail(e.target.value)}
+              placeholder={t('auth.email_placeholder')}
+              aria-label={t('auth.email_placeholder')}
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!magicEmail.trim() || magicSending}
+              aria-label={t('auth.magic_link_button')}
+              title={t('auth.magic_link_button')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition enabled:hover:brightness-110 enabled:active:scale-95 disabled:opacity-40"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : undefined }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
+          </form>
+        </>
       )}
     </div>
   )
