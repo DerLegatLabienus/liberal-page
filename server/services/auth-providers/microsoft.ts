@@ -1,3 +1,10 @@
+// DORMANT — Microsoft sign-in is intentionally NOT wired into the auth route registry
+// (`server/routes/auth.ts`) and the frontend button is removed, so this adapter is currently
+// unreachable in production. It is kept, correct and tested, as the blueprint for re-enabling:
+// Microsoft support is nOAuth-safe only when the Entra app registration emits the `xms_edov`
+// optional claim (see below), configuration we don't maintain. To re-enable: configure
+// `xms_edov` + `email` optional claims in Azure, register `microsoft` in the route's `verifiers`
+// map, and restore the frontend MSAL button. See the multi-provider-login design doc.
 import { decodeJwt } from 'jose'
 import { AuthError, type ProviderIdentity } from '../auth-service'
 import { verifyOidcIdToken } from './oidc'

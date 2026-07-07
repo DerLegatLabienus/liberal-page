@@ -121,7 +121,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `GET`    | `/api/mks/activity`           | fetch MK activity by `siteId` |
 | `GET`    | `/api/feature-flags`          | all feature flags for the frontend |
 | `POST`   | `/api/analytics/join`         | fire-and-forget join click-through event |
-| `POST`   | `/api/auth/:provider`         | exchange a provider ID token (`google` \| `microsoft`) for access + refresh tokens, gated by the invite allowlist (`loginWithIdentity`). Unknown provider → 400; unconfigured provider (e.g. `MICROSOFT_CLIENT_ID` unset) → 503. |
+| `POST`   | `/api/auth/:provider`         | exchange a provider ID token (`google`) for access + refresh tokens, gated by the invite allowlist (`loginWithIdentity`). `loginWithIdentity` requires a **provider-verified email** (nOAuth mitigation) — Google via `email_verified === true`, magic-link via delivery; unverified → 403. Unknown/unsupported provider → 400. **Microsoft is intentionally disabled** (not registered): safe support needs the Entra app registration to emit the `xms_edov` optional claim, which we don't maintain — so `/api/auth/microsoft` → 400. The verified-ownership adapter (`auth-providers/microsoft.ts`) is kept dormant + tested as the blueprint for re-enabling. |
 | `POST`   | `/api/auth/magic-link/request` | **Public.** Neutral (always `200`); emails a single-use 15-min sign-in link if the email is invited/known. Rate-limited per (IP, email). |
 | `POST`   | `/api/auth/magic-link/verify` | exchange a magic-link token (single-use) for access + refresh tokens |
 | `POST`   | `/api/auth/refresh`           | refresh access token |

@@ -6,7 +6,6 @@ import {
   type ProviderIdentity,
 } from '../services/auth-service'
 import { requestMagicLink, verifyMagicLink } from '../services/auth-providers/magic-link'
-import { verifyMicrosoftIdToken } from '../services/auth-providers/microsoft'
 import { SlidingWindowLimiter } from '../services/rate-limit'
 
 const router = Router()
@@ -111,6 +110,13 @@ router.post('/magic-link/verify', async (req, res) => {
 // One verifier per supported provider, each resolving to a `ProviderIdentity` or throwing
 // `AuthError`. A registry (rather than an if-chain) keeps adding a provider to a one-line
 // addition here plus its own adapter module.
+//
+// Microsoft is intentionally NOT registered: under Entra `common` the token `email` claim is
+// attacker-settable, so a nOAuth-safe flow requires the app registration to emit the
+// `xms_edov` optional claim (configuration we don't maintain). `/auth/microsoft` therefore
+// falls through to the "Unknown provider" 400. The verified-ownership adapter
+// (`../services/auth-providers/microsoft.ts` → `verifyMicrosoftIdToken`) is kept, dormant and
+// tested, as the blueprint for re-enabling once `xms_edov` is configured — add it back here.
 const verifiers: Record<string, (idToken: string) => Promise<ProviderIdentity>> = {
   google: async (idToken) => {
     try {
@@ -120,7 +126,6 @@ const verifiers: Record<string, (idToken: string) => Promise<ProviderIdentity>> 
       throw new AuthError('invalid_token')
     }
   },
-  microsoft: verifyMicrosoftIdToken,
 }
 
 // Exchange a verified provider ID token for our session tokens. Gated by the invite

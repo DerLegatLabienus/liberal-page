@@ -3,6 +3,17 @@
 **Date:** 2026-07-07
 **Status:** Approved (design), pending implementation plan
 
+> **Implementation note (2026-07-07): Microsoft login is disabled.** The nOAuth account-takeover
+> mitigation below requires a provider-verified email signal before account-linking. For Microsoft,
+> that signal is the `xms_edov` optional claim, which is only emitted when the Entra **app
+> registration is explicitly configured to send it** — configuration the owner opted not to
+> maintain. Rather than ship an unsafe or half-working flow, Microsoft is **not registered** in the
+> route's `verifiers` map (so `POST /api/auth/microsoft` → `400`) and the frontend MSAL button is
+> removed. The `microsoft.ts` adapter (with correct `xms_edov` handling) and its tests are kept
+> **dormant** as the blueprint. To re-enable: configure `xms_edov` + `email` optional claims in
+> Azure, add `microsoft` back to `verifiers`, and restore the frontend button.
+> **Shipped today:** Google + email magic-link, both behind the verified-email gate.
+
 ## Goal
 
 Let members sign in with **Apple, Facebook, Microsoft, and an email magic-link**, in addition to the existing Google Sign-In. **Login stays invite-only** — every provider funnels through the current email allowlist gate unchanged. Adding a provider must never widen who can log in; it only adds *ways* an already-invited email can authenticate.

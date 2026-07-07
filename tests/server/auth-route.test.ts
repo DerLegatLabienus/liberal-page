@@ -10,11 +10,8 @@ vi.mock('../../server/services/auth-service', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../server/services/auth-service')>()
   return { ...actual, verifyGoogleIdToken: vi.fn() }
 })
-vi.mock('../../server/services/auth-providers/microsoft', () => ({ verifyMicrosoftIdToken: vi.fn() }))
 
 import { verifyGoogleIdToken } from '../../server/services/auth-service'
-import { verifyMicrosoftIdToken } from '../../server/services/auth-providers/microsoft'
-import { AuthError } from '../../server/services/auth-service'
 import authRouter from '../../server/routes/auth'
 
 const app = express()
@@ -23,10 +20,6 @@ app.use('/api/auth', authRouter)
 
 function asGoogle(email: string, sub = 'gsub', name = 'Name', emailVerified = true) {
   vi.mocked(verifyGoogleIdToken).mockResolvedValueOnce({ email, sub, name, emailVerified })
-}
-
-function asMicrosoft(email: string, sub = 'ms-sub', name = 'Name', emailVerified = true) {
-  vi.mocked(verifyMicrosoftIdToken).mockResolvedValueOnce({ provider: 'microsoft', sub, email, name, emailVerified })
 }
 
 describe('auth routes', () => {
@@ -81,33 +74,10 @@ describe('auth routes', () => {
     expect(await db.select().from(refreshTokens)).toHaveLength(0)
   })
 
-  it('POST /microsoft: allowed email signs in and gets tokens + user', async () => {
+  it('POST /microsoft: unsupported provider → 400 (disabled pending xms_edov, not registered)', async () => {
     await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'member', createdAt: new Date() })
-    asMicrosoft('a@x.com')
     const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
-    expect(res.status).toBe(200)
-    expect(res.body.accessToken).toBeTruthy()
-    expect(res.body.user).toMatchObject({ email: 'a@x.com', role: 'member' })
-  })
-
-  it('POST /microsoft: provider not configured → 503', async () => {
-    vi.mocked(verifyMicrosoftIdToken).mockRejectedValueOnce(new AuthError('provider_unconfigured'))
-    const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
-    expect(res.status).toBe(503)
-  })
-
-  it('POST /microsoft: invalid token → 401', async () => {
-    vi.mocked(verifyMicrosoftIdToken).mockRejectedValueOnce(new AuthError('invalid_token'))
-    const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
-    expect(res.status).toBe(401)
-  })
-
-  it('POST /microsoft: unverified email → 403, no user created', async () => {
-    await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'admin', createdAt: new Date() })
-    asMicrosoft('a@x.com', 'ms-sub', 'Name', false)
-    const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
-    expect(res.status).toBe(403)
-    expect(res.body.error).toMatch(/microsoft/i)
+    expect(res.status).toBe(400)
     expect(await db.select().from(users)).toHaveLength(0)
   })
 
