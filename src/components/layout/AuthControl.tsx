@@ -115,15 +115,15 @@ export default function AuthControl() {
     )
   }
 
-  // One "Sign in" button in the header opens a popup with every way into the invite-only
-  // account: Google one-click, or a passwordless email sign-in link. Keeping the choices behind
-  // a single trigger keeps the header uncluttered and gives the two paths room to breathe.
+  // A quiet outline "Sign in" trigger — deliberately understated so it doesn't compete with the
+  // solid primary "tracker" button beside it in the header. It opens a popup holding every way
+  // into the invite-only account: Google one-click, or a passwordless email sign-in link.
   return (
     <>
       <button
         type="button"
         onClick={openLogin}
-        className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+        className="whitespace-nowrap rounded-full border border-input px-4 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
       >
         {t('auth.sign_in')}
       </button>
@@ -132,68 +132,79 @@ export default function AuthControl() {
         open={loginOpen}
         onOpenChange={(open) => { setLoginOpen(open); if (!open) { setMagicSent(false); setMagicEmail(''); setLoginError(null) } }}
       >
-        <DialogContent className="max-w-xs rounded-2xl border border-border bg-background p-6 shadow-xl">
-          <DialogClose
-            aria-label={t('auth.close')}
-            className="absolute end-3 top-3 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <XIcon className="h-4 w-4" />
-          </DialogClose>
+        {/* Opaque inner card (not bg on the positioning Popup, which renders see-through) —
+            same pattern as AdminPanel. Light card regardless of theme; the site is light-first. */}
+        <DialogContent className="max-w-[25rem]">
+          <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl" dir="rtl">
+            <DialogClose
+              aria-label={t('auth.close')}
+              className="absolute end-4 top-4 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <XIcon className="h-5 w-5" />
+            </DialogClose>
 
-          <DialogTitle className="text-lg font-semibold">{t('auth.sign_in')}</DialogTitle>
-          <DialogDescription className="mt-1">{t('auth.sign_in_hint')}</DialogDescription>
-
-          {loginError && (
-            <p role="alert" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {loginError}
-            </p>
-          )}
-
-          <div className="mt-5 flex flex-col gap-4">
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
-                onError={() => setLoginError(t('auth.sign_in_failed'))}
-                useOneTap={false}
-                shape="pill"
-                size="large"
-                width="260"
-                text="signin_with"
-              />
+            <div className="text-center">
+              <DialogTitle className="text-xl font-bold text-slate-900">{t('auth.sign_in')}</DialogTitle>
+              <DialogDescription className="mx-auto mt-2 max-w-[19rem] text-sm leading-relaxed text-slate-500">
+                {t('auth.sign_in_hint')}
+              </DialogDescription>
             </div>
 
-            <div className="flex items-center gap-2.5" aria-hidden>
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">{t('auth.or')}</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            {magicSent ? (
-              <div
-                role="status"
-                className="rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm leading-snug text-muted-foreground"
-              >
-                {t('auth.magic_link_sent')}
-              </div>
-            ) : (
-              <form onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }} className="flex flex-col gap-2">
-                <input
-                  type="email"
-                  value={magicEmail}
-                  onChange={(e) => setMagicEmail(e.target.value)}
-                  placeholder={t('auth.email_placeholder')}
-                  aria-label={t('auth.email_placeholder')}
-                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
-                />
-                <button
-                  type="submit"
-                  disabled={!magicEmail.trim() || magicSending}
-                  className="h-10 rounded-lg border border-input bg-background text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-40"
-                >
-                  {t('auth.magic_link_button')}
-                </button>
-              </form>
+            {loginError && (
+              <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+                {loginError}
+              </p>
             )}
+
+            <div className="mt-6 flex flex-col gap-4">
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
+                  onError={() => setLoginError(t('auth.sign_in_failed'))}
+                  useOneTap={false}
+                  shape="pill"
+                  size="large"
+                  width="336"
+                  text="signin_with"
+                />
+              </div>
+
+              <div className="flex items-center gap-3" aria-hidden>
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-medium text-slate-400">{t('auth.or')}</span>
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              {magicSent ? (
+                <div
+                  role="status"
+                  className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-snug text-emerald-800"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  <span>{t('auth.magic_link_sent')}</span>
+                </div>
+              ) : (
+                <form onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }} className="flex flex-col gap-2.5">
+                  <input
+                    type="email"
+                    value={magicEmail}
+                    onChange={(e) => setMagicEmail(e.target.value)}
+                    placeholder={t('auth.email_placeholder')}
+                    aria-label={t('auth.email_placeholder')}
+                    className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                  />
+                  {/* Explicit blue-600 (== the brand --primary oklch) because the project's
+                      bg-primary token resolves transparent under hsl(var(--primary)). */}
+                  <button
+                    type="submit"
+                    disabled={!magicEmail.trim() || magicSending}
+                    className="h-11 rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-40"
+                  >
+                    {t('auth.magic_link_button')}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
