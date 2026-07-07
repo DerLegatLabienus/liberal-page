@@ -1,5 +1,44 @@
 # Backlog
 
+### 🐛 Theme tokens: shadcn color utilities render transparent (`bg-primary` etc.) — 2026-07-07
+
+**Symptom.** `bg-primary` (and every other shadcn color token — `bg-secondary`, `bg-muted`,
+`bg-card`, `bg-background`, `border-border`, `text-foreground`, …) resolves to a **transparent**
+background site-wide. Confirmed via the CSSOM: `.bg-primary` is emitted as
+`background-color: hsl(var(--primary))`, which computes to `rgba(0,0,0,0)`.
+
+**Root cause.** `tailwind.config.ts` maps the tokens as `hsl(var(--x))`, but the CSS variables in
+`src/index.css` hold **complete `oklch(...)` values** (e.g. `--primary: oklch(0.546 0.245 262.881)`).
+So the utility becomes `hsl(oklch(...))` — invalid CSS, which the browser drops. It's a botched
+shadcn HSL→oklch migration: the vars were moved to oklch but the config kept the `hsl()` wrapper.
+
+**Already patched (the one visible instance).** The login popup's "send link" button and focus ring
+use explicit `blue-600` (== the brand `--primary` oklch) instead of `bg-primary` — see
+`src/components/layout/AuthControl.tsx` (commit `00d3b5e`). Solid CTAs elsewhere fall back to other
+classes or explicit colors, so the pages we can see render correctly.
+
+**Why not fixed globally yet (it's a theme refactor, not a one-liner).** The naive fix —
+`hsl(var(--x))` → `var(--x)` — **breaks the build**: Tailwind v3 can't inject an alpha into a plain
+`var()`, so opacity modifiers like `outline-ring/50` (used in `@layer base`), `bg-primary/80`
+(Button), `ring-*/25`, `bg-destructive/10` all fail with "class does not exist". The correct fix is
+the standard shadcn-v3-with-oklch pattern:
+- `src/index.css`: reformat every var to **bare components** — `--primary: 0.546 0.245 262.881;`
+- `tailwind.config.ts`: `primary: 'oklch(var(--primary) / <alpha-value>)'` (and same for all tokens).
+
+**Special cases to handle in that refactor:**
+- `--destructive-foreground: 210 40% 98%` is already a **bare HSL triplet** (the only token that
+  currently works) — don't blanket-convert it to the oklch pattern.
+- The `.dark` block has **alpha-baked** values (`--border: oklch(1 0 0 / 10%)`); a bare-component
+  conversion would turn them solid. **Mitigant:** dark mode is never activated (no `classList`
+  `dark` toggling anywhere in `src/`), so `.dark` is currently dead code — but fix it correctly if
+  it's ever wired up.
+
+**Blast radius / why deferred.** These tokens drive the shadcn primitives (Button, Dialog, Tabs,
+Input, Accordion) that live mostly on the **auth-gated admin / tracker-drawer / letters** screens,
+which can't be verified without logging in (invite-only). The homepage mostly uses explicit colors
+and is barely affected. Do this as its own change with the admin spot-checking those screens after
+deploy; easily reverted if a screen regresses.
+
 ### ✅ Join Flow Analytics — Click-Through Tracking — 2026-06-02
 
 `JoinSelector` fires a fire-and-forget `POST /api/analytics/join {status, mode}` when a
