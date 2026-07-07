@@ -35,23 +35,37 @@ function getGoogleClient(): OAuth2Client {
   return (googleClient ??= new OAuth2Client(googleClientId()))
 }
 
-export interface GoogleIdentity { email: string; sub: string; name: string | null }
+export interface GoogleIdentity { email: string; sub: string; name: string | null; emailVerified: boolean }
 
 /** Verifies a Google ID token and extracts identity. Throws if invalid. */
 export async function verifyGoogleIdToken(idToken: string): Promise<GoogleIdentity> {
   const ticket = await getGoogleClient().verifyIdToken({ idToken, audience: googleClientId() })
   const payload = ticket.getPayload()
   if (!payload?.email) throw new Error('Google token has no email')
-  return { email: payload.email, sub: payload.sub, name: payload.name ?? null }
+  // Google always emits `email_verified`; treat anything other than a literal `true` as
+  // unverified rather than assuming absence means verified (see nOAuth: a provider that
+  // lets the caller set an unverified email must never be trusted to assert ownership).
+  return { email: payload.email, sub: payload.sub, name: payload.name ?? null, emailVerified: payload.email_verified === true }
 }
 
 // --- Provider-agnostic login choke point -------------------------------------------------
 
-/** A verified identity from any auth provider, ready to be logged in. */
-export interface ProviderIdentity { provider: string; sub: string; email: string; name: string | null }
+/**
+ * A verified identity from any auth provider, ready to be logged in.
+ *
+ * `emailVerified` must reflect the PROVIDER's own proof that the caller controls this
+ * mailbox, not merely that the provider issued a validly-signed token. A validly-signed
+ * token only proves the caller authenticated with that provider — under a multi-tenant
+ * identity provider (e.g. Microsoft Entra `common`), an attacker can self-register a tenant
+ * and set the `email` claim to an arbitrary address, including one already invited here.
+ * Trusting `email` without a verified-ownership signal lets that attacker's token merge into
+ * the victim's account (nOAuth-style account takeover). See each adapter for how it derives
+ * this flag.
+ */
+export interface ProviderIdentity { provider: string; sub: string; email: string; name: string | null; emailVerified: boolean }
 
 export class AuthError extends Error {
-  constructor(public code: 'not_invited' | 'no_email' | 'invalid_token' | 'provider_unconfigured') {
+  constructor(public code: 'not_invited' | 'no_email' | 'invalid_token' | 'provider_unconfigured' | 'email_not_verified') {
     super(code)
   }
 }
@@ -64,6 +78,10 @@ export class AuthError extends Error {
 export async function loginWithIdentity(id: ProviderIdentity) {
   const email = id.email?.trim().toLowerCase()
   if (!email) throw new AuthError('no_email')
+  // Defense against nOAuth account takeover: a provider-signed token proves the caller
+  // authenticated, not that they own `email`. Reject before any allowlist lookup or upsert
+  // so an unverified-email token can never merge into (or create) an account.
+  if (!id.emailVerified) throw new AuthError('email_not_verified')
 
   const allowed = await authRepo.getAllowedEmail(email)
   const existing = await authRepo.findUserByEmail(email)

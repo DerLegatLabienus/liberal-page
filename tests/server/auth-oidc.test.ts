@@ -41,9 +41,16 @@ describe('verifyOidcIdToken', () => {
   })
 
   it('valid token → identity', async () => {
-    const token = await signToken({ sub: 'user-1', email: 'a@x.com', name: 'Alice' })
+    const token = await signToken({ sub: 'user-1', email: 'a@x.com', name: 'Alice', email_verified: true })
     const identity = await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: ISSUER, audience: AUDIENCE }, token)
-    expect(identity).toEqual({ sub: 'user-1', email: 'a@x.com', name: 'Alice', emailVerified: true })
+    expect(identity).toMatchObject({ sub: 'user-1', email: 'a@x.com', name: 'Alice', emailVerified: true })
+  })
+
+  it('exposes the raw verified claims so provider adapters can read non-standard fields', async () => {
+    const token = await signToken({ sub: 'user-1', email: 'a@x.com', xms_edov: true })
+    const identity = await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: ISSUER, audience: AUDIENCE }, token)
+    expect(identity.claims.xms_edov).toBe(true)
+    expect(identity.claims.sub).toBe('user-1')
   })
 
   it('falls back to preferred_username when email is absent', async () => {
@@ -52,10 +59,14 @@ describe('verifyOidcIdToken', () => {
     expect(identity.email).toBe('b@x.com')
   })
 
-  it('emailVerified is false only when the claim is explicitly false', async () => {
-    const token = await signToken({ sub: 'user-3', email: 'c@x.com', email_verified: false })
-    const identity = await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: ISSUER, audience: AUDIENCE }, token)
-    expect(identity.emailVerified).toBe(false)
+  it('emailVerified fails closed: true only when email_verified is explicitly true', async () => {
+    // Explicit false → false, and — critically — an ABSENT claim → false. Never trust an
+    // unstated claim as verification (a naive future OIDC provider must not inherit fail-open).
+    const explicitFalse = await signToken({ sub: 'user-3', email: 'c@x.com', email_verified: false })
+    expect((await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: ISSUER, audience: AUDIENCE }, explicitFalse)).emailVerified).toBe(false)
+
+    const absent = await signToken({ sub: 'user-4', email: 'd@x.com' })
+    expect((await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: ISSUER, audience: AUDIENCE }, absent)).emailVerified).toBe(false)
   })
 
   it('wrong audience → throws', async () => {

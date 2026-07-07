@@ -44,7 +44,16 @@ export async function verifyMicrosoftIdToken(idToken: string): Promise<ProviderI
 
   try {
     const identity = await verifyOidcIdToken({ jwksUrl: JWKS_URL, issuer: iss, audience: clientId }, idToken)
-    return { provider: 'microsoft', sub: identity.sub, email: identity.email ?? '', name: identity.name }
+    // Microsoft never emits the standard `email_verified` claim, so `verifyOidcIdToken`'s
+    // generic `emailVerified` (which defaults to true when the claim is absent) must NOT be
+    // trusted here — doing so would accept every Microsoft token as "verified" and reopen
+    // the nOAuth hole this adapter exists to close. The actual verified-ownership signal for
+    // Microsoft is the optional `xms_edov` ("email domain owner verified") claim, which is
+    // only present/true when the tenant's email domain has been verified. Absent, false, or
+    // any other value means "not proven" — fail closed.
+    const edov = identity.claims.xms_edov
+    const emailVerified = edov === true || edov === 'true' || edov === '1'
+    return { provider: 'microsoft', sub: identity.sub, email: identity.email ?? '', name: identity.name, emailVerified }
   } catch (err) {
     if (err instanceof AuthError) throw err
     throw new AuthError('invalid_token')

@@ -21,12 +21,12 @@ const app = express()
 app.use(express.json())
 app.use('/api/auth', authRouter)
 
-function asGoogle(email: string, sub = 'gsub', name = 'Name') {
-  vi.mocked(verifyGoogleIdToken).mockResolvedValueOnce({ email, sub, name })
+function asGoogle(email: string, sub = 'gsub', name = 'Name', emailVerified = true) {
+  vi.mocked(verifyGoogleIdToken).mockResolvedValueOnce({ email, sub, name, emailVerified })
 }
 
-function asMicrosoft(email: string, sub = 'ms-sub', name = 'Name') {
-  vi.mocked(verifyMicrosoftIdToken).mockResolvedValueOnce({ provider: 'microsoft', sub, email, name })
+function asMicrosoft(email: string, sub = 'ms-sub', name = 'Name', emailVerified = true) {
+  vi.mocked(verifyMicrosoftIdToken).mockResolvedValueOnce({ provider: 'microsoft', sub, email, name, emailVerified })
 }
 
 describe('auth routes', () => {
@@ -100,6 +100,24 @@ describe('auth routes', () => {
     vi.mocked(verifyMicrosoftIdToken).mockRejectedValueOnce(new AuthError('invalid_token'))
     const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
     expect(res.status).toBe(401)
+  })
+
+  it('POST /microsoft: unverified email → 403, no user created', async () => {
+    await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'admin', createdAt: new Date() })
+    asMicrosoft('a@x.com', 'ms-sub', 'Name', false)
+    const res = await request(app).post('/api/auth/microsoft').send({ idToken: 'tok' })
+    expect(res.status).toBe(403)
+    expect(res.body.error).toMatch(/microsoft/i)
+    expect(await db.select().from(users)).toHaveLength(0)
+  })
+
+  it('POST /google: unverified email → 403, no user created', async () => {
+    await db.insert(allowedEmails).values({ email: 'a@x.com', role: 'admin', createdAt: new Date() })
+    asGoogle('a@x.com', 'gsub', 'Name', false)
+    const res = await request(app).post('/api/auth/google').send({ idToken: 'tok' })
+    expect(res.status).toBe(403)
+    expect(res.body.error).toMatch(/google/i)
+    expect(await db.select().from(users)).toHaveLength(0)
   })
 
   it('POST /unknown-provider → 400', async () => {

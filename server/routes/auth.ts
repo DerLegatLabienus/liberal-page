@@ -90,8 +90,11 @@ router.post('/magic-link/verify', async (req, res) => {
 
   try {
     const { email } = await verifyMagicLink(token)
+    // Magic-link's "verified email" proof is the delivery itself: only the inbox that
+    // received the link can present this single-use token, so ownership is already
+    // established by the time we get here.
     const { user, accessToken, refreshToken } = await loginWithIdentity({
-      provider: 'magic-link', sub: email, email, name: null,
+      provider: 'magic-link', sub: email, email, name: null, emailVerified: true,
     })
     res.json({ accessToken, refreshToken, user: publicUser(user) })
   } catch (err) {
@@ -99,6 +102,7 @@ router.post('/magic-link/verify', async (req, res) => {
       if (err.code === 'not_invited') return res.status(403).json({ error: 'This email is not invited' })
       if (err.code === 'invalid_token') return res.status(401).json({ error: 'Invalid or expired link' })
       if (err.code === 'no_email') return res.status(403).json({ error: 'Identity has no email' })
+      if (err.code === 'email_not_verified') return res.status(403).json({ error: 'Your email is not verified' })
     }
     throw err
   }
@@ -111,7 +115,7 @@ const verifiers: Record<string, (idToken: string) => Promise<ProviderIdentity>> 
   google: async (idToken) => {
     try {
       const g = await verifyGoogleIdToken(idToken)
-      return { provider: 'google', sub: g.sub, email: g.email, name: g.name }
+      return { provider: 'google', sub: g.sub, email: g.email, name: g.name, emailVerified: g.emailVerified }
     } catch {
       throw new AuthError('invalid_token')
     }
@@ -139,6 +143,9 @@ router.post('/:provider', async (req, res) => {
       if (err.code === 'invalid_token') return res.status(401).json({ error: 'Invalid token' })
       if (err.code === 'provider_unconfigured') return res.status(503).json({ error: 'Provider not configured' })
       if (err.code === 'no_email') return res.status(403).json({ error: 'Identity has no email' })
+      if (err.code === 'email_not_verified') {
+        return res.status(403).json({ error: `Your ${provider} account's email is not verified` })
+      }
     }
     throw err
   }
