@@ -37,10 +37,17 @@ function renderControl() {
 describe('AuthControl sign-in toasts', () => {
   beforeEach(() => { localStorage.clear(); vi.clearAllMocks() })
 
+  // The logged-out control is now a single "Sign in" button that opens a modal holding the
+  // Google button + email link options — open it first, then interact.
+  const openLoginModal = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: /sign in|התחבר/i }))
+    return screen.findByText('google-signin')
+  }
+
   it('shows an error toast when sign-in is rejected (uninvited 403)', async () => {
     vi.mocked(api.auth.google).mockRejectedValue(Object.assign(new Error('not invited'), { status: 403 }))
     renderControl()
-    await userEvent.click(await screen.findByText('google-signin'))
+    await userEvent.click(await openLoginModal())
     const alert = await screen.findByRole('alert')
     expect(alert.textContent ?? '').toMatch(/invit|מורש/i) // "not invited" he/en
   })
@@ -50,7 +57,7 @@ describe('AuthControl sign-in toasts', () => {
       accessToken: 'a', refreshToken: 'r', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: true },
     })
     renderControl()
-    await userEvent.click(await screen.findByText('google-signin'))
+    await userEvent.click(await openLoginModal())
     expect(await screen.findByRole('alert')).toBeInTheDocument()
   })
 
@@ -62,7 +69,7 @@ describe('AuthControl sign-in toasts', () => {
       accessToken: 'a', refreshToken: 'r', user: { id: 1, email: 'a@x.com', name: 'A', role: 'member', emailAlerts: true },
     })
     renderControl()
-    await userEvent.click(await screen.findByText('google-signin'))
+    await userEvent.click(await openLoginModal())
     const checkbox = await screen.findByRole('checkbox', { name: /alerts|התראות/i })
     await userEvent.click(checkbox)
     expect(api.auth.updateMe).toHaveBeenCalledWith(false)

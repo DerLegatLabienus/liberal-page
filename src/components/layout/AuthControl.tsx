@@ -1,9 +1,10 @@
 import { useState, lazy, Suspense } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
+import { XIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
-import { useDirection } from '@/hooks/useDirection'
 import { api, errorStatus } from '@/lib/api-client'
 
 // Admin-only and heavy (tabs, accordion, analytics) — lazy-loaded so the ~99% of visitors who
@@ -25,10 +26,11 @@ const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
  */
 export default function AuthControl() {
   const { t } = useTranslation()
-  const dir = useDirection()
   const auth = useAuthOptional()
   const toastCtx = useToastOptional()
   const [adminOpen, setAdminOpen] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [magicEmail, setMagicEmail] = useState('')
   const [magicSending, setMagicSending] = useState(false)
   const [magicSent, setMagicSent] = useState(false)
@@ -36,13 +38,16 @@ export default function AuthControl() {
   if (!auth || !auth.ready) return null
   const { user, signIn, signOut, updateUser } = auth
 
+  const openLogin = () => { setLoginError(null); setMagicSent(false); setLoginOpen(true) }
+
   const handleSignIn = (idToken: string) => {
+    setLoginError(null)
     signIn(idToken)
-      .then(() => toastCtx?.toast(t('auth.signed_in'), 'success'))
+      .then(() => { setLoginOpen(false); toastCtx?.toast(t('auth.signed_in'), 'success') })
       .catch((err: unknown) => {
-        // 403 = email not on the invite allowlist; anything else = generic failure.
-        const msg = errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed')
-        toastCtx?.toast(msg, 'error')
+        // 403 = email not on the invite allowlist; anything else = generic failure. Shown
+        // inside the modal (a toast would render behind the dialog's inert backdrop, unseen).
+        setLoginError(errorStatus(err) === 403 ? t('auth.not_invited') : t('auth.sign_in_failed'))
       })
   }
 
@@ -110,63 +115,88 @@ export default function AuthControl() {
     )
   }
 
-  // Two ways into the same invite-only account, given equal footing and a shared 240px rhythm:
-  // Google one-click, or a passwordless email link. The email field is one control — type,
-  // then press the inset send button (or Enter). The arrow points the reading-forward way so
-  // it reads as "send" in both Hebrew (RTL) and English (LTR).
+  // One "Sign in" button in the header opens a popup with every way into the invite-only
+  // account: Google one-click, or a passwordless email sign-in link. Keeping the choices behind
+  // a single trigger keeps the header uncluttered and gives the two paths room to breathe.
   return (
-    <div className="flex w-60 max-w-[80vw] flex-col gap-3">
-      <GoogleLogin
-        onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
-        onError={() => toastCtx?.toast(t('auth.sign_in_failed'), 'error')}
-        useOneTap={false}
-        shape="pill"
-        size="large"
-        width="240"
-        text="signin_with"
-        logo_alignment="center"
-      />
+    <>
+      <button
+        type="button"
+        onClick={openLogin}
+        className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+      >
+        {t('auth.sign_in')}
+      </button>
 
-      {magicSent ? (
-        <div
-          role="status"
-          className="flex items-start gap-2 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-2.5 text-xs leading-snug text-muted-foreground"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-          <span>{t('auth.magic_link_sent')}</span>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-2.5" aria-hidden>
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">{t('auth.or')}</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <form
-            onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }}
-            className="flex h-11 items-center gap-1 rounded-full border border-input bg-background ps-4 pe-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25"
+      <Dialog
+        open={loginOpen}
+        onOpenChange={(open) => { setLoginOpen(open); if (!open) { setMagicSent(false); setMagicEmail(''); setLoginError(null) } }}
+      >
+        <DialogContent className="max-w-xs rounded-2xl border border-border bg-background p-6 shadow-xl">
+          <DialogClose
+            aria-label={t('auth.close')}
+            className="absolute end-3 top-3 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <input
-              type="email"
-              value={magicEmail}
-              onChange={(e) => setMagicEmail(e.target.value)}
-              placeholder={t('auth.email_placeholder')}
-              aria-label={t('auth.email_placeholder')}
-              className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={!magicEmail.trim() || magicSending}
-              aria-label={t('auth.magic_link_button')}
-              title={t('auth.magic_link_button')}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition enabled:hover:brightness-110 enabled:active:scale-95 disabled:opacity-40"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : undefined }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            </button>
-          </form>
-        </>
-      )}
-    </div>
+            <XIcon className="h-4 w-4" />
+          </DialogClose>
+
+          <DialogTitle className="text-lg font-semibold">{t('auth.sign_in')}</DialogTitle>
+          <DialogDescription className="mt-1">{t('auth.sign_in_hint')}</DialogDescription>
+
+          {loginError && (
+            <p role="alert" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {loginError}
+            </p>
+          )}
+
+          <div className="mt-5 flex flex-col gap-4">
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={(cred) => { if (cred.credential) handleSignIn(cred.credential) }}
+                onError={() => setLoginError(t('auth.sign_in_failed'))}
+                useOneTap={false}
+                shape="pill"
+                size="large"
+                width="260"
+                text="signin_with"
+              />
+            </div>
+
+            <div className="flex items-center gap-2.5" aria-hidden>
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">{t('auth.or')}</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            {magicSent ? (
+              <div
+                role="status"
+                className="rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm leading-snug text-muted-foreground"
+              >
+                {t('auth.magic_link_sent')}
+              </div>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }} className="flex flex-col gap-2">
+                <input
+                  type="email"
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  placeholder={t('auth.email_placeholder')}
+                  aria-label={t('auth.email_placeholder')}
+                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+                />
+                <button
+                  type="submit"
+                  disabled={!magicEmail.trim() || magicSending}
+                  className="h-10 rounded-lg border border-input bg-background text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-40"
+                >
+                  {t('auth.magic_link_button')}
+                </button>
+              </form>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

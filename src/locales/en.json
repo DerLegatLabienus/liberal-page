@@ -136,6 +136,9 @@
     "no_selection": "Search and select an MK above"
   },
   "auth": {
+    "sign_in": "Sign in",
+    "sign_in_hint": "Invite-only. Sign in with Google, or get a one-time link by email.",
+    "close": "Close",
     "sign_out": "Sign out",
     "signed_in": "Signed in",
     "not_invited": "This email isn't on the invite list. Ask an admin for an invitation.",
