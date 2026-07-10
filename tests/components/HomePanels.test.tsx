@@ -112,6 +112,21 @@ describe('HomePanels', () => {
     }
   })
 
+  // Regression: navigation must scroll the carousel track only, never the window.
+  // `scrollIntoView` walks up every scroll ancestor and yanks the whole page back to
+  // this section on each 6s auto-advance, no matter where the user has scrolled.
+  it('navigates without scrollIntoView (no page jump)', async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      render(<HomePanels />)
+      await userEvent.click(screen.getByRole('tab', { name: 'שאלות' }))
+      expect(screen.getByRole('tab', { name: 'שאלות' })).toHaveAttribute('aria-selected', 'true')
+      expect(spy).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('auto-advances to the next tab after the interval', () => {
     vi.useFakeTimers()
     try {

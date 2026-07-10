@@ -48,8 +48,18 @@ export default function HomePanels() {
 
   const goTo = useCallback((i: number) => {
     const clamped = Math.max(0, Math.min(i, panels.length - 1))
-    const panel = trackRef.current?.children[clamped] as HTMLElement | undefined
-    panel?.scrollIntoView?.({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    // Scroll the carousel track itself, never the window. `scrollIntoView` would
+    // walk up every scroll ancestor and yank the whole page to this section on each
+    // auto-advance; centring the panel via the track's own scrollLeft keeps the
+    // motion contained. The client-rect delta is direction-agnostic (works RTL/LTR).
+    const track = trackRef.current
+    const panel = track?.children[clamped] as HTMLElement | undefined
+    if (track && panel) {
+      const trackRect = track.getBoundingClientRect()
+      const panelRect = panel.getBoundingClientRect()
+      const delta = panelRect.left + panelRect.width / 2 - (trackRect.left + trackRect.width / 2)
+      track.scrollTo?.({ left: track.scrollLeft + delta, behavior: 'smooth' })
+    }
     setActive(clamped)
   }, [panels.length])
 
