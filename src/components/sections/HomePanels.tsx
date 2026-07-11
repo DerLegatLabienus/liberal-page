@@ -79,9 +79,11 @@ export default function HomePanels() {
     setActive(nearest)
   }, [])
 
-  // Auto-advance through the panels, wrapping at the end. Paused on hover/focus
-  // and disabled when the user prefers reduced motion. Re-arms whenever `active`
-  // changes, so a manual nav simply restarts the dwell timer.
+  // Auto-advance through the panels, wrapping at the end. Paused while a tab has
+  // keyboard focus (so mid-interaction navigation isn't yanked away) and disabled
+  // when the user prefers reduced motion — but NOT paused on mouse hover, which made
+  // the carousel look frozen whenever the cursor rested on it. Re-arms whenever
+  // `active` changes, so a manual nav simply restarts the dwell timer.
   useEffect(() => {
     if (paused || panels.length <= 1 || prefersReducedMotion()) return
     const id = setTimeout(() => goTo((active + 1) % panels.length), AUTO_ADVANCE_MS)
@@ -111,8 +113,6 @@ export default function HomePanels() {
       id="about"
       className="bg-white py-12"
       dir={direction}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
