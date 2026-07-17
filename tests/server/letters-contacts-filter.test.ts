@@ -61,4 +61,12 @@ describe('GET /api/letters/contacts?channel=', () => {
     expect(res.status).toBe(200)
     expect(res.body.contacts).toHaveLength(3)
   })
+
+  it('invalid channel param returns 400', async () => {
+    const res = await request(app)
+      .get('/api/letters/contacts?channel=bogus')
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid channel')
+  })
 })

@@ -58,7 +58,15 @@ router.get('/tags', async (_req, res) => {
 router.get('/contacts', async (req, res) => {
   try {
     const q = req.query.q as string | undefined
-    const channel = req.query.channel as ChannelKind | undefined
+    const channelRaw = req.query.channel as string | undefined
+
+    // Validate channel param if present
+    const validChannels: ChannelKind[] = ['email', 'sms', 'whatsapp']
+    if (channelRaw && !validChannels.includes(channelRaw as ChannelKind)) {
+      return res.status(400).json({ error: 'invalid channel' })
+    }
+    const channel = channelRaw as ChannelKind | undefined
+
     let contacts = q ? await contactsRepo.search(q) : await contactsRepo.list()
     if (channel) contacts = contacts.filter((c) => reachableOn(channel, c))
     res.json({ contacts })
