@@ -1,4 +1,5 @@
 import type { LetterAddress } from '../types'
+import { phoneForWhatsapp } from './phone'
 
 /**
  * Build a mailto: URI with pre-filled fields. Per RFC 6068, hfields must be
@@ -45,4 +46,22 @@ export function buildGmailComposeUrl(
   params.set('body', bodyPlain)
   // Gmail decodes + as space in su/body, so URLSearchParams' + encoding is fine here.
   return `https://mail.google.com/mail/?${params.toString()}`
+}
+
+/**
+ * WhatsApp click-to-chat deep link. wa.me wants an international number with no
+ * '+', spaces, or dashes. Opens the user's own WhatsApp with the text pre-filled;
+ * no media parameter exists, so this carries text only.
+ */
+export function buildWhatsappUrl(phoneE164: string, text: string): string {
+  return `https://wa.me/${phoneForWhatsapp(phoneE164)}?text=${encodeURIComponent(text)}`
+}
+
+/**
+ * SMS deep link. The `?&body=` form is deliberate cross-platform glue: iOS
+ * historically wants `&body=`, Android `?body=`; `?&body=` is honored by both.
+ * The '+' in the E.164 number is kept (dialers accept it).
+ */
+export function buildSmsUrl(phoneE164: string, text: string): string {
+  return `sms:${phoneE164}?&body=${encodeURIComponent(text)}`
 }
