@@ -1,13 +1,12 @@
 import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
-import { LettersRepository } from '../repositories/letters-repository'
+import { LettersRepository, attachChannels } from '../repositories/letters-repository'
 import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
-import { renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../services/letter-utils'
+import { buildChannelSends } from '../services/channel-send'
 import { reachableOn } from '../services/channel-availability'
-import type { LetterAddress } from '../db/schema'
 import type { ChannelKind } from '../../src/types'
 
 const router = Router()
@@ -89,23 +88,17 @@ router.get('/', async (req, res) => {
   }
 })
 
-// GET /api/letters/:id — letter detail with rendered HTML and mailto URL
+// GET /api/letters/:id — letter detail + per-channel resolved send links
 router.get('/:id', async (req, res) => {
   try {
     const id = parseId(req, res)
     if (id === null) return
-    const letter = await lettersRepo.getById(id)
-    if (!letter || letter.status !== 'published') return res.status(404).json({ error: 'Not found' })
+    const raw = await lettersRepo.getById(id)
+    if (!raw || raw.status !== 'published') return res.status(404).json({ error: 'Not found' })
 
-    const renderedHtml = await renderLetterHtml(letter.bodyHtml, letter.templateId)
-    const addrs = [
-      letter.toAddresses as LetterAddress[],
-      letter.ccAddresses as LetterAddress[],
-      letter.bccAddresses as LetterAddress[],
-    ] as const
-    const mailtoUrl = buildMailtoUrl(...addrs, letter.subject, letter.bodyPlain)
-    const gmailUrl = buildGmailComposeUrl(...addrs, letter.subject, letter.bodyPlain)
-    res.json({ letter, renderedHtml, mailtoUrl, gmailUrl })
+    const [letter] = await attachChannels([raw])
+    const channels = await buildChannelSends(letter.channels)
+    res.json({ letter, channels })
   } catch (err) {
     console.error('[letters] detail failed:', err)
     res.status(500).json({ error: 'Failed to load letter' })

@@ -2,7 +2,7 @@ import { LetterTemplatesRepository } from '../repositories/letter-templates-repo
 
 // URL builders live in a shared module so the client (member recipient edits) and
 // the server (detail endpoint) produce byte-identical URLs from one source of truth.
-export { buildMailtoUrl, buildGmailComposeUrl } from '../../src/lib/letter-urls'
+export { buildMailtoUrl, buildGmailComposeUrl, buildWhatsappUrl, buildSmsUrl } from '../../src/lib/letter-urls'
 
 const templatesRepo = new LetterTemplatesRepository()
 
