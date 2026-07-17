@@ -1,4 +1,4 @@
-import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags, Letter, LetterWithStats, LetterDetailResponse, LetterIssueTag, LetterContact, LetterTemplate, LetterMediaAsset } from '@/types'
+import type { Bill, Committee, Mk, TrackingType, KnessetMember, MkActivity, BillSearchResult, CommitteeListItem, KnessetBillOverviewItem, FeatureFlags, Letter, LetterWithStats, LetterDetailResponse, LetterIssueTag, LetterContact, LetterTemplate, LetterMediaAsset, ChannelKind, LetterChannelInput } from '@/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 
@@ -160,9 +160,9 @@ export const api = {
     },
     letters: {
       list: () => apiFetch<{ letters: LetterWithStats[] }>('/admin/letters'),
-      create: (body: Partial<Letter>) =>
+      create: (body: { title: string; status?: string; priority?: string; issueTagIds?: number[]; channels: LetterChannelInput[] }) =>
         apiFetch<{ letter: Letter }>('/admin/letters', { method: 'POST', body: JSON.stringify(body) }),
-      update: (id: number, body: Partial<Letter>) =>
+      update: (id: number, body: Partial<{ title: string; status: string; priority: string; issueTagIds: number[]; channels: LetterChannelInput[] }>) =>
         apiFetch<{ letter: Letter }>(`/admin/letters/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/${id}`, { method: 'DELETE' }),
       togglePin: (id: number, pinned: boolean) =>
@@ -180,11 +180,16 @@ export const api = {
         delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/tags/${id}`, { method: 'DELETE' }),
       },
       contacts: {
-        list: (q?: string) =>
-          apiFetch<{ contacts: LetterContact[] }>(`/admin/letters/contacts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-        create: (body: { displayName: string; email: string; category: string }) =>
+        list: (q?: string, channel?: ChannelKind) => {
+          const params = new URLSearchParams()
+          if (q) params.set('q', q)
+          if (channel) params.set('channel', channel)
+          const qs = params.toString()
+          return apiFetch<{ contacts: LetterContact[] }>(`/admin/letters/contacts${qs ? `?${qs}` : ''}`)
+        },
+        create: (body: { displayName: string; email?: string | null; phone?: string | null; hasWhatsapp?: boolean; photoUrl?: string | null; mkSiteId?: number | null; category?: string }) =>
           apiFetch<{ contact: LetterContact }>('/admin/letters/contacts', { method: 'POST', body: JSON.stringify(body) }),
-        update: (id: number, body: { displayName: string; email: string; category: string }) =>
+        update: (id: number, body: { displayName: string; email?: string | null; phone?: string | null; hasWhatsapp?: boolean; photoUrl?: string | null; mkSiteId?: number | null; category?: string }) =>
           apiFetch<{ ok: boolean }>(`/admin/letters/contacts/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
         delete: (id: number) => apiFetch<{ ok: boolean }>(`/admin/letters/contacts/${id}`, { method: 'DELETE' }),
       },
@@ -228,8 +233,21 @@ export const api = {
     detail: (id: number) => apiFetch<LetterDetailResponse>(`/letters/${id}`),
     recordSend: (id: number, action: 'mailto' | 'copy') =>
       apiFetch<{ ok: boolean }>(`/letters/${id}/send`, { method: 'POST', body: JSON.stringify({ action }) }),
-    contacts: (q?: string) =>
-      apiFetch<{ contacts: LetterContact[] }>(`/letters/contacts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    contacts: (q?: string, channel?: ChannelKind) => {
+      const params = new URLSearchParams()
+      if (q) params.set('q', q)
+      if (channel) params.set('channel', channel)
+      const qs = params.toString()
+      return apiFetch<{ contacts: LetterContact[] }>(`/letters/contacts${qs ? `?${qs}` : ''}`)
+    },
+    // Public, unauthenticated: POST /api/public/letters/:id/send?action=...&contactId=...
+    // Fire-and-forget; the endpoint always responds 204 (no JSON body), so this bypasses
+    // apiFetch's JSON parsing and just posts the query string.
+    publicSend: (id: number, action: 'mailto' | 'gmail' | 'copy' | 'sms' | 'whatsapp', contactId?: number): Promise<void> => {
+      const params = new URLSearchParams({ action })
+      if (contactId != null) params.set('contactId', String(contactId))
+      return fetch(`${API_BASE}/public/letters/${id}/send?${params.toString()}`, { method: 'POST' }).then(() => undefined)
+    },
   },
 }
 
