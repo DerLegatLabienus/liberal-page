@@ -1,4 +1,4 @@
-import { serial, integer, text, timestamp, jsonb, primaryKey } from 'drizzle-orm/pg-core'
+import { serial, integer, text, timestamp, jsonb, primaryKey, boolean, unique } from 'drizzle-orm/pg-core'
 import { users } from './tracking'
 import { lettersSchema, analyticsSchema } from './schemas'
 
@@ -14,7 +14,11 @@ export const letterIssueTags = lettersSchema.table('letter_issue_tags', {
 export const letterContacts = lettersSchema.table('letter_contacts', {
   id: serial('id').primaryKey(),
   displayName: text('display_name').notNull(),
-  email: text('email').notNull().unique(),
+  email: text('email').unique(),                 // now nullable (many NULLs allowed under unique index)
+  phone: text('phone'),                          // E.164
+  hasWhatsapp: boolean('has_whatsapp').notNull().default(false),
+  photoUrl: text('photo_url'),
+  mkSiteId: integer('mk_site_id'),
   category: text('category').notNull().default('custom'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -47,6 +51,24 @@ export const letters = lettersSchema.table('letters', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+export const letterChannels = lettersSchema.table('letter_channels', {
+  id: serial('id').primaryKey(),
+  letterId: integer('letter_id').notNull().references(() => letters.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),                  // 'email' | 'sms' | 'whatsapp'
+  enabled: boolean('enabled').notNull().default(true),
+  recipientIds: jsonb('recipient_ids').$type<number[]>().notNull().default([]),
+  ccIds: jsonb('cc_ids').$type<number[]>().notNull().default([]),
+  bccIds: jsonb('bcc_ids').$type<number[]>().notNull().default([]),
+  bodyText: text('body_text').notNull().default(''),
+  subject: text('subject'),                      // email-only
+  bodyHtml: text('body_html'),                   // email-only
+  templateId: integer('template_id').references(() => letterTemplates.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqLetterKind: unique().on(t.letterId, t.kind),
+}))
 
 export const letterMediaAssets = lettersSchema.table('letter_media_assets', {
   id: serial('id').primaryKey(),
