@@ -36,6 +36,22 @@ describe('LetterChannelsRepository', () => {
     expect(await repo.contactReferenced(99)).toBe(false)
   })
 
+  it('sanitizes email bodyHtml before storage (stored-XSS regression)', async () => {
+    const id = await newLetter()
+    await repo.replaceForLetter(id, [
+      {
+        kind: 'email',
+        recipientIds: [1],
+        bodyText: 'plain',
+        subject: 'S',
+        bodyHtml: '<p>hi</p><script>alert(1)</script>',
+      },
+    ])
+    const [channel] = await repo.listByLetter(id)
+    expect(channel.bodyHtml).not.toContain('<script>')
+    expect(channel.bodyHtml).toContain('<p>hi</p>')
+  })
+
   it('contactReferenced finds contacts in ccIds and bccIds', async () => {
     const id = await newLetter()
     await repo.replaceForLetter(id, [

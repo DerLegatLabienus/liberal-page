@@ -1,6 +1,7 @@
 import { eq, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { letterChannels } from '../db/schema'
+import { sanitizeLetterHtml } from '../services/html-sanitizer'
 
 export type LetterChannelRow = typeof letterChannels.$inferSelect
 
@@ -49,7 +50,7 @@ export class LetterChannelsRepository {
           bccIds: c.bccIds ?? [],
           bodyText: c.bodyText ?? '',
           subject: c.subject ?? null,
-          bodyHtml: c.bodyHtml ?? null,
+          bodyHtml: c.bodyHtml ? sanitizeLetterHtml(c.bodyHtml) : (c.bodyHtml ?? null),
           templateId: c.templateId ?? null,
           createdAt: now,
           updatedAt: now,
