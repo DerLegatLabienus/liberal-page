@@ -35,4 +35,15 @@ describe('LetterChannelsRepository', () => {
     expect(await repo.contactReferenced(7)).toBe(true)
     expect(await repo.contactReferenced(99)).toBe(false)
   })
+
+  it('contactReferenced finds contacts in ccIds and bccIds', async () => {
+    const id = await newLetter()
+    await repo.replaceForLetter(id, [
+      { kind: 'sms', recipientIds: [1], ccIds: [2], bccIds: [3], bodyText: 'x' },
+    ])
+    expect(await repo.contactReferenced(1)).toBe(true) // in recipientIds
+    expect(await repo.contactReferenced(2)).toBe(true) // in ccIds
+    expect(await repo.contactReferenced(3)).toBe(true) // in bccIds
+    expect(await repo.contactReferenced(99)).toBe(false) // not in any list
+  })
 })
