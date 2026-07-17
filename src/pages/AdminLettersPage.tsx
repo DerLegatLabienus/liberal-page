@@ -7,7 +7,8 @@ import { splitSends } from '@/lib/letter-sends'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
 import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
-import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterAddress } from '@/types'
+import SmsBodyEditor from '@/components/letters/SmsBodyEditor'
+import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterChannelInput, ChannelKind } from '@/types'
 
 type Tab = 'letters' | 'tags' | 'contacts' | 'templates'
 
@@ -304,13 +305,19 @@ export default function AdminLettersPage() {
 }
 
 type NewLetterBody = {
-  title: string; subject: string; bodyHtml: string
-  toAddresses: LetterAddress[]
-  ccAddresses: LetterAddress[]
-  bccAddresses: LetterAddress[]
-  status: Letter['status']; priority: Letter['priority']
-  templateId: number | null
+  title: string
+  status: Letter['status']
+  priority: Letter['priority']
+  issueTagIds: number[]
+  channels: LetterChannelInput[]
 }
+
+const CHANNEL_LABELS: Record<ChannelKind, string> = {
+  email: 'Email',
+  sms: 'SMS',
+  whatsapp: 'WhatsApp',
+}
+const CHANNEL_ORDER: ChannelKind[] = ['email', 'sms', 'whatsapp']
 
 function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLetter, onCancel }: {
   templates: LetterTemplate[]
@@ -321,23 +328,87 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
   onCancel?: () => void
 }) {
   const isEdit = !!initialLetter
+  const seed = initialLetter?.channels ?? []
+  const seedEmail = seed.find((c) => c.kind === 'email')
+  const seedSms = seed.find((c) => c.kind === 'sms')
+  const seedWa = seed.find((c) => c.kind === 'whatsapp')
+
   const [open, setOpen] = useState(isEdit)
   const [saving, setSaving] = useState(false)
+
+  // Shared header state
   const [title, setTitle] = useState(initialLetter?.title ?? '')
-  const [subject, setSubject] = useState(initialLetter?.subject ?? '')
-  const [bodyHtml, setBodyHtml] = useState(initialLetter?.bodyHtml ?? '')
-  const [toAddresses, setToAddresses] = useState<LetterAddress[]>(initialLetter?.toAddresses ?? [])
-  const [ccAddresses, setCcAddresses] = useState<LetterAddress[]>(initialLetter?.ccAddresses ?? [])
-  const [bccAddresses, setBccAddresses] = useState<LetterAddress[]>(initialLetter?.bccAddresses ?? [])
-  const [showCc, setShowCc] = useState((initialLetter?.ccAddresses?.length ?? 0) > 0)
-  const [showBcc, setShowBcc] = useState((initialLetter?.bccAddresses?.length ?? 0) > 0)
   const [status, setStatus] = useState<Letter['status']>(initialLetter?.status ?? 'published')
   const [priority, setPriority] = useState<Letter['priority']>(initialLetter?.priority ?? 'normal')
-  const [templateId, setTemplateId] = useState<number | null>(initialLetter?.templateId ?? null)
+  const [issueTagIds] = useState<number[]>(initialLetter?.issueTagIds ?? [])
+
+  // Which channels are enabled + which tab is active
+  const [enabled, setEnabled] = useState<Set<ChannelKind>>(() =>
+    isEdit && seed.length ? new Set(seed.map((c) => c.kind)) : new Set<ChannelKind>(['email']))
+  const [activeTab, setActiveTab] = useState<ChannelKind>(() =>
+    isEdit && seed.length ? seed[0].kind : 'email')
+
+  // Email channel state
+  const [subject, setSubject] = useState(seedEmail?.subject ?? '')
+  const [bodyHtml, setBodyHtml] = useState(seedEmail?.bodyHtml ?? '')
+  const [toIds, setToIds] = useState<number[]>(seedEmail?.recipientIds ?? [])
+  const [ccIds, setCcIds] = useState<number[]>(seedEmail?.ccIds ?? [])
+  const [bccIds, setBccIds] = useState<number[]>(seedEmail?.bccIds ?? [])
+  const [templateId, setTemplateId] = useState<number | null>(seedEmail?.templateId ?? null)
+  const [showCc, setShowCc] = useState((seedEmail?.ccIds?.length ?? 0) > 0)
+  const [showBcc, setShowBcc] = useState((seedEmail?.bccIds?.length ?? 0) > 0)
   const [beautifying, setBeautifying] = useState(false)
   const [beautifyError, setBeautifyError] = useState<string | null>(null)
 
-  const searchContacts = (q: string) => api.admin.letters.contacts.list(q).then((r) => r.contacts)
+  // SMS channel state
+  const [smsIds, setSmsIds] = useState<number[]>(seedSms?.recipientIds ?? [])
+  const [smsBody, setSmsBody] = useState(seedSms?.bodyText ?? '')
+
+  // WhatsApp channel state
+  const [waIds, setWaIds] = useState<number[]>(seedWa?.recipientIds ?? [])
+  const [waBody, setWaBody] = useState(seedWa?.bodyText ?? '')
+
+  // Per-channel candidate contacts (channel-filtered server-side, then filtered locally by the picker)
+  const [emailContacts, setEmailContacts] = useState<LetterContact[]>([])
+  const [smsContacts, setSmsContacts] = useState<LetterContact[]>([])
+  const [waContacts, setWaContacts] = useState<LetterContact[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    Promise.all([
+      api.letters.contacts(undefined, 'email'),
+      api.letters.contacts(undefined, 'sms'),
+      api.letters.contacts(undefined, 'whatsapp'),
+    ]).then(([e, s, w]) => {
+      if (cancelled) return
+      setEmailContacts(e.contacts); setSmsContacts(s.contacts); setWaContacts(w.contacts)
+    }).catch(() => { /* leave pickers empty on failure */ })
+    return () => { cancelled = true }
+  }, [open])
+
+  function toggleChannel(kind: ChannelKind) {
+    setEnabled((prev) => {
+      const next = new Set(prev)
+      if (next.has(kind)) {
+        next.delete(kind)
+        // Never leave the active tab pointing at a disabled channel.
+        if (activeTab === kind) {
+          const fallback = CHANNEL_ORDER.find((k) => next.has(k))
+          if (fallback) setActiveTab(fallback)
+        }
+      } else {
+        next.add(kind)
+        setActiveTab(kind) // jump to a freshly enabled channel
+      }
+      return next
+    })
+  }
+
+  // Guard against an active tab that isn't enabled (e.g. after toggling it off).
+  const shownTab: ChannelKind | null = enabled.has(activeTab)
+    ? activeTab
+    : CHANNEL_ORDER.find((k) => enabled.has(k)) ?? null
 
   async function beautify() {
     if (!bodyHtml.trim()) return
@@ -352,22 +423,41 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
     }
   }
 
+  function buildChannels(): LetterChannelInput[] {
+    const channels: LetterChannelInput[] = []
+    if (enabled.has('email')) {
+      channels.push({
+        kind: 'email', recipientIds: toIds, ccIds, bccIds,
+        subject, bodyHtml, bodyText: '', templateId,
+      })
+    }
+    if (enabled.has('sms')) channels.push({ kind: 'sms', recipientIds: smsIds, bodyText: smsBody })
+    if (enabled.has('whatsapp')) channels.push({ kind: 'whatsapp', recipientIds: waIds, bodyText: waBody })
+    return channels
+  }
+
+  function valid(): boolean {
+    if (!title.trim() || enabled.size === 0) return false
+    if (enabled.has('email') && (!subject.trim() || !bodyHtml.trim() || toIds.length === 0)) return false
+    if (enabled.has('sms') && !smsBody.trim()) return false
+    if (enabled.has('whatsapp') && !waBody.trim()) return false
+    return true
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title || !subject || !bodyHtml || toAddresses.length === 0) return
+    if (!valid()) return
     setSaving(true)
     try {
-      await onSubmit({
-        title, subject, bodyHtml,
-        toAddresses, ccAddresses, bccAddresses,
-        status, priority, templateId,
-      })
+      await onSubmit({ title, status, priority, issueTagIds, channels: buildChannels() })
       // Create mode resets the form for the next letter; edit mode is torn down by the
       // parent (clears editingLetter → the keyed remount resets everything).
       if (!isEdit) {
-        setTitle(''); setSubject(''); setBodyHtml('')
-        setToAddresses([]); setCcAddresses([]); setBccAddresses([])
-        setShowCc(false); setShowBcc(false); setTemplateId(null)
+        setTitle('')
+        setSubject(''); setBodyHtml(''); setTemplateId(null)
+        setToIds([]); setCcIds([]); setBccIds([]); setShowCc(false); setShowBcc(false)
+        setSmsIds([]); setSmsBody(''); setWaIds([]); setWaBody('')
+        setEnabled(new Set<ChannelKind>(['email'])); setActiveTab('email')
         setOpen(false)
       }
     } finally {
@@ -393,29 +483,14 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
         <h3 className="font-semibold">{isEdit ? 'Edit Letter' : 'New Letter'}</h3>
         <button type="button" onClick={() => { setOpen(false); onCancel?.() }} className="text-xs text-muted-foreground hover:underline">Cancel</button>
       </div>
+
+      {/* Shared header */}
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identify</div>
         <div className="col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} required
             className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Internal title" />
-        </div>
-        <div className="col-span-2">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Email Subject *</label>
-          <input value={subject} onChange={(e) => setSubject(e.target.value)} required
-            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Re: ..." />
-        </div>
-
-        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipients</div>
-        <div className="col-span-2 space-y-3">
-          <RecipientEditor label="To *" value={toAddresses} onChange={setToAddresses}
-            search={searchContacts} allowFreeForm />
-          {showCc
-            ? <RecipientEditor label="Cc" value={ccAddresses} onChange={setCcAddresses} search={searchContacts} allowFreeForm />
-            : <button type="button" onClick={() => setShowCc(true)} className="text-xs text-primary hover:underline">+ add Cc</button>}
-          {showBcc
-            ? <RecipientEditor label="Bcc" value={bccAddresses} onChange={setBccAddresses} search={searchContacts} allowFreeForm />
-            : <button type="button" onClick={() => setShowBcc(true)} className="text-xs text-primary hover:underline">+ add Bcc</button>}
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
@@ -434,65 +509,169 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
             <option value="urgent">Urgent</option>
           </select>
         </div>
+      </div>
 
-        <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content</div>
-        <div className="col-span-2">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Template</label>
-          <select
-            value={templateId ?? ''}
-            onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full rounded border px-3 py-1.5 text-sm"
-          >
-            <option value="">— None (raw body) —</option>
-            {templates.map((tpl) => (
-              <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">
-            The body below is injected into the template’s <code>{'{{CONTENT}}'}</code> placeholder when the letter is viewed.
-          </p>
-        </div>
-        <div className="col-span-2">
-          <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-muted-foreground">Body HTML *</label>
-            {beautifyEnabled && (
-              <button
-                type="button"
-                onClick={beautify}
-                disabled={beautifying || !bodyHtml.trim()}
-                className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-50"
-              >
-                {beautifying ? '✨ Beautifying…' : '✨ Beautify'}
-              </button>
-            )}
-          </div>
-          <HtmlCodeEditor
-            value={bodyHtml}
-            onChange={setBodyHtml}
-            ariaLabel="Body HTML"
-            placeholder={'<p>לכבוד ח"כ...</p>'}
-          />
-          {beautifyError && <p className="mt-1 text-xs text-destructive">{beautifyError}</p>}
-          {beautifyEnabled && (
-            <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
-          )}
-        </div>
-        <div className="col-span-2">
-          <p className="mb-1 text-xs text-muted-foreground">Live preview:</p>
-          <iframe
-            title="composer-preview"
-            srcDoc={(templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
-              .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>')}
-            className="h-48 w-full rounded border"
-            sandbox="allow-same-origin"
-          />
+      {/* Channel enable toggles */}
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Channels</div>
+        <div className="flex flex-wrap gap-3">
+          {CHANNEL_ORDER.map((kind) => (
+            <label key={kind} className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={enabled.has(kind)}
+                onChange={() => toggleChannel(kind)}
+                aria-label={`toggle ${CHANNEL_LABELS[kind]} channel`}
+              />
+              {CHANNEL_LABELS[kind]}
+            </label>
+          ))}
         </div>
       </div>
-      <button type="submit" disabled={saving}
+
+      {/* Tab bar — one tab per enabled channel */}
+      <div className="flex gap-1 border-b">
+        {CHANNEL_ORDER.filter((k) => enabled.has(k)).map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => setActiveTab(kind)}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              shownTab === kind
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {CHANNEL_LABELS[kind]}
+          </button>
+        ))}
+      </div>
+
+      {/* Email tab */}
+      {shownTab === 'email' && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Email Subject *</label>
+            <input value={subject} onChange={(e) => setSubject(e.target.value)}
+              className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Re: ..." />
+          </div>
+
+          <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipients</div>
+          <div className="col-span-2 space-y-3">
+            <RecipientEditor label="To *" value={toIds} onChange={setToIds} contacts={emailContacts} />
+            {showCc
+              ? <RecipientEditor label="Cc" value={ccIds} onChange={setCcIds} contacts={emailContacts} />
+              : <button type="button" onClick={() => setShowCc(true)} className="text-xs text-primary hover:underline">+ add Cc</button>}
+            {showBcc
+              ? <RecipientEditor label="Bcc" value={bccIds} onChange={setBccIds} contacts={emailContacts} />
+              : <button type="button" onClick={() => setShowBcc(true)} className="text-xs text-primary hover:underline">+ add Bcc</button>}
+          </div>
+
+          <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content</div>
+          <div className="col-span-2">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Template</label>
+            <select
+              value={templateId ?? ''}
+              onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded border px-3 py-1.5 text-sm"
+            >
+              <option value="">— None (raw body) —</option>
+              {templates.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The body below is injected into the template’s <code>{'{{CONTENT}}'}</code> placeholder when the letter is viewed.
+            </p>
+          </div>
+          <div className="col-span-2">
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-xs font-medium text-muted-foreground">Body HTML *</label>
+              {beautifyEnabled && (
+                <button
+                  type="button"
+                  onClick={beautify}
+                  disabled={beautifying || !bodyHtml.trim()}
+                  className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-50"
+                >
+                  {beautifying ? '✨ Beautifying…' : '✨ Beautify'}
+                </button>
+              )}
+            </div>
+            <HtmlCodeEditor
+              value={bodyHtml}
+              onChange={setBodyHtml}
+              ariaLabel="Body HTML"
+              placeholder={'<p>לכבוד ח"כ...</p>'}
+            />
+            {beautifyError && <p className="mt-1 text-xs text-destructive">{beautifyError}</p>}
+            {beautifyEnabled && (
+              <p className="mt-1 text-xs text-muted-foreground">Beautify uses AI and may change wording — review before saving.</p>
+            )}
+          </div>
+          <div className="col-span-2">
+            <p className="mb-1 text-xs text-muted-foreground">Live preview:</p>
+            <iframe
+              title="composer-preview"
+              srcDoc={(templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
+                .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>')}
+              className="h-48 w-full rounded border"
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* SMS tab */}
+      {shownTab === 'sms' && (
+        <ChannelBodyTab
+          mode="sms"
+          body={smsBody} onBody={setSmsBody}
+          ids={smsIds} onIds={setSmsIds}
+          contacts={smsContacts}
+        />
+      )}
+
+      {/* WhatsApp tab */}
+      {shownTab === 'whatsapp' && (
+        <ChannelBodyTab
+          mode="whatsapp"
+          body={waBody} onBody={setWaBody}
+          ids={waIds} onIds={setWaIds}
+          contacts={waContacts}
+        />
+      )}
+
+      <button type="submit" disabled={saving || !valid()}
         className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
         {saving ? 'Saving...' : (isEdit ? 'Save' : 'Create Letter')}
       </button>
     </form>
+  )
+}
+
+function ChannelBodyTab({ mode, body, onBody, ids, onIds, contacts }: {
+  mode: 'sms' | 'whatsapp'
+  body: string
+  onBody: (v: string) => void
+  ids: number[]
+  onIds: (next: number[]) => void
+  contacts: LetterContact[]
+}) {
+  const label = mode === 'sms' ? 'SMS' : 'WhatsApp'
+  const reachable = new Set(contacts.map((c) => c.id))
+  const unreachable = ids.filter((id) => !reachable.has(id)).length
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">{label} Body *</label>
+        <SmsBodyEditor value={body} onChange={onBody} mode={mode} channelLabel={`${label} body`} />
+      </div>
+      <RecipientEditor label="Recipients" value={ids} onChange={onIds} contacts={contacts} />
+      <p className="text-xs text-muted-foreground">
+        {unreachable} מתוך {ids.length} נמענים ללא ערוץ זה
+      </p>
+    </div>
   )
 }
 

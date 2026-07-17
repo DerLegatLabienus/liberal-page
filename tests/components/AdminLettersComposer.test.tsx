@@ -2,18 +2,26 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-vi.mock('@/lib/api-client', () => ({
-  api: { admin: { letters: {
-    create: vi.fn().mockResolvedValue({ letter: {} }),
-    update: vi.fn().mockResolvedValue({ letter: {} }),
-    regenerateShares: vi.fn().mockResolvedValue({ regenerated: 3 }),
-    list: vi.fn().mockResolvedValue({ letters: [] }),
-    contacts: { list: vi.fn().mockResolvedValue({ contacts: [
-      { id: 1, displayName: 'דובר חינוך', email: 'dover@education.gov.il', category: 'ministry', createdAt: '' },
-    ] }) },
-    letterTemplates: { list: vi.fn().mockResolvedValue({ templates: [] }) },
-  } } },
-}))
+vi.mock('@/lib/api-client', () => {
+  const candidates = [
+    { id: 1, displayName: 'דובר חינוך', email: 'dover@education.gov.il', phone: '050-1234567', hasWhatsapp: true, photoUrl: null, mkSiteId: null, category: 'ministry', createdAt: '' },
+  ]
+  return {
+    api: {
+      admin: { letters: {
+        create: vi.fn().mockResolvedValue({ letter: {} }),
+        update: vi.fn().mockResolvedValue({ letter: {} }),
+        regenerateShares: vi.fn().mockResolvedValue({ regenerated: 3 }),
+        list: vi.fn().mockResolvedValue({ letters: [] }),
+        // Admin Contacts tab still uses this list endpoint.
+        contacts: { list: vi.fn().mockResolvedValue({ contacts: candidates }) },
+        letterTemplates: { list: vi.fn().mockResolvedValue({ templates: [] }) },
+      } },
+      // Composer per-channel recipient pickers use the channel-filtered contacts endpoint.
+      letters: { contacts: vi.fn().mockResolvedValue({ contacts: candidates }) },
+    },
+  }
+})
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { role: 'admin' }, ready: true }) }))
 vi.mock('@/hooks/useFeatureFlags', () => ({ useFeatureFlags: () => ({}) }))
 // CodeMirror doesn't run under happy-dom; mock the editor to a plain textarea that
@@ -32,8 +40,12 @@ import type { LetterWithStats } from '@/types'
 const renderPage = () => render(<MemoryRouter><AdminLettersPage /></MemoryRouter>)
 
 const existingLetter: LetterWithStats = {
-  id: 7, title: 'כותרת קיימת', subject: 'נושא קיים', bodyHtml: '<p>גוף קיים</p>', bodyPlain: 'גוף קיים',
-  templateId: null, toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], ccAddresses: [], bccAddresses: [],
+  id: 7, title: 'כותרת קיימת',
+  channels: [{
+    id: 1, letterId: 7, kind: 'email', enabled: true,
+    recipientIds: [1], ccIds: [], bccIds: [],
+    bodyText: '', subject: 'נושא קיים', bodyHtml: '<p>גוף קיים</p>', templateId: null,
+  }],
   issueTagIds: [], status: 'published', priority: 'normal', pinnedAt: null, activityScore: 0,
   publishedAt: null, createdAt: '', updatedAt: '', totalSends: 0, breakdown: {},
 }
@@ -55,7 +67,34 @@ describe('admin composer multi-recipient', () => {
     await user.click(await screen.findByText(/dover@education.gov.il/))
     await user.click(screen.getByRole('button', { name: /Create Letter/ }))
     expect(api.admin.letters.create).toHaveBeenCalledWith(expect.objectContaining({
-      toAddresses: [{ email: 'dover@education.gov.il', display_name: 'דובר חינוך', contact_id: 1 }],
+      channels: expect.arrayContaining([
+        expect.objectContaining({ kind: 'email', subject: 'נושא', bodyHtml: '<p>גוף</p>', recipientIds: [1] }),
+      ]),
+    }))
+  })
+
+  it('renders the (mocked) HTML editor on the Email tab', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /New Letter/ }))
+    // Email is enabled by default; the mocked HtmlCodeEditor exposes the body placeholder.
+    expect(screen.getByPlaceholderText(/<p>/)).toBeInTheDocument()
+  })
+
+  it('enables the SMS tab, types a Hebrew body, and submits a sms channel', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /New Letter/ }))
+    await user.type(screen.getByPlaceholderText('Internal title'), 'כותרת')
+    // Enable SMS (jumps to its tab), then disable Email so its fields aren't required.
+    await user.click(screen.getByRole('checkbox', { name: /toggle SMS channel/ }))
+    await user.click(screen.getByRole('checkbox', { name: /toggle Email channel/ }))
+    await user.type(screen.getByLabelText('SMS body'), 'שלום זו הודעת SMS')
+    await user.click(screen.getByRole('button', { name: /Create Letter/ }))
+    expect(api.admin.letters.create).toHaveBeenCalledWith(expect.objectContaining({
+      channels: expect.arrayContaining([
+        expect.objectContaining({ kind: 'sms', bodyText: 'שלום זו הודעת SMS' }),
+      ]),
     }))
   })
 
