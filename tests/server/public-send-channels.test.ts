@@ -36,6 +36,21 @@ describe('POST /api/public/letters/:id/send (sms/whatsapp channels)', () => {
     expect(sms?.breakdown).toMatchObject({ '5': 1 })
   })
 
+  it('rolls a public_sms send into the lifetime bucket alongside the per-contact breakdown', async () => {
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
+    const res = await request(app).post(`/api/public/letters/${l.id}/send?action=sms&contactId=5`)
+    expect(res.status).toBe(204)
+    await flush()
+    const stats = await analyticsRepo.getLifetimeForLetters([l.id])
+    expect(stats.get(l.id)?.total).toBe(1)
+    expect(stats.get(l.id)?.breakdown.public_sms).toBe(1)
+    // per-contact breakdown still lands in the fixed public_sms bucket, unaffected by the lifetime roll-up
+    const all = await bucketsFor(l.id)
+    const sms = all.find((r) => r.bucket === 'public_sms')
+    expect(sms?.total).toBe(1)
+    expect(sms?.breakdown).toMatchObject({ '5': 1 })
+  })
+
   it('records a public_whatsapp send with the contact id in the breakdown, and keeps sms/whatsapp buckets separate', async () => {
     const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await request(app).post(`/api/public/letters/${l.id}/send?action=whatsapp&contactId=7`)

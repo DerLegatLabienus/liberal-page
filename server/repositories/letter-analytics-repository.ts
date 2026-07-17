@@ -8,7 +8,14 @@ const LIFETIME = 'lifetime'
 export type LetterAnalyticsRow = typeof letterAnalytics.$inferSelect
 export interface LifetimeStats { total: number; breakdown: Record<string, number> }
 
-export type SendAction = 'mailto' | 'copy' | 'public_mailto' | 'public_gmail' | 'public_copy'
+export type SendAction =
+  | 'mailto'
+  | 'copy'
+  | 'public_mailto'
+  | 'public_gmail'
+  | 'public_copy'
+  | 'public_sms'
+  | 'public_whatsapp'
 
 export class LetterAnalyticsRepository {
   async record(letterId: number, action: SendAction, now: Date = new Date()): Promise<void> {

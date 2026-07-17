@@ -53,10 +53,13 @@ router.post('/:id/send', express.text({ type: '*/*', limit: '4kb' }), async (req
           const result = await verifyTurnstile(token, ip)
           if (result === 'rejected') return // human not confirmed → do not count
         }
-        if (CHANNEL_ACTIONS.has(action)) {
-          await analyticsRepo.recordChannel(id, BUCKET[action], contactId != null ? String(contactId) : BUCKET[action])
-        } else {
-          await analyticsRepo.record(id, BUCKET[action])
+        // Always roll the send into the lifetime/day buckets, same as mailto/gmail/copy, so
+        // sms/whatsapp are visible in the admin letters list's totalSends. Additionally, when a
+        // contactId is present, also record it into the fixed public_sms/public_whatsapp bucket
+        // broken down by recipient, so the per-official breakdown survives alongside lifetime.
+        await analyticsRepo.record(id, BUCKET[action])
+        if (CHANNEL_ACTIONS.has(action) && contactId != null) {
+          await analyticsRepo.recordChannel(id, BUCKET[action], String(contactId))
         }
         await lettersRepo.incrementActivityScore(id)
       } catch (err) {
