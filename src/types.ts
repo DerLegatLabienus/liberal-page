@@ -194,10 +194,42 @@ export interface LetterIssueTag {
   createdAt: string
 }
 
+export type ChannelKind = 'email' | 'sms' | 'whatsapp'
+
+export interface LetterChannel {
+  id: number
+  letterId: number
+  kind: ChannelKind
+  enabled: boolean
+  recipientIds: number[]
+  ccIds: number[]
+  bccIds: number[]
+  bodyText: string
+  subject: string | null
+  bodyHtml: string | null
+  templateId: number | null
+}
+
+export interface LetterChannelInput {
+  kind: ChannelKind
+  enabled?: boolean
+  recipientIds: number[]
+  ccIds?: number[]
+  bccIds?: number[]
+  bodyText: string
+  subject?: string | null
+  bodyHtml?: string | null
+  templateId?: number | null
+}
+
 export interface LetterContact {
   id: number
   displayName: string
-  email: string
+  email: string | null
+  phone: string | null
+  hasWhatsapp: boolean
+  photoUrl: string | null
+  mkSiteId: number | null
   category: string
   createdAt: string
 }
@@ -223,13 +255,7 @@ export interface LetterMediaAsset {
 export interface Letter {
   id: number
   title: string
-  subject: string
-  bodyHtml: string
-  bodyPlain: string
-  templateId: number | null
-  toAddresses: LetterAddress[]
-  ccAddresses: LetterAddress[]
-  bccAddresses: LetterAddress[]
+  channels: LetterChannel[]
   issueTagIds: number[]
   status: 'draft' | 'published'
   priority: 'normal' | 'high' | 'urgent'
@@ -245,9 +271,27 @@ export interface LetterWithStats extends Letter {
   breakdown: Record<string, number>
 }
 
+export interface RecipientSendLink {
+  contactId: number
+  displayName: string
+  photoUrl: string | null
+  url: string
+}
+
+export interface ChannelSend {
+  kind: ChannelKind
+  enabled: boolean
+  bodyText: string
+  unavailableCount: number
+  // email only:
+  mailtoUrl?: string
+  gmailUrl?: string
+  renderedHtml?: string
+  // sms / whatsapp only:
+  recipients?: RecipientSendLink[]
+}
+
 export interface LetterDetailResponse {
   letter: Letter
-  renderedHtml: string
-  mailtoUrl: string
-  gmailUrl: string
+  channels: ChannelSend[]
 }
