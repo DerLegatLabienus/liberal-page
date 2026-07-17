@@ -18,6 +18,17 @@ export class LetterAnalyticsRepository {
     await this.pruneOldDays(letterId, now)
   }
 
+  /**
+   * Record a single send into a fixed named bucket (not the day/lifetime windowed pair `record`
+   * writes), broken down by an arbitrary key. Used for public sms/whatsapp sends, where callers
+   * want one lifetime row per channel (e.g. `public_sms`) broken down by recipient contact id,
+   * distinct from the mailto/gmail/copy day+lifetime buckets. One row per (letterId, bucket);
+   * never pruned by `pruneOldDays` (bucket is not a day string and not `lifetime`).
+   */
+  async recordChannel(letterId: number, bucket: string, breakdownKey: string, now: Date = new Date()): Promise<void> {
+    await this.bump(letterId, bucket, breakdownKey, now)
+  }
+
   async getForLetter(letterId: number): Promise<{ lifetime: LetterAnalyticsRow | null; daily: LetterAnalyticsRow[] }> {
     const rows = await db.select().from(letterAnalytics).where(eq(letterAnalytics.letterId, letterId))
     const lifetime = rows.find((r) => r.bucket === LIFETIME) ?? null

@@ -6,6 +6,7 @@ import { LetterIssueTagsRepository } from '../repositories/letter-issue-tags-rep
 import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
 import { LetterTemplatesRepository } from '../repositories/letter-templates-repository'
 import { LetterMediaAssetsRepository } from '../repositories/letter-media-assets-repository'
+import { normalizePhone } from '../../src/lib/phone'
 import { sanitizeLetterHtml } from '../services/html-sanitizer'
 import * as r2 from '../services/r2-client'
 import { validateImage } from '../services/image-validator'
@@ -67,22 +68,56 @@ router.get('/contacts', async (req, res) => {
   res.json({ contacts })
 })
 
+interface ContactBody {
+  displayName?: string
+  email?: string
+  phone?: string
+  hasWhatsapp?: boolean
+  photoUrl?: string
+  mkSiteId?: number
+  category?: string
+}
+
+/** Validates + normalizes a contact payload. Returns an error message, or the repo-ready input. */
+function parseContact(body: ContactBody): { error: string } | { input: Parameters<LetterContactsRepository['create']>[0] } {
+  const { displayName, email, phone, hasWhatsapp, photoUrl, mkSiteId, category } = body
+  if (!displayName || (!email && !phone)) return { error: 'displayName and email or phone required' }
+  let e164: string | null = null
+  if (phone) {
+    e164 = normalizePhone(phone)
+    if (!e164) return { error: 'invalid phone' }
+  }
+  return {
+    input: {
+      displayName,
+      email: email ?? null,
+      phone: e164,
+      hasWhatsapp: !!hasWhatsapp,
+      photoUrl: photoUrl ?? null,
+      mkSiteId: mkSiteId ?? null,
+      category: category ?? 'custom',
+    },
+  }
+}
+
 router.post('/contacts', async (req, res) => {
-  const { displayName, email, category } = req.body as { displayName?: string; email?: string; category?: string }
-  if (!displayName || !email) return res.status(400).json({ error: 'displayName and email required' })
-  const contact = await contactsRepo.create({ displayName, email, category: category ?? 'custom' })
+  const parsed = parseContact(req.body as ContactBody)
+  if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+  const contact = await contactsRepo.create(parsed.input)
   res.status(201).json({ contact })
 })
 
 router.put('/contacts/:id', async (req, res) => {
-  const { displayName, email, category } = req.body as { displayName?: string; email?: string; category?: string }
-  if (!displayName || !email) return res.status(400).json({ error: 'displayName and email required' })
-  await contactsRepo.update(Number(req.params.id), { displayName, email, category: category ?? 'custom' })
+  const parsed = parseContact(req.body as ContactBody)
+  if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+  await contactsRepo.update(Number(req.params.id), parsed.input)
   res.json({ ok: true })
 })
 
 router.delete('/contacts/:id', async (req, res) => {
-  await contactsRepo.delete(Number(req.params.id))
+  const id = Number(req.params.id)
+  if (await contactsRepo.isReferenced(id)) return res.status(409).json({ error: 'contact is used by a letter' })
+  await contactsRepo.delete(id)
   res.json({ ok: true })
 })
 
