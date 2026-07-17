@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '@/lib/api-client'
+import { api, errorStatus } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useMkList } from '@/hooks/useMkList'
 import { splitSends } from '@/lib/letter-sends'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
@@ -234,48 +235,7 @@ export default function AdminLettersPage() {
         )}
 
         {!loading && tab === 'contacts' && (
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Contacts ({contacts.length})</h2>
-              <input
-                type="search"
-                onChange={async (e) => {
-                  const res = await api.admin.letters.contacts.list(e.target.value || undefined)
-                  setContacts(res.contacts)
-                }}
-                placeholder="Search..."
-                className="rounded border px-3 py-1 text-sm"
-              />
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-4">Name</th>
-                  <th className="py-2 pr-4">Email</th>
-                  <th className="py-2 pr-4">Category</th>
-                  <th className="py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((c) => (
-                  <tr key={c.id} className="border-b hover:bg-muted/50">
-                    <td className="py-2 pr-4">{c.displayName}</td>
-                    <td className="py-2 pr-4">{c.email}</td>
-                    <td className="py-2 pr-4">{c.category}</td>
-                    <td className="py-2">
-                      <button
-                        type="button"
-                        onClick={async () => { await api.admin.letters.contacts.delete(c.id); refresh() }}
-                        className="text-xs text-destructive hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ContactsTab contacts={contacts} setContacts={setContacts} refresh={refresh} />
         )}
 
         {!loading && tab === 'templates' && (
@@ -301,6 +261,285 @@ export default function AdminLettersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+type ContactFormBody = {
+  displayName: string
+  email: string | null
+  phone: string | null
+  hasWhatsapp: boolean
+  photoUrl: string | null
+  mkSiteId: number | null
+  category: string
+}
+
+/** Derives the photo to show for a contact: the linked MK's cached photo takes priority
+ * over a manually-set photoUrl (the MK's photo is kept fresh by the MK list cache). */
+function contactPhotoUrl(c: LetterContact, mks: { siteId: number; photoUrl: string | null }[]): string | null {
+  if (c.mkSiteId != null) {
+    const mk = mks.find((m) => m.siteId === c.mkSiteId)
+    if (mk?.photoUrl) return mk.photoUrl
+  }
+  return c.photoUrl
+}
+
+function ContactAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  if (photoUrl) {
+    return <img src={photoUrl} alt={name} className="h-8 w-8 rounded-full object-cover" />
+  }
+  const initials = name.trim().slice(0, 2).toUpperCase() || '?'
+  return (
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+      {initials}
+    </span>
+  )
+}
+
+function ContactsTab({ contacts, setContacts, refresh }: {
+  contacts: LetterContact[]
+  setContacts: (c: LetterContact[]) => void
+  refresh: () => void | Promise<void>
+}) {
+  const { mks } = useMkList()
+  const [editing, setEditing] = useState<LetterContact | 'new' | null>(null)
+  const [deleteErrors, setDeleteErrors] = useState<Record<number, string>>({})
+
+  async function handleDelete(id: number) {
+    setDeleteErrors((prev) => { const next = { ...prev }; delete next[id]; return next })
+    try {
+      await api.admin.letters.contacts.delete(id)
+      refresh()
+    } catch (err) {
+      if (errorStatus(err) === 409) {
+        setDeleteErrors((prev) => ({ ...prev, [id]: 'לא ניתן למחוק — איש קשר בשימוש' }))
+      } else {
+        setDeleteErrors((prev) => ({ ...prev, [id]: 'המחיקה נכשלה' }))
+      }
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Contacts ({contacts.length})</h2>
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            onChange={async (e) => {
+              const res = await api.admin.letters.contacts.list(e.target.value || undefined)
+              setContacts(res.contacts)
+            }}
+            placeholder="Search..."
+            className="rounded border px-3 py-1 text-sm"
+          />
+          {editing === null && (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="rounded border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-primary"
+            >
+              + New Contact
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editing !== null && (
+        <ContactForm
+          key={editing === 'new' ? 'new' : editing.id}
+          initial={editing === 'new' ? undefined : editing}
+          onCancel={() => setEditing(null)}
+          onSubmit={async (body) => {
+            if (editing === 'new') await api.admin.letters.contacts.create(body)
+            else await api.admin.letters.contacts.update(editing.id, body)
+            setEditing(null)
+            refresh()
+          }}
+        />
+      )}
+
+      <table className="mt-4 w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="py-2 pr-4">Photo</th>
+            <th className="py-2 pr-4">Name</th>
+            <th className="py-2 pr-4">Email</th>
+            <th className="py-2 pr-4">Phone</th>
+            <th className="py-2 pr-4">Category</th>
+            <th className="py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contacts.map((c) => (
+            <tr key={c.id} className="border-b hover:bg-muted/50">
+              <td className="py-2 pr-4">
+                <ContactAvatar name={c.displayName} photoUrl={contactPhotoUrl(c, mks)} />
+              </td>
+              <td className="py-2 pr-4">{c.displayName}</td>
+              <td className="py-2 pr-4">{c.email}</td>
+              <td className="py-2 pr-4">
+                {c.phone && <span>{c.phone}</span>}
+                {c.hasWhatsapp && (
+                  <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">WhatsApp</span>
+                )}
+              </td>
+              <td className="py-2 pr-4">{c.category}</td>
+              <td className="py-2">
+                <div className="space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(c)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c.id)}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
+                {deleteErrors[c.id] && (
+                  <p className="mt-1 text-xs text-destructive">{deleteErrors[c.id]}</p>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ContactForm({ initial, onSubmit, onCancel }: {
+  initial?: LetterContact
+  onSubmit: (body: ContactFormBody) => Promise<void>
+  onCancel: () => void
+}) {
+  const isEdit = !!initial
+  const [displayName, setDisplayName] = useState(initial?.displayName ?? '')
+  const [email, setEmail] = useState(initial?.email ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [hasWhatsapp, setHasWhatsapp] = useState(initial?.hasWhatsapp ?? false)
+  const [photoUrl, setPhotoUrl] = useState(initial?.photoUrl ?? '')
+  const [mkSiteId, setMkSiteId] = useState(initial?.mkSiteId != null ? String(initial.mkSiteId) : '')
+  const [category, setCategory] = useState(initial?.category ?? 'custom')
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const valid = displayName.trim() && (email.trim() || phone.trim())
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!valid) return
+    setSaving(true); setError(null)
+    try {
+      await onSubmit({
+        displayName: displayName.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        hasWhatsapp,
+        photoUrl: photoUrl.trim() || null,
+        mkSiteId: mkSiteId.trim() ? Number(mkSiteId) : null,
+        category: category.trim() || 'custom',
+      })
+    } catch (err) {
+      setError(errorStatus(err) === 400 ? (err as Error).message : 'השמירה נכשלה')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploading(true); setError(null)
+    try {
+      const { asset } = await api.admin.letters.media.upload(file)
+      setPhotoUrl(asset.url)
+    } catch {
+      setError('העלאת התמונה נכשלה')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mb-6 space-y-3 rounded-lg border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">{isEdit ? 'Edit Contact' : 'New Contact'}</h3>
+        <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Name *</label>
+          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="Display name" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="name@example.com" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="05X… או ‎+9725X…" />
+          <p className="mt-1 text-xs text-muted-foreground">05X… או ‎+9725X…</p>
+        </div>
+        <div className="col-span-2 flex items-center gap-1.5">
+          <input
+            id="contact-has-whatsapp"
+            type="checkbox"
+            checked={hasWhatsapp}
+            onChange={(e) => setHasWhatsapp(e.target.checked)}
+            aria-label="has WhatsApp"
+          />
+          <label htmlFor="contact-has-whatsapp" className="text-sm">Has WhatsApp</label>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Photo URL</label>
+          <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="https://…" />
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              aria-label="upload photo"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
+              className="text-xs"
+            />
+            {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">MK Site ID</label>
+          <input
+            type="number"
+            value={mkSiteId}
+            onChange={(e) => setMkSiteId(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm"
+            placeholder="e.g. 1116"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">When set, the contact's photo is derived from the linked MK.</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Category</label>
+          <input value={category} onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded border px-3 py-1.5 text-sm" placeholder="custom" />
+        </div>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {!valid && (displayName || email || phone) && (
+        <p className="text-xs text-muted-foreground">Name and (email or phone) are required.</p>
+      )}
+      <button type="submit" disabled={saving || !valid}
+        className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+        {saving ? 'Saving...' : (isEdit ? 'Save' : 'Create Contact')}
+      </button>
+    </form>
   )
 }
 

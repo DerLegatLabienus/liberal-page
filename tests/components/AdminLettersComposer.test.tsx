@@ -14,16 +14,25 @@ vi.mock('@/lib/api-client', () => {
         regenerateShares: vi.fn().mockResolvedValue({ regenerated: 3 }),
         list: vi.fn().mockResolvedValue({ letters: [] }),
         // Admin Contacts tab still uses this list endpoint.
-        contacts: { list: vi.fn().mockResolvedValue({ contacts: candidates }) },
+        contacts: {
+          list: vi.fn().mockResolvedValue({ contacts: candidates }),
+          create: vi.fn().mockResolvedValue({ contact: candidates[0] }),
+          update: vi.fn().mockResolvedValue({ ok: true }),
+          delete: vi.fn().mockResolvedValue({ ok: true }),
+        },
         letterTemplates: { list: vi.fn().mockResolvedValue({ templates: [] }) },
+        media: { upload: vi.fn() },
       } },
       // Composer per-channel recipient pickers use the channel-filtered contacts endpoint.
       letters: { contacts: vi.fn().mockResolvedValue({ contacts: candidates }) },
     },
+    // errorStatus reads the `status` field off thrown Error objects, same shape as the real client.
+    errorStatus: (e: unknown) => (e as { status?: number } | null)?.status,
   }
 })
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { role: 'admin' }, ready: true }) }))
 vi.mock('@/hooks/useFeatureFlags', () => ({ useFeatureFlags: () => ({}) }))
+vi.mock('@/hooks/useMkList', () => ({ useMkList: () => ({ mks: [], loading: false, error: null }) }))
 // CodeMirror doesn't run under happy-dom; mock the editor to a plain textarea that
 // forwards placeholder/value/onChange so the existing typing assertions keep working.
 vi.mock('@/components/admin/HtmlCodeEditor', () => ({
@@ -149,5 +158,35 @@ describe('admin composer multi-recipient', () => {
     await user.click(await screen.findByRole('button', { name: /Regenerate share pages/ }))
     expect(api.admin.letters.regenerateShares).toHaveBeenCalled()
     expect(await screen.findByText(/Regenerated 3 share pages/)).toBeInTheDocument()
+  })
+})
+
+describe('admin contacts tab', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('creates a contact with a phone number and WhatsApp toggled on', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /^Contacts$/ }))
+    await user.click(await screen.findByRole('button', { name: /New Contact/ }))
+    await user.type(screen.getByPlaceholderText('Display name'), 'ישראל ישראלי')
+    await user.type(screen.getByPlaceholderText(/05X/), '0501234567')
+    await user.click(screen.getByRole('checkbox', { name: /has WhatsApp/ }))
+    await user.click(screen.getByRole('button', { name: /Create Contact/ }))
+    expect(api.admin.letters.contacts.create).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: '0501234567', hasWhatsapp: true }),
+    )
+  })
+
+  it('shows an inline "in use" message on a 409 delete and keeps the contact', async () => {
+    const conflict = Object.assign(new Error('contact is used by a letter'), { status: 409 })
+    vi.mocked(api.admin.letters.contacts.delete).mockRejectedValueOnce(conflict)
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /^Contacts$/ }))
+    await screen.findByText('דובר חינוך')
+    await user.click(screen.getByRole('button', { name: /^Delete$/ }))
+    expect(await screen.findByText(/לא ניתן למחוק/)).toBeInTheDocument()
+    expect(screen.getByText('דובר חינוך')).toBeInTheDocument()
   })
 })
