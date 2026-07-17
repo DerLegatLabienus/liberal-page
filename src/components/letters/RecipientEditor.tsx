@@ -11,7 +11,7 @@ export interface RecipientEditorProps {
   contacts: LetterContact[]
 }
 
-export default function RecipientEditor({ label, value, onChange, contacts }: RecipientEditorProps) {
+export default function RecipientEditor({ label, value, onChange, contacts = [] }: RecipientEditorProps) {
   const [query, setQuery] = useState('')
 
   const byId = new Map(contacts.map((c) => [c.id, c]))
