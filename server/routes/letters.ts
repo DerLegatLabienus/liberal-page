@@ -6,7 +6,9 @@ import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repo
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
 import { renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../services/letter-utils'
+import { reachableOn } from '../services/channel-availability'
 import type { LetterAddress } from '../db/schema'
+import type { ChannelKind } from '../../src/types'
 
 const router = Router()
 const lettersRepo = new LettersRepository()
@@ -56,7 +58,9 @@ router.get('/tags', async (_req, res) => {
 router.get('/contacts', async (req, res) => {
   try {
     const q = req.query.q as string | undefined
-    const contacts = q ? await contactsRepo.search(q) : await contactsRepo.list()
+    const channel = req.query.channel as ChannelKind | undefined
+    let contacts = q ? await contactsRepo.search(q) : await contactsRepo.list()
+    if (channel) contacts = contacts.filter((c) => reachableOn(channel, c))
     res.json({ contacts })
   } catch (err) {
     console.error('[letters] contacts failed:', err)

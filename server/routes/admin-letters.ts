@@ -20,8 +20,11 @@ router.use(requireAdmin)
 router.get('/', async (_req, res) => {
   try {
     const allLetters = await lettersRepo.listAll()
-    const statsById = await analyticsRepo.getLifetimeForLetters(allLetters.map((l) => l.id))
-    const withStats = allLetters.map((letter) => {
+    const [statsById, withChannels] = await Promise.all([
+      analyticsRepo.getLifetimeForLetters(allLetters.map((l) => l.id)),
+      attachChannels(allLetters),
+    ])
+    const withStats = withChannels.map((letter) => {
       const stats = statsById.get(letter.id)
       return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {} }
     })
