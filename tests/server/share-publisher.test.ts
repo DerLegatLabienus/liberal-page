@@ -20,7 +20,7 @@ import { syncShareForLetter, removeShareForLetter } from '../../server/services/
 
 const lettersRepo = new LettersRepository()
 const flags = new FeatureFlagsRepository()
-const BASE = { title: 'כותרת', subject: 'נושא', bodyHtml: '<p>גוף</p>', bodyPlain: 'גוף', toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ פלוני' }] }
+const BASE = { title: 'כותרת' }
 
 describe('share-publisher', () => {
   beforeAll(async () => { await setupTestDb() })
@@ -31,7 +31,7 @@ describe('share-publisher', () => {
   })
 
   it('publishes both objects for a published letter when the flag is on', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await syncShareForLetter(l.id)
     expect(put).toHaveBeenCalledTimes(2)
     const keys = put.mock.calls.map((c) => c[0]).sort()
@@ -39,7 +39,7 @@ describe('share-publisher', () => {
   })
 
   it('removes objects for a draft (non-published) letter', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'draft' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'draft' })
     await syncShareForLetter(l.id)
     expect(put).not.toHaveBeenCalled()
     expect(del).toHaveBeenCalledTimes(2)
@@ -47,7 +47,7 @@ describe('share-publisher', () => {
 
   it('does nothing when the flag is off', async () => {
     await flags.setFlag('publicSharePages', false, null, 'x')
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await syncShareForLetter(l.id)
     expect(put).not.toHaveBeenCalled(); expect(del).not.toHaveBeenCalled()
   })
@@ -60,7 +60,7 @@ describe('share-publisher', () => {
 
   it('never throws when rendering/upload fails', async () => {
     put.mockRejectedValue(new Error('boom'))
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await expect(syncShareForLetter(l.id)).resolves.toBeUndefined()
   })
 })

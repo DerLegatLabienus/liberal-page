@@ -1,19 +1,13 @@
 import { eq, and, isNull, isNotNull, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/client'
-import { letters } from '../db/schema'
-import type { LetterAddress } from '../db/schema'
+import { letters, letterChannels } from '../db/schema'
+import { LetterChannelsRepository } from './letter-channels-repository'
+import type { Letter as LetterApi, LetterChannel } from '../../src/types'
 
 export type Letter = typeof letters.$inferSelect
-export type LetterInput = {
+export type LetterCoreInput = {
   title: string
-  subject: string
-  bodyHtml: string
-  bodyPlain: string
-  toAddresses: LetterAddress[]
-  ccAddresses?: LetterAddress[]
-  bccAddresses?: LetterAddress[]
   issueTagIds?: number[]
-  templateId?: number | null
   status?: string
   priority?: string
   pinnedAt?: Date | null
@@ -22,6 +16,28 @@ export type LetterInput = {
 }
 
 const PRIORITY_WEIGHT: Record<string, number> = { urgent: 3, high: 2, normal: 1 }
+const channelsRepo = new LetterChannelsRepository()
+
+function toApiChannel(r: typeof letterChannels.$inferSelect): LetterChannel {
+  return {
+    id: r.id, letterId: r.letterId, kind: r.kind as LetterChannel['kind'],
+    enabled: r.enabled, recipientIds: r.recipientIds, ccIds: r.ccIds, bccIds: r.bccIds,
+    bodyText: r.bodyText, subject: r.subject, bodyHtml: r.bodyHtml, templateId: r.templateId,
+  }
+}
+
+/** Assemble API-shaped letters (shared fields + hydrated channels) from raw letter rows. */
+export async function attachChannels(rows: Letter[]): Promise<LetterApi[]> {
+  const byLetter = await channelsRepo.listByLetterIds(rows.map((r) => r.id))
+  return rows.map((r) => ({
+    id: r.id, title: r.title, issueTagIds: r.issueTagIds,
+    status: r.status as LetterApi['status'], priority: r.priority as LetterApi['priority'],
+    pinnedAt: r.pinnedAt?.toISOString() ?? null, activityScore: r.activityScore,
+    publishedAt: r.publishedAt?.toISOString() ?? null,
+    createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
+    channels: (byLetter.get(r.id) ?? []).map(toApiChannel),
+  }))
+}
 
 export class LettersRepository {
   async listAll(): Promise<Letter[]> {
@@ -58,21 +74,14 @@ export class LettersRepository {
     return row ?? null
   }
 
-  async create(input: LetterInput): Promise<Letter> {
+  async createCore(input: LetterCoreInput): Promise<Letter> {
     const now = new Date()
     const status = input.status ?? 'draft'
     const [row] = await db
       .insert(letters)
       .values({
         title: input.title,
-        subject: input.subject,
-        bodyHtml: input.bodyHtml,
-        bodyPlain: input.bodyPlain,
-        toAddresses: input.toAddresses,
-        ccAddresses: input.ccAddresses ?? [],
-        bccAddresses: input.bccAddresses ?? [],
         issueTagIds: input.issueTagIds ?? [],
-        templateId: input.templateId ?? null,
         status,
         priority: input.priority ?? 'normal',
         pinnedAt: input.pinnedAt ?? null,
@@ -87,7 +96,7 @@ export class LettersRepository {
     return row
   }
 
-  async update(id: number, input: Partial<LetterInput>): Promise<void> {
+  async updateCore(id: number, input: Partial<LetterCoreInput>): Promise<void> {
     const fields: Record<string, unknown> = { ...input, updatedAt: new Date() }
     // Stamp publishedAt only on the transition into published — never overwrite an existing
     // publish date (editing an already-published letter must not bump it forward).

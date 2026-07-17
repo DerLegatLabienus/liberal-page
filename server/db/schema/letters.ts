@@ -33,9 +33,9 @@ export const letterTemplates = lettersSchema.table('letter_templates', {
 export const letters = lettersSchema.table('letters', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
-  subject: text('subject').notNull(),
-  bodyHtml: text('body_html').notNull(),
-  bodyPlain: text('body_plain').notNull(),
+  subject: text('subject'),
+  bodyHtml: text('body_html'),
+  bodyPlain: text('body_plain'),
   templateId: integer('template_id').references(() => letterTemplates.id, { onDelete: 'set null' }),
   toAddresses: jsonb('to_addresses').$type<LetterAddress[]>().notNull().default([]),
   ccAddresses: jsonb('cc_addresses').$type<LetterAddress[]>().notNull().default([]),

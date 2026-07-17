@@ -16,12 +16,6 @@ const analyticsRepo = new LetterAnalyticsRepository()
 
 const BASE_LETTER = {
   title: 'Test Letter',
-  subject: 'Test Subject',
-  bodyHtml: '<p>body</p>',
-  bodyPlain: 'body',
-  toAddresses: [{ email: 'mk@example.com', display_name: 'MK Name' }],
-  ccAddresses: [] as { email: string; display_name: string }[],
-  bccAddresses: [] as { email: string; display_name: string }[],
   issueTagIds: [] as number[],
 }
 
@@ -148,46 +142,46 @@ describe('LettersRepository', () => {
   })
 
   it('creates a letter in draft status by default', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
+    const letter = await lettersRepo.createCore(BASE_LETTER)
     expect(letter.status).toBe('draft')
     expect(letter.id).toBeTypeOf('number')
   })
 
   it('stamps publishedAt when created already published, leaves it null for drafts', async () => {
-    const draft = await lettersRepo.create(BASE_LETTER)
+    const draft = await lettersRepo.createCore(BASE_LETTER)
     expect(draft.publishedAt).toBeNull()
-    const published = await lettersRepo.create({ ...BASE_LETTER, status: 'published' })
+    const published = await lettersRepo.createCore({ ...BASE_LETTER, status: 'published' })
     expect(published.publishedAt).not.toBeNull()
   })
 
   it('sets publishedAt on the draft→published transition', async () => {
-    const draft = await lettersRepo.create(BASE_LETTER)
-    await lettersRepo.update(draft.id, { status: 'published' })
+    const draft = await lettersRepo.createCore(BASE_LETTER)
+    await lettersRepo.updateCore(draft.id, { status: 'published' })
     const found = await lettersRepo.getById(draft.id)
     expect(found?.publishedAt).not.toBeNull()
   })
 
   it('does not bump publishedAt when editing an already-published letter', async () => {
-    const published = await lettersRepo.create({ ...BASE_LETTER, status: 'published' })
+    const published = await lettersRepo.createCore({ ...BASE_LETTER, status: 'published' })
     const firstDate = (await lettersRepo.getById(published.id))?.publishedAt?.getTime()
     await new Promise((r) => setTimeout(r, 5))
-    await lettersRepo.update(published.id, { status: 'published', title: 'Edited typo' })
+    await lettersRepo.updateCore(published.id, { status: 'published', title: 'Edited typo' })
     const after = await lettersRepo.getById(published.id)
     expect(after?.publishedAt?.getTime()).toBe(firstDate)
     expect(after?.title).toBe('Edited typo')
   })
 
   it('listAll returns both draft and published', async () => {
-    await lettersRepo.create(BASE_LETTER)
-    await lettersRepo.create({ ...BASE_LETTER, title: 'Published', status: 'published' })
+    await lettersRepo.createCore(BASE_LETTER)
+    await lettersRepo.createCore({ ...BASE_LETTER, title: 'Published', status: 'published' })
     const all = await lettersRepo.listAll()
     expect(all).toHaveLength(2)
   })
 
   it('listPublished returns only published letters, pinned first', async () => {
-    const pinned = await lettersRepo.create({ ...BASE_LETTER, title: 'Pinned', status: 'published', pinnedAt: new Date() })
-    await lettersRepo.create({ ...BASE_LETTER, title: 'Normal', status: 'published' })
-    await lettersRepo.create({ ...BASE_LETTER, title: 'Draft' })
+    const pinned = await lettersRepo.createCore({ ...BASE_LETTER, title: 'Pinned', status: 'published', pinnedAt: new Date() })
+    await lettersRepo.createCore({ ...BASE_LETTER, title: 'Normal', status: 'published' })
+    await lettersRepo.createCore({ ...BASE_LETTER, title: 'Draft' })
     const published = await lettersRepo.listPublished()
     expect(published).toHaveLength(2)
     expect(published[0].id).toBe(pinned.id)
@@ -195,11 +189,11 @@ describe('LettersRepository', () => {
   })
 
   it('listPublished filters by tag with OR semantics', async () => {
-    const a = await lettersRepo.create({ ...BASE_LETTER, title: 'A', status: 'published', issueTagIds: [1, 2] })
-    const b = await lettersRepo.create({ ...BASE_LETTER, title: 'B', status: 'published', issueTagIds: [3] })
-    await lettersRepo.create({ ...BASE_LETTER, title: 'C', status: 'published', issueTagIds: [] })
+    const a = await lettersRepo.createCore({ ...BASE_LETTER, title: 'A', status: 'published', issueTagIds: [1, 2] })
+    const b = await lettersRepo.createCore({ ...BASE_LETTER, title: 'B', status: 'published', issueTagIds: [3] })
+    await lettersRepo.createCore({ ...BASE_LETTER, title: 'C', status: 'published', issueTagIds: [] })
     // a draft with a matching tag must never surface
-    await lettersRepo.create({ ...BASE_LETTER, title: 'D-draft', issueTagIds: [1] })
+    await lettersRepo.createCore({ ...BASE_LETTER, title: 'D-draft', issueTagIds: [1] })
 
     const onlyTag1 = await lettersRepo.listPublished([1])
     expect(onlyTag1.map((l) => l.id)).toEqual([a.id])
@@ -215,26 +209,26 @@ describe('LettersRepository', () => {
   })
 
   it('getById returns the letter', async () => {
-    const created = await lettersRepo.create(BASE_LETTER)
+    const created = await lettersRepo.createCore(BASE_LETTER)
     const found = await lettersRepo.getById(created.id)
     expect(found?.id).toBe(created.id)
   })
 
   it('update changes fields', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
-    await lettersRepo.update(letter.id, { title: 'Updated' })
+    const letter = await lettersRepo.createCore(BASE_LETTER)
+    await lettersRepo.updateCore(letter.id, { title: 'Updated' })
     const found = await lettersRepo.getById(letter.id)
     expect(found?.title).toBe('Updated')
   })
 
   it('delete removes the letter', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
+    const letter = await lettersRepo.createCore(BASE_LETTER)
     await lettersRepo.delete(letter.id)
     expect(await lettersRepo.getById(letter.id)).toBeNull()
   })
 
   it('setPinned sets pinnedAt when pinning, clears when unpinning', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
+    const letter = await lettersRepo.createCore(BASE_LETTER)
     await lettersRepo.setPinned(letter.id, true)
     const pinned = await lettersRepo.getById(letter.id)
     expect(pinned?.pinnedAt).not.toBeNull()
@@ -245,8 +239,8 @@ describe('LettersRepository', () => {
   })
 
   it('listUnnotifiedPinned returns pinned letters with pin_notified_at null', async () => {
-    await lettersRepo.create({ ...BASE_LETTER, status: 'published', pinnedAt: new Date() })
-    const notified = await lettersRepo.create({ ...BASE_LETTER, status: 'published', pinnedAt: new Date(), pinNotifiedAt: new Date() })
+    await lettersRepo.createCore({ ...BASE_LETTER, status: 'published', pinnedAt: new Date() })
+    const notified = await lettersRepo.createCore({ ...BASE_LETTER, status: 'published', pinnedAt: new Date(), pinNotifiedAt: new Date() })
     const unnotified = await lettersRepo.listUnnotifiedPinned()
     expect(unnotified.some((l) => l.id === notified.id)).toBe(false)
     expect(unnotified).toHaveLength(1)
@@ -261,7 +255,7 @@ describe('LetterAnalyticsRepository', () => {
   })
 
   it('records a send event into both day and lifetime buckets', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
+    const letter = await lettersRepo.createCore(BASE_LETTER)
     const now = new Date('2026-06-14T10:00:00Z')
     await analyticsRepo.record(letter.id, 'mailto', now)
 
@@ -273,7 +267,7 @@ describe('LetterAnalyticsRepository', () => {
   })
 
   it('accumulates repeated events', async () => {
-    const letter = await lettersRepo.create(BASE_LETTER)
+    const letter = await lettersRepo.createCore(BASE_LETTER)
     const now = new Date('2026-06-14T10:00:00Z')
     await analyticsRepo.record(letter.id, 'copy', now)
     await analyticsRepo.record(letter.id, 'mailto', now)
@@ -286,9 +280,9 @@ describe('LetterAnalyticsRepository', () => {
 
   it('getLifetimeForLetters returns batched totals keyed by letter, omitting letters with no sends', async () => {
     const now = new Date('2026-06-14T10:00:00Z')
-    const a = await lettersRepo.create({ ...BASE_LETTER, title: 'A' })
-    const b = await lettersRepo.create({ ...BASE_LETTER, title: 'B' })
-    const c = await lettersRepo.create({ ...BASE_LETTER, title: 'C' }) // no sends
+    const a = await lettersRepo.createCore({ ...BASE_LETTER, title: 'A' })
+    const b = await lettersRepo.createCore({ ...BASE_LETTER, title: 'B' })
+    const c = await lettersRepo.createCore({ ...BASE_LETTER, title: 'C' }) // no sends
     await analyticsRepo.record(a.id, 'mailto', now)
     await analyticsRepo.record(a.id, 'copy', now)
     await analyticsRepo.record(b.id, 'mailto', now)

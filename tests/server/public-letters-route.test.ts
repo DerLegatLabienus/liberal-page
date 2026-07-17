@@ -22,7 +22,7 @@ app.use(cors({ origin: (origin, cb) => (origin ? cb(new Error('blocked')) : cb(n
 const lettersRepo = new LettersRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flags = new FeatureFlagsRepository()
-const BASE = { title: 'כ', subject: 'נ', bodyHtml: '<p>x</p>', bodyPlain: 'x', toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }] }
+const BASE = { title: 'כ' }
 
 const flush = () => new Promise((r) => setImmediate(r))
 
@@ -31,7 +31,7 @@ describe('POST /api/public/letters/:id/send', () => {
   beforeEach(async () => { await db.delete(letters); await flags.setFlag('lettersEnabled', true, 'True', 'x') })
 
   it('204s and records a public_mailto send for a published letter', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`)
     expect(res.status).toBe(204)
     await flush()
@@ -41,14 +41,14 @@ describe('POST /api/public/letters/:id/send', () => {
   })
 
   it('204s without recording for a draft letter', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'draft' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'draft' })
     await request(app).post(`/api/public/letters/${l.id}/send?action=gmail`)
     await flush()
     expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)).toBeUndefined()
   })
 
   it('204s without recording for an unknown action or id', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     expect((await request(app).post(`/api/public/letters/${l.id}/send?action=bogus`)).status).toBe(204)
     expect((await request(app).post(`/api/public/letters/999999/send?action=copy`)).status).toBe(204)
     await flush()
@@ -56,7 +56,7 @@ describe('POST /api/public/letters/:id/send', () => {
   })
 
   it('does not double-count a rapid repeat from the same ip/letter/action', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await request(app).post(`/api/public/letters/${l.id}/send?action=copy`)
     await request(app).post(`/api/public/letters/${l.id}/send?action=copy`)
     await flush()
@@ -64,13 +64,13 @@ describe('POST /api/public/letters/:id/send', () => {
   })
 
   it('accepts a cross-origin beacon (foreign Origin) — not blocked by the restrictive global cors', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Origin', 'https://pub-x.r2.dev')
     expect(res.status).toBe(204)
   })
 
   it('204s without recording when lettersEnabled is off', async () => {
-    const l = await lettersRepo.create({ ...BASE, status: 'published' })
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await flags.setFlag('lettersEnabled', false, 'False', 'x')
     const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`)
     expect(res.status).toBe(204)
@@ -83,7 +83,7 @@ describe('POST /api/public/letters/:id/send', () => {
 
     it('records when the token verifies', async () => {
       mockedVerify.mockResolvedValue('verified')
-      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
       await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Content-Type','text/plain').send('tok')
       await flush()
       expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_mailto).toBe(1)
@@ -91,7 +91,7 @@ describe('POST /api/public/letters/:id/send', () => {
 
     it('does NOT record when the token is rejected', async () => {
       mockedVerify.mockResolvedValue('rejected')
-      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
       const res = await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`).set('Content-Type','text/plain').send('bad')
       expect(res.status).toBe(204)
       await flush()
@@ -100,7 +100,7 @@ describe('POST /api/public/letters/:id/send', () => {
 
     it('records (fail-open) when verification is skipped (secret unset)', async () => {
       mockedVerify.mockResolvedValue('skip')
-      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
       await request(app).post(`/api/public/letters/${l.id}/send?action=copy`).set('Content-Type','text/plain').send('')
       await flush()
       expect((await analyticsRepo.getLifetimeForLetters([l.id])).get(l.id)?.breakdown.public_copy).toBe(1)
@@ -108,7 +108,7 @@ describe('POST /api/public/letters/:id/send', () => {
 
     it('does not verify at all when the flag is off (regression)', async () => {
       await flags.setFlag('publicSendTurnstile', false, 'False', 'x')
-      const l = await lettersRepo.create({ ...BASE, status: 'published' })
+      const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
       await request(app).post(`/api/public/letters/${l.id}/send?action=mailto`)
       await flush()
       expect(mockedVerify).not.toHaveBeenCalled()

@@ -1,16 +1,16 @@
 import { Router } from 'express'
 import { requireAdmin } from '../middleware/auth'
-import { LettersRepository } from '../repositories/letters-repository'
+import { LettersRepository, attachChannels } from '../repositories/letters-repository'
+import { LetterChannelsRepository } from '../repositories/letter-channels-repository'
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
-import { stripHtml } from '../services/letter-utils'
-import { sanitizeLetterHtml } from '../services/html-sanitizer'
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter } from '../services/share-publisher'
-import type { LetterAddress } from '../db/schema'
+import type { LetterChannelInput } from '../../src/types'
 
 const router = Router()
 const lettersRepo = new LettersRepository()
+const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
 
@@ -36,17 +36,17 @@ router.get('/', async (_req, res) => {
 router.post('/', async (req, res) => {
   try {
     const body = req.body as {
-      title: string; subject: string; bodyHtml: string
-      toAddresses: LetterAddress[]; ccAddresses?: LetterAddress[]; bccAddresses?: LetterAddress[]
-      issueTagIds?: number[]; templateId?: number | null; status?: string; priority?: string
+      title: string; issueTagIds?: number[]; status?: string; priority?: string
+      channels?: LetterChannelInput[]
     }
-    if (!body.title || !body.subject || !body.bodyHtml || !Array.isArray(body.toAddresses) || body.toAddresses.length === 0) {
-      return res.status(400).json({ error: 'title, subject, bodyHtml, and at least one toAddress are required' })
+    if (!body.title) {
+      return res.status(400).json({ error: 'title is required' })
     }
-    const bodyHtml = sanitizeLetterHtml(body.bodyHtml)
-    const letter = await lettersRepo.create({ ...body, bodyHtml, bodyPlain: stripHtml(bodyHtml) })
+    const { title, status, priority, issueTagIds, channels } = body
+    const letter = await lettersRepo.createCore({ title, status, priority, issueTagIds, createdBy: req.user?.id ?? null })
+    await channelsRepo.replaceForLetter(letter.id, channels ?? [])
     setImmediate(() => { syncShareForLetter(letter.id) })
-    res.status(201).json({ letter })
+    res.status(201).json({ letter: (await attachChannels([letter]))[0] })
   } catch (err) {
     console.error('[admin/letters] create failed:', err)
     res.status(500).json({ error: 'Failed to create letter' })
@@ -58,20 +58,15 @@ router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
     const body = req.body as Partial<{
-      title: string; subject: string; bodyHtml: string; toAddresses: LetterAddress[]
-      ccAddresses: LetterAddress[]; bccAddresses: LetterAddress[]; issueTagIds: number[]
-      templateId: number | null; status: string; priority: string
+      title: string; issueTagIds: number[]; status: string; priority: string
+      channels: LetterChannelInput[]
     }>
-    const update: Parameters<typeof lettersRepo.update>[1] = { ...body }
-    if (body.bodyHtml) {
-      const bodyHtml = sanitizeLetterHtml(body.bodyHtml)
-      update.bodyHtml = bodyHtml
-      update.bodyPlain = stripHtml(bodyHtml)
-    }
-    await lettersRepo.update(id, update)
+    const { channels, ...core } = body
+    await lettersRepo.updateCore(id, core)
+    if (channels) await channelsRepo.replaceForLetter(id, channels)
     const letter = await lettersRepo.getById(id)
     setImmediate(() => { syncShareForLetter(id) })
-    res.json({ letter })
+    res.json({ letter: letter ? (await attachChannels([letter]))[0] : null })
   } catch (err) {
     console.error('[admin/letters] update failed:', err)
     res.status(500).json({ error: 'Failed to update letter' })
