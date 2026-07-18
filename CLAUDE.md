@@ -69,6 +69,23 @@ Solo developer, single branch. Work **directly on `master`** — no feature bran
 
 Pushing `master` **deploys**: GitHub Pages (frontend) via CI, and the Render backend redeploys on commit. So "done" means committed, gated, and pushed.
 
+## Infrastructure & Tooling Map
+
+Don't rediscover this — it's fixed. Prod values (no secrets here; pull credentials/connection strings on demand via the MCPs below).
+
+| Piece | Where | How to reach it |
+|---|---|---|
+| **Frontend (prod)** | GitHub Pages, repo `DerLegatLabienus/liberal-page`, base path `/liberal-page/` | Live: `https://derlegatlabienus.github.io/liberal-page/`. Deploys via GH Actions on push (`gh run list`/`gh run watch` to check CI). |
+| **Backend (prod)** | Render web service | Live: `https://liberal-page.onrender.com` (health: `/api/health`). Redeploys on push to `master`; **migrations auto-apply on boot**. |
+| **Database (prod)** | **Neon** (NOT Render Postgres — Render's PG list is empty) | Neon project **`Liberal-page`** = `empty-hill-56029538`, db `neondb`, org `Aviv` (`org-mute-cherry-43196213`), region `eu-central-1`, pg18. |
+
+**MCP servers wired in:**
+- **Neon** (`mcp__neon__*`, write mode) — the prod DB. `run_sql` for read/verify queries against project `empty-hill-56029538`; `get_connection_string` to get a `DATABASE_URL` for running scripts (e.g. `npm run db:backfill-channels`). Never run destructive SQL (DROP/DELETE/TRUNCATE/UPDATE-without-WHERE) without asking.
+- **Render** (`mcp__render__*`) — deploy/service status. Single workspace **`My Workspace`** (`tea-d85nhm6gvqtc73e12060`), auto-selected. Use `list_deploys`/`get_deploy` for backend deploy state. (The DB is not here — see above.)
+- Others available but rarely relevant to this repo: Trello, Gmail, Google Calendar/Drive, browser automation. Ignore unless a task calls for them.
+
+**Prod one-offs** (e.g. seed/backfill scripts) run locally with the prod `DATABASE_URL` from Neon's `get_connection_string`: `DATABASE_URL='<neon uri>' npm run db:<script>`.
+
 ## Key Ports
 
 | Service  | Port | URL                    |
