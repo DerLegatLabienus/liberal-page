@@ -52,6 +52,24 @@ describe('LetterChannelsRepository', () => {
     expect(channel.bodyHtml).toContain('<p>hi</p>')
   })
 
+  it('derives email bodyText from bodyHtml, leaves sms bodyText untouched (empty deep-link body regression)', async () => {
+    const id = await newLetter()
+    await repo.replaceForLetter(id, [
+      { kind: 'email', recipientIds: [1], bodyText: '', subject: 'S', bodyHtml: '<p>שלום עולם</p>' },
+      { kind: 'sms', recipientIds: [1], bodyText: 'הודעת SMS מקורית' },
+    ])
+    const channels = await repo.listByLetter(id)
+    const email = channels.find((c) => c.kind === 'email')!
+    const sms = channels.find((c) => c.kind === 'sms')!
+
+    expect(email.bodyText).toBeTruthy()
+    expect(email.bodyText).toContain('שלום עולם')
+    expect(email.bodyText).not.toContain('<')
+    expect(email.bodyText).not.toContain('>')
+
+    expect(sms.bodyText).toBe('הודעת SMS מקורית')
+  })
+
   it('contactReferenced finds contacts in ccIds and bccIds', async () => {
     const id = await newLetter()
     await repo.replaceForLetter(id, [

@@ -2,6 +2,7 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { letterChannels } from '../db/schema'
 import { sanitizeLetterHtml } from '../services/html-sanitizer'
+import { stripHtml } from '../services/letter-utils'
 
 export type LetterChannelRow = typeof letterChannels.$inferSelect
 
@@ -41,20 +42,28 @@ export class LetterChannelsRepository {
       if (channels.length === 0) return
       const now = new Date()
       await tx.insert(letterChannels).values(
-        channels.map((c) => ({
-          letterId,
-          kind: c.kind,
-          enabled: c.enabled ?? true,
-          recipientIds: c.recipientIds ?? [],
-          ccIds: c.ccIds ?? [],
-          bccIds: c.bccIds ?? [],
-          bodyText: c.bodyText ?? '',
-          subject: c.subject ?? null,
-          bodyHtml: c.bodyHtml ? sanitizeLetterHtml(c.bodyHtml) : (c.bodyHtml ?? null),
-          templateId: c.templateId ?? null,
-          createdAt: now,
-          updatedAt: now,
-        })),
+        channels.map((c) => {
+          const bodyHtml = c.bodyHtml ? sanitizeLetterHtml(c.bodyHtml) : (c.bodyHtml ?? null)
+          // Email's bodyText is the plain-text alternative derived from bodyHtml (used to
+          // fill the mailto/Gmail body) — always recompute it here rather than trusting the
+          // composer, which currently sends '' for the email channel. sms/whatsapp bodyText
+          // is the real outgoing message and must be left untouched.
+          const bodyText = c.kind === 'email' ? stripHtml(bodyHtml ?? '') : (c.bodyText ?? '')
+          return {
+            letterId,
+            kind: c.kind,
+            enabled: c.enabled ?? true,
+            recipientIds: c.recipientIds ?? [],
+            ccIds: c.ccIds ?? [],
+            bccIds: c.bccIds ?? [],
+            bodyText,
+            subject: c.subject ?? null,
+            bodyHtml,
+            templateId: c.templateId ?? null,
+            createdAt: now,
+            updatedAt: now,
+          }
+        }),
       )
     })
   }
