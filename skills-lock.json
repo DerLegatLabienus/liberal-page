@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "claimable-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/claimable-postgres/SKILL.md",
+      "computedHash": "65b0b2208ec0bdcf3b6f8254dec083017102d052e2bce55a37bca7a7b9e0b3cc"
+    },
+    "neon": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon/SKILL.md",
+      "computedHash": "3e0830ae6f39544bcabf932ba555dc71db19d3a997cbed972290924868f13626"
+    },
+    "neon-ai-gateway": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-ai-gateway/SKILL.md",
+      "computedHash": "66c2a08418d01effa3b790a51c7ed7f5e1fcf9c695244db7a62689384ec5e501"
+    },
+    "neon-functions": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-functions/SKILL.md",
+      "computedHash": "7916184cf0f73f5990a657929a41a84d35b0ad4f7c943effea074b0fcbaea1e0"
+    },
+    "neon-object-storage": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-object-storage/SKILL.md",
+      "computedHash": "4edd759ebc1b0a0774d307ebf3b174e12205d960092135238e2f277e8ff2b903"
+    },
+    "neon-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres/SKILL.md",
+      "computedHash": "7da7d922a0a8043a6ba896b81727182b88ff9ff62757643bdd942063774d105b"
+    },
+    "neon-postgres-branches": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres-branches/SKILL.md",
+      "computedHash": "c0ff429a18e64daa491469ce09a1b8e4b9de445b458c2d726b1b11d611044b04"
+    },
+    "neon-postgres-egress-optimizer": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres-egress-optimizer/SKILL.md",
+      "computedHash": "3ef9c916662a08cefb703b7f8823463cb9d3839c4b21acc53b6a45755175d897"
+    }
+  }
+}

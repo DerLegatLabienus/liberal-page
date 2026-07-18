@@ -40,13 +40,14 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
 
     // Recipient names for the "אל:" line — resolved directly (not via buildChannelSends,
     // which only returns urls/html for email) since we just need display names here.
+    // Filter to only contacts WITH an email (matching the actual send recipients list).
     let emailNames: string[] = []
     if (emailChannel && emailChannel.recipientIds.length) {
       const rows = await db
-        .select({ displayName: letterContacts.displayName })
+        .select({ displayName: letterContacts.displayName, email: letterContacts.email })
         .from(letterContacts)
         .where(inArray(letterContacts.id, emailChannel.recipientIds))
-      emailNames = rows.map((r) => r.displayName)
+      emailNames = rows.filter((r) => r.email).map((r) => r.displayName)
     }
 
     const channelBlocks: ShareChannelBlock[] = sends

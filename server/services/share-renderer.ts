@@ -100,7 +100,11 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
     .filter((c) => c.recipients.length > 0)
     .map((c) => {
       const links = c.recipients
-        .map((r) => `<a class="recipient" href="${escAttr(r.url)}" data-kind="${c.kind}" data-contact-id="${r.contactId}">שליחה ל${esc(r.displayName)}</a>`)
+        .map((r) => {
+          // WhatsApp wa.me URLs open in a new tab; SMS sms: handlers don't need it.
+          const targetRel = c.kind === 'whatsapp' ? ' target="_blank" rel="noopener noreferrer"' : ''
+          return `<a class="recipient" href="${escAttr(r.url)}" data-kind="${c.kind}" data-contact-id="${r.contactId}"${targetRel}>שליחה ל${esc(r.displayName)}</a>`
+        })
         .join('\n      ')
       return `<div class="channel-block">
       <h2 class="channel-title">${esc(CHANNEL_LABELS[c.kind])}</h2>

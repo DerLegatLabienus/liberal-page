@@ -60,3 +60,41 @@ describe('renderShareHtml — real content assembled from channels (no mocks)', 
     expect(html).toContain('data-kind="sms"')
   })
 })
+
+describe('renderShareHtml — WhatsApp channels', () => {
+  const whatsappView: ShareLetterView = {
+    id: 102,
+    title: 'מכתב לדוגמה',
+    recipientNames: ['ח"כ ישראל ישראלי', 'דנה כהן'],
+    issueTags: ['חירות אזרחית'],
+    email: {
+      subject: 'בקשה דחופה בנושא החוק',
+      bodyHtml: '<p>שלום רב, אנו פונים אליך בבקשת דחיפות.</p>',
+      bodyPlain: 'שלום רב, אנו פונים אליך בבקשת דחיפות.',
+      mailtoUrl: 'mailto:mk@knesset.gov.il?subject=%D7%91%D7%A7%D7%A9%D7%94&body=%D7%92%D7%95%D7%A3',
+      gmailUrl: 'https://mail.google.com/mail/?view=cm&fs=1&to=mk%40knesset.gov.il&su=%D7%91%D7%A7%D7%A9%D7%94&body=%D7%92%D7%95%D7%A3',
+    },
+    channels: [
+      {
+        kind: 'whatsapp',
+        recipients: [
+          { contactId: 601, displayName: 'דנה כהן', url: 'https://wa.me/+972500000001' },
+          { contactId: 602, displayName: 'יוסי לוי', url: 'https://wa.me/+972500000002' },
+        ],
+      },
+    ],
+  }
+
+  const html = renderShareHtml(whatsappView, opts)
+
+  it('renders WhatsApp recipient links with target="_blank" rel="noopener noreferrer"', () => {
+    expect(html).toContain('href="https://wa.me/+972500000001"')
+    expect(html).toContain('target="_blank" rel="noopener noreferrer"')
+    expect(html).toContain('data-kind="whatsapp"')
+    expect(html).toContain('שליחה לדנה כהן')
+  })
+
+  it('wires WhatsApp recipient links to the whatsapp track kind', () => {
+    expect(html).toContain('data-kind="whatsapp"')
+  })
+})
