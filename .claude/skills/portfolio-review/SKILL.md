@@ -1,11 +1,12 @@
 ---
 name: portfolio-review
-description: Regenerate docs/portfolio-review.md — a portfolio-ready review of this project's architecture, stack, services, demonstrated backend skills, and solved technical issues, mined from the repo docs, git history, and BACKLOG.md. Use when the user wants to introduce the project, refresh the portfolio report, prepare interview material, or summarize what was built and what problems were solved.
+description: Regenerate docs/portfolio-review.md — a portfolio-ready review of this project's architecture, stack, services, demonstrated backend skills, solved technical issues, and a concepts-in-context glossary (every technical idiom/buzzword mapped to where it lives in this repo), mined from the repo docs, git history, and BACKLOG.md. Use when the user wants to introduce the project, refresh the portfolio report, prepare interview material, or summarize what was built and what problems were solved.
 triggers:
   - portfolio review
   - introduce the project
   - summarize architecture and solved issues
   - interview preparation summary
+  - technical terms glossary
 ---
 
 # Portfolio Review — Extraction Process
@@ -46,7 +47,14 @@ developer-portfolio / interview audience.
    - `BACKLOG.md` ✅ items — each carries the problem, the fix, and often the file paths.
    - `BACKLOG.md` "Code Review Findings" passes — issues found via self-review; note which were
      fixed vs. consciously deferred.
-3. **Synthesize** into `docs/portfolio-review.md` with this section skeleton (keep it — reruns
+3. **Extract the concepts-in-context glossary** — sweep the same corpus (architecture doc,
+   BACKLOG, specs, commit subjects) for recurring technical idioms/concepts/buzzwords, and for
+   each write ONE line: *how it fits this project* (the anchoring file, feature, or incident) —
+   never a textbook definition. Group by category: Security & auth / Data & persistence /
+   Resilience & operations / Web platform & i18n / AI / Testing & process.
+   **Rule: no orphan buzzwords** — a term that can't be pointed at a concrete repo location or
+   incident gets dropped, not padded.
+4. **Synthesize** into `docs/portfolio-review.md` with this section skeleton (keep it — reruns
    should diff cleanly):
    1. What the project is (one paragraph + bolded scale stats)
    2. Architecture points (bulleted, each = one defensible claim)
@@ -54,9 +62,11 @@ developer-portfolio / interview audience.
    4. What it demonstrates as a backend engineer (numbered, honest claims only)
    5. Technical issues seen and solved — themed subsections: Security / External APIs /
       RTL-Hebrew / Infrastructure & cost / Self-found via review / Frontend
-   6. Framing tips for interviews
-4. **Stamp** the generation date at the top and write with the native Write tool.
-5. Commit per the repo workflow (solo master, gate, push).
+   6. Technical glossary — concepts in context (one table per category,
+      columns: Term | How it fits this project)
+   7. Framing tips for interviews
+5. **Stamp** the generation date at the top and write with the native Write tool.
+6. Commit per the repo workflow (solo master, gate, push).
 
 ## Success criteria
 
@@ -64,6 +74,8 @@ developer-portfolio / interview audience.
   spec, or code) — nothing aspirational.
 - Scale stats are regenerated, not copied from the previous version.
 - Solved-issue entries follow problem → fix → (optional) lesson; each is tellable in 60 seconds.
+- Every glossary term is anchored to a specific file, feature, or incident in this repo, phrased
+  as "how it fits here" — usable verbatim as an interview answer to "have you worked with X?".
 - Open/known bugs are mentioned (honesty reads better than a flawless facade).
 
 ## Pitfalls
@@ -77,3 +89,6 @@ developer-portfolio / interview audience.
   for *newer* stories (recent commits since the report's generation date) rather than re-deriving
   these.
 - The report is a generated artifact: regenerate whole sections rather than hand-patching stats.
+- Glossary discipline: definitions-in-context only ("SSRF — `url-guard.ts` allowlists doc hosts…"),
+  never generic definitions; and resist inflating the list — a dropped weak term costs nothing,
+  an unanchored buzzword undermines the whole document's credibility.

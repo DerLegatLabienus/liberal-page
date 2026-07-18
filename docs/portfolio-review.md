@@ -165,6 +165,97 @@ prioritization.
 - An open, documented shadcn theming bug (`bg-primary` rendering transparent) sits in the
   backlog — known issues tracked honestly.
 
+## Technical glossary — concepts in context
+
+Every term below is anchored to a concrete place in this repo. Each row doubles as a ready
+interview answer to "have you worked with X?" — say the term, then the anchor.
+
+### Security & auth
+
+| Term | How it fits this project |
+|---|---|
+| SSRF (server-side request forgery) | `server/services/url-guard.ts` guards the summarizer's document downloads: host allowlist, private/loopback IP rejection after DNS resolution, redirect re-validation, timeout, size cap |
+| Allowlist over denylist | Applied twice: doc-fetch hosts (`*.knesset.gov.il`) and the invite-only `auth.allowed_emails` account gate |
+| JWT bearer authentication | Short-lived (15-min) access tokens checked by `requireAuth`/`requireAdmin`/`optionalAuth` middleware; role claim rides in the token |
+| Refresh-token rotation & reuse detection | Tokens stored as sha256 hashes in `auth.refresh_tokens`; replaying a rotated token revokes all of the user's sessions |
+| OIDC / JWKS verification | Provider ID tokens verified server-side against the provider's live JWKS via `jose` (`iss`/`aud`/`exp`), adapters in `server/services/auth-providers/` |
+| nOAuth | Login requires provider-*verified* email ownership; Microsoft kept disabled until the Entra `xms_edov` claim is maintained — the dormant adapter is the re-enabling blueprint |
+| Magic link | Hashed, single-use, 15-minute sign-in token emailed via Resend — delivery itself proves address ownership |
+| Timing attack / constant-time code | The magic-link request path runs constant-time so response latency can't leak whether an email is registered |
+| User enumeration | The same endpoint always returns a neutral `200`, invited or not |
+| Sliding-window rate limiting | `server/services/rate-limit.ts` — per-IP and per-(IP, email) limits on auth, booking, and paid-AI endpoints |
+| RBAC (role-based access control) | `admin` / `member` / internal `group` roles; personal vs. group tracking scopes enforced per route |
+| XSS / HTML sanitization | Admin-authored letter HTML passes `server/services/html-sanitizer.ts` (strict allowlist) before storage, because it's later opened in scriptable contexts |
+| Magic-byte (content) sniffing | Letter image uploads are byte-sniffed raster-only in `image-validator.ts` — the declared MIME type is never trusted |
+| Fail-open vs. fail-closed | A deliberate fail-open: missing `TURNSTILE_SECRET_KEY` still counts public sends, so a misconfig can't silently zero the metric |
+| CAPTCHA / bot mitigation | Cloudflare Turnstile interstitial on the public share pages; token verified server-side via `siteverify` |
+
+### Data & persistence
+
+| Term | How it fits this project |
+|---|---|
+| Repository pattern | One class per domain in `server/repositories/` — routes and the poller never touch SQL directly |
+| ORM / schema-as-code | Drizzle schema per domain in `server/db/schema/`, single source for DDL and query types |
+| Versioned, idempotent migrations | 28 SQL migrations applied automatically on boot, tracked in `__drizzle_migrations` — safe to re-run |
+| Normalization & aggregate reassembly | An MK read joins `mks` + terms + roles + activity + votes and derives `party`/`inactive` — normalized storage, typed aggregate out |
+| Bounded contexts / domain schemas | 28 tables grouped into 6 Postgres schemas (`parliament`, `auth`, `email`, `letters`, `analytics`, `config`) by low coupling / high cohesion, moved non-destructively via `ALTER TABLE … SET SCHEMA` |
+| Upsert | `/api/tracking/add` upserts the entity, then the per-user tracking row |
+| N+1 query problem | Found in the parliament read path during self-review (per-entity `getById` fan-out); fix pattern: batch with `inArray` + in-memory grouping |
+| FK indexing | Postgres doesn't auto-index foreign keys — migration 0019 added the missing hot indexes, including `refresh_tokens.token_hash` on the hottest auth path |
+| Connection pooling | One `node-postgres` `Pool` serves local Docker and Neon; SSL decided by the connection string, not the driver |
+| Content-addressed caching | AI summaries cached in `summaries_cache` keyed by document MD5 — identical content never pays for a second Claude call |
+| TTL cache / refresh-on-stale-read | Knesset member & committee list caches (6 h) refreshed lazily when a read finds them stale |
+| Anti-join | Orphan reclamation finds entities no user tracks via anti-joins on the tracking tables — multi-user safe |
+| Hermetic tests | The whole suite runs on in-memory pglite — no database, no network, parallelizable in CI |
+| Single source of truth | `src/types.ts` is the one shape definition shared by frontend and server |
+
+### Resilience & operations
+
+| Term | How it fits this project |
+|---|---|
+| Exponential backoff | Poller total-failure backoff: 1 min doubling up to 10 min, then the normal 6 h interval on recovery |
+| Polling vs. webhooks | Resend delivery status is *pulled* each cycle after the svix-verified webhook was reverted (paywalled) — the trade-off is a known freshness lag, implementation preserved in git |
+| Fire-and-forget | Share-page publishing and analytics beacons never block or fail the primary write; errors are logged, not surfaced |
+| Bulkhead / failure isolation | Email digests and delivery polling run inside their own try/catch so email problems can never fail a poll cycle |
+| Graceful degradation | Every optional integration degrades cleanly: unset provider → 503 + hidden button; R2 unconfigured → media routes 503, share publish no-ops |
+| Feature flags / dark launch | DB-backed `feature_flags` gate risky surfaces; `publicSharePages` was dark-merged off and enabled in prod by flag flip |
+| Capacity management as code | The storage-pressure reclaimer runs a cheapest-first pipeline against a `pg_database_size` budget, re-measuring between reclaimers |
+| Deploy ordering | Documented invariant: seed the DB before serving traffic; migrations auto-apply on boot; the domain-schema migration got a Neon-branch dry-run first |
+| Trunk-based development | Solo work directly on `master`; a four-command gate (test, tsc, lint, build), then push — and push *is* deploy (GitHub Pages + Render) |
+
+### Web platform & i18n
+
+| Term | How it fits this project |
+|---|---|
+| CORS | Global allowlisted CORS, plus a permissive `cors()` mounted *before* it on the one public route that receives beacons from R2-hosted pages — middleware order as the fix |
+| OData | Knesset's query protocol, with hard-won rules: URL-encode `$filter`, chunk ID lists to 40 per request, stay under the ~2000-char URL limit |
+| Unicode bidi (logical vs. visual order) | satori can't do bidi, so Hebrew strings are pre-reordered to visual order with `bidi-js` before OG-card rendering |
+| RTL-first i18n | Hebrew is the primary language; direction lives on `document.documentElement.dir`, read via `useDirection()`; some sections render only in Hebrew |
+| Static site generation | Each published letter is rendered to a standalone HTML + OG PNG pair and published to R2 — per-entity SSG with a `letters:regen` backfill script |
+| Open Graph / Twitter Cards | Share pages carry OG/Twitter meta plus a branded 1200×630 card rendered by satori + resvg (lazy-imported so a native-binding failure can't kill boot) |
+| `navigator.sendBeacon` | Public send pages report mailto/gmail/copy actions via beacons — fire-and-forget from the browser side too |
+| `BroadcastChannel` | Syncs login/logout across browser tabs after the refresh-race fix |
+| SPA + dev proxy | Vite serves the React SPA and proxies `/api/*` to Express — one origin in dev, no CORS friction locally |
+
+### AI engineering
+
+| Term | How it fits this project |
+|---|---|
+| LLM summarization with relevance gating | Committee protocols (PDF/DOCX) are summarized by Claude only after a relevance check, so irrelevant documents don't burn tokens |
+| AI cost & abuse control | The paid surface is fenced three ways: auth required, per-IP rate limit, MD5-keyed result cache — and the SSRF guard keeps it from fetching arbitrary URLs |
+| AI-assisted content editing | Admin "beautify" cleans letter HTML via Claude, feature-flagged and sanitized on output |
+
+### Testing & process
+
+| Term | How it fits this project |
+|---|---|
+| Spec-driven development | 44 dated design specs in `docs/superpowers/specs/` — written before implementation, referenced from BACKLOG entries |
+| Integration testing | `supertest` drives the real Express app against pglite — routes, middleware, and repositories exercised together |
+| Auto-mocking | `react-i18next` auto-mocked for component tests via `src/__mocks__/react-i18next.ts` |
+| Environment parity | The same driver and migrations run in dev (Docker), prod (Neon), and tests (pglite) — parity by construction, switched by one env var |
+| CI gating | Lint + typecheck + tests + build on every push; the gap (deploy workflow not `needs:`-gated on CI) was itself found in a self-review pass |
+| Rolling self-review | Seven structured review passes over the codebase with findings triaged into BACKLOG — fixed or consciously deferred with rationale |
+
 ## Framing tips for interviews
 
 - Lead with the **data pipeline + Postgres migration + auth system** trio and the scale numbers;

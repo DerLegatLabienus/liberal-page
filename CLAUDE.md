@@ -198,8 +198,9 @@ Each cycle: polls bills via oknesset, fetches committee sessions and runs `commi
 ## Project Skills
 
 - `/portfolio-review` (`.claude/skills/portfolio-review/SKILL.md`) — regenerates
-  `docs/portfolio-review.md`, a portfolio-ready review of the architecture, stack, and solved
-  technical issues, mined from the repo docs, git history, and `BACKLOG.md`.
+  `docs/portfolio-review.md`, a portfolio-ready review of the architecture, stack, solved
+  technical issues, and a concepts-in-context technical glossary, mined from the repo docs,
+  git history, and `BACKLOG.md`.
 
 ## Visual Companion (Brainstorming)
 
