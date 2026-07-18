@@ -113,12 +113,6 @@ export default function LettersPage() {
                     <span className="mb-1 inline-block text-xs text-primary">📌 ממוקד</span>
                   )}
                   <h2 className="text-lg font-semibold">{letter.title}</h2>
-                  {letter.toAddresses.length > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      אל: {letter.toAddresses[0].display_name}
-                      {letter.toAddresses.length > 1 && ` ו-${letter.toAddresses.length - 1} נוספים`}
-                    </p>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {PRIORITY_LABELS[letter.priority] && (
