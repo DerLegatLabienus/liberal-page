@@ -6,6 +6,7 @@ import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repo
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter } from '../services/share-publisher'
+import { getShareConfig, isShareConfigured } from '../services/share-config'
 import type { LetterChannelInput } from '../../src/types'
 
 const router = Router()
@@ -24,9 +25,11 @@ router.get('/', async (_req, res) => {
       analyticsRepo.getLifetimeForLetters(allLetters.map((l) => l.id)),
       attachChannels(allLetters),
     ])
+    const shareBase = isShareConfigured() ? getShareConfig().publicBaseUrl : ''
     const withStats = withChannels.map((letter) => {
       const stats = statsById.get(letter.id)
-      return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {} }
+      const shareUrl = shareBase && letter.status === 'published' ? `${shareBase}/letter/${letter.id}.html` : null
+      return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {}, shareUrl }
     })
     res.json({ letters: withStats })
   } catch (err) {

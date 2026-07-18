@@ -269,6 +269,7 @@ export interface Letter {
 export interface LetterWithStats extends Letter {
   totalSends: number
   breakdown: Record<string, number>
+  shareUrl: string | null
 }
 
 export interface RecipientSendLink {
