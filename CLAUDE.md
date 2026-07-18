@@ -195,6 +195,12 @@ Each cycle: polls bills via oknesset, fetches committee sessions and runs `commi
 - `tests/server/` — node environment (see `vitest.config.ts` `environmentMatchGlobs`)
 - `tests/unit/` — pure logic, happy-dom
 
+## Project Skills
+
+- `/portfolio-review` (`.claude/skills/portfolio-review/SKILL.md`) — regenerates
+  `docs/portfolio-review.md`, a portfolio-ready review of the architecture, stack, and solved
+  technical issues, mined from the repo docs, git history, and `BACKLOG.md`.
+
 ## Visual Companion (Brainstorming)
 
 WSL2 is detected as Linux, so the brainstorm server's auto-detection does **not** enable foreground mode. Without `--foreground`, the server dies within seconds.
