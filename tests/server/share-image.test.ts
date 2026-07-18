@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { renderShareImage, type ShareLetterView } from '../../server/services/share-renderer'
 
 const view: ShareLetterView = {
-  id: 7, title: 'עצרו את חוק X', subject: 's',
-  bodyHtml: '<p>x</p>', bodyPlain: 'x', recipientNames: ['ח"כ פלוני'], issueTags: ['חירות'],
+  id: 7, title: 'עצרו את חוק X', recipientNames: ['ח"כ פלוני'], issueTags: ['חירות'],
 }
 
 describe('renderShareImage', () => {

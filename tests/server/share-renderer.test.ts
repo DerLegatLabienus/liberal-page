@@ -1,17 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import { renderShareHtml, buildOgCardNode, type ShareLetterView } from '../../server/services/share-renderer'
+import { buildMailtoUrl, buildGmailComposeUrl } from '../../server/services/letter-utils'
 import { toVisualOrder } from '../../server/services/bidi'
+
+const mk = { email: 'mk@knesset.gov.il', display_name: 'ח"כ ישראל ישראלי' }
 
 const view: ShareLetterView = {
   id: 42,
   title: 'עצרו את חוק X',
-  subject: 'בקשה דחופה',
-  bodyHtml: '<p>שלום רב, אנו פונים אליך</p>',
-  bodyPlain: 'שלום רב, אנו פונים אליך בבקשה לפעול בנושא החשוב הזה למען חירות הפרט והשוק החופשי בישראל.',
   recipientNames: ['ח"כ ישראל ישראלי'],
   issueTags: ['חירות אזרחית'],
+  email: {
+    subject: 'בקשה דחופה',
+    bodyHtml: '<p>שלום רב, אנו פונים אליך</p>',
+    bodyPlain: 'שלום רב, אנו פונים אליך בבקשה לפעול בנושא החשוב הזה למען חירות הפרט והשוק החופשי בישראל.',
+    mailtoUrl: buildMailtoUrl([mk], [], [], 'בקשה דחופה', 'שלום רב, אנו פונים אליך'),
+    gmailUrl: buildGmailComposeUrl([mk], [], [], 'בקשה דחופה', 'שלום רב, אנו פונים אליך'),
+  },
 }
-const opts = { shareBaseUrl: 'https://share.example.org', appBaseUrl: 'https://app.example.org/liberal-page' }
+const opts = { shareBaseUrl: 'https://share.example.org', appBaseUrl: 'https://app.example.org/liberal-page', apiBaseUrl: 'https://api.example.org' }
 
 describe('renderShareHtml', () => {
   const html = renderShareHtml(view, opts)
@@ -23,7 +30,7 @@ describe('renderShareHtml', () => {
     expect(html).toContain('property="og:image" content="https://share.example.org/letter/42.png"')
     expect(html).toContain('property="og:url" content="https://share.example.org/letter/42.html"')
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
-    // description = first ~150 chars of bodyPlain
+    // description = first ~150 chars of the email body
     expect(html).toMatch(/property="og:description" content="שלום רב/)
   })
   it('links the CTA into the app with src=share', () => {
@@ -35,10 +42,30 @@ describe('renderShareHtml', () => {
   })
 })
 
+describe('renderShareHtml (sms/whatsapp-only letter, no email channel)', () => {
+  const smsOnlyView: ShareLetterView = {
+    id: 43, title: 'כותרת בלי מייל',
+    recipientNames: ['ח"כ פלוני'],
+    issueTags: [],
+    channels: [{ kind: 'sms', recipients: [{ contactId: 5, displayName: 'ח"כ פלוני', url: 'sms:+972500000000?&body=x' }] }],
+  }
+  const html = renderShareHtml(smsOnlyView, opts)
+
+  it('renders the page (title + og fields) without crashing when there is no email channel', () => {
+    expect(html).toContain('<meta property="og:title" content="כותרת בלי מייל">')
+    expect(html).not.toContain('id="send-mailto"')
+    expect(html).not.toContain('id="send-gmail"')
+    expect(html).not.toContain('id="copy-btn"')
+  })
+  it('still renders the sms recipient link', () => {
+    expect(html).toContain('שליחה לח"כ פלוני')
+  })
+})
+
 describe('buildOgCardNode', () => {
   it('reorders the card title to visual order', () => {
     const node = buildOgCardNode({
-      id: 1, title: 'חוק הבריאות 2026', subject: '', bodyHtml: '', bodyPlain: '',
+      id: 1, title: 'חוק הבריאות 2026',
       recipientNames: [], issueTags: [],
     })
     const children = node.props.children as Array<{ props: { children: string } }>
@@ -48,9 +75,13 @@ describe('buildOgCardNode', () => {
 
 describe('renderShareHtml (public send page)', () => {
   const view = {
-    id: 7, title: 'חוק הבריאות', subject: 'נושא', bodyHtml: '<p>גוף המכתב</p>', bodyPlain: 'גוף המכתב',
+    id: 7, title: 'חוק הבריאות',
     recipientNames: ['ח"כ פלוני'], issueTags: ['בריאות'],
-    toAddresses: [{ email: 'mk@knesset.gov.il', display_name: 'ח"כ פלוני' }], ccAddresses: [], bccAddresses: [],
+    email: {
+      subject: 'נושא', bodyHtml: '<p>גוף המכתב</p>', bodyPlain: 'גוף המכתב',
+      mailtoUrl: buildMailtoUrl([{ email: 'mk@knesset.gov.il', display_name: 'ח"כ פלוני' }], [], [], 'נושא', 'גוף המכתב'),
+      gmailUrl: buildGmailComposeUrl([{ email: 'mk@knesset.gov.il', display_name: 'ח"כ פלוני' }], [], [], 'נושא', 'גוף המכתב'),
+    },
   }
   const html = renderShareHtml(view, { shareBaseUrl: 'https://pub.r2.dev', appBaseUrl: 'https://app', apiBaseUrl: 'https://api' })
 
@@ -78,9 +109,13 @@ describe('renderShareHtml (public send page)', () => {
 
 describe('renderShareHtml (Turnstile interstitial)', () => {
   const base = {
-    id: 9, title: 'חוק', subject: 'נ', bodyHtml: '<p>גוף</p>', bodyPlain: 'גוף',
+    id: 9, title: 'חוק',
     recipientNames: ['ח"כ'], issueTags: ['בריאות'],
-    toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], ccAddresses: [], bccAddresses: [],
+    email: {
+      subject: 'נ', bodyHtml: '<p>גוף</p>', bodyPlain: 'גוף',
+      mailtoUrl: buildMailtoUrl([{ email: 'mk@k.il', display_name: 'ח"כ' }], [], [], 'נ', 'גוף'),
+      gmailUrl: buildGmailComposeUrl([{ email: 'mk@k.il', display_name: 'ח"כ' }], [], [], 'נ', 'גוף'),
+    },
   }
   const optsBase = { shareBaseUrl: 'https://pub.r2.dev', appBaseUrl: 'https://app', apiBaseUrl: 'https://api' }
 

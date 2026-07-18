@@ -1,20 +1,38 @@
 import fs from 'fs'
 import path from 'path'
 import { toVisualOrder } from './bidi'
-import { buildMailtoUrl, buildGmailComposeUrl } from './letter-utils'
-import type { LetterAddress } from '../db/schema'
+
+export interface ShareRecipientLink {
+  contactId: number
+  displayName: string
+  url: string
+}
+
+/** One sms/whatsapp channel's resolved per-recipient send links. */
+export interface ShareChannelBlock {
+  kind: 'sms' | 'whatsapp'
+  recipients: ShareRecipientLink[]
+}
+
+/** The email channel's rendered content + pre-built send links (built once, upstream,
+ *  by channel-send.ts — the single source of truth for mailto/gmail URL construction). */
+export interface ShareEmailBlock {
+  subject: string
+  bodyHtml: string   // already sanitized at store time
+  bodyPlain: string
+  mailtoUrl: string
+  gmailUrl: string
+}
 
 export interface ShareLetterView {
   id: number
   title: string
-  subject: string
-  bodyHtml: string   // already sanitized at store time
-  bodyPlain: string
   recipientNames: string[]
   issueTags: string[]
-  toAddresses?: LetterAddress[]
-  ccAddresses?: LetterAddress[]
-  bccAddresses?: LetterAddress[]
+  /** Absent when the letter has no enabled email channel (sms/whatsapp-only letter). */
+  email?: ShareEmailBlock
+  /** Enabled sms/whatsapp channels that have at least one reachable recipient. */
+  channels?: ShareChannelBlock[]
 }
 
 /** Escape a string for safe use inside an HTML attribute. */
@@ -30,23 +48,21 @@ function esc(s: string): string {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-function description(bodyPlain: string): string {
-  const flat = bodyPlain.replace(/\s+/g, ' ').trim()
+function description(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
   return flat.length > 150 ? flat.slice(0, 149).trimEnd() + '…' : flat
 }
+
+const CHANNEL_LABELS: Record<ShareChannelBlock['kind'], string> = { sms: 'SMS', whatsapp: 'WhatsApp' }
 
 export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string; apiBaseUrl: string; turnstileSiteKey?: string }): string {
   const shareUrl = `${opts.shareBaseUrl}/letter/${view.id}.html`
   const imageUrl = `${opts.shareBaseUrl}/letter/${view.id}.png`
   const learnMoreUrl = `${opts.appBaseUrl}/letters/${view.id}?src=share`
-  const desc = description(view.bodyPlain)
+  // Fall back to the title when there's no email body to summarize (sms/whatsapp-only letter).
+  const desc = description(view.email?.bodyPlain || view.title)
   const tags = view.issueTags.map((t) => `<span class="tag">${esc(t)}</span>`).join(' ')
   const recipients = view.recipientNames.map(esc).join(', ')
-  const to = view.toAddresses ?? []
-  const cc = view.ccAddresses ?? []
-  const bcc = view.bccAddresses ?? []
-  const mailtoUrl = buildMailtoUrl(to, cc, bcc, view.subject, view.bodyPlain)
-  const gmailUrl = buildGmailComposeUrl(to, cc, bcc, view.subject, view.bodyPlain)
   const track = `${opts.apiBaseUrl}/api/public/letters/${view.id}/send`
   const siteKey = opts.turnstileSiteKey ?? ''
   const gated = siteKey !== ''
@@ -64,6 +80,35 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
      </div>
      <div id="gate-fallback" hidden><a class="learn" href="${learnMoreUrl}">לצפייה במכתב באתר ←</a></div>`
     : ''
+
+  // Email is the primary content: subject/body + mailto/gmail/copy buttons, same as before.
+  // Rendered only when the letter has an enabled email channel — omitted (not blank) otherwise.
+  const emailBlock = view.email
+    ? `<div class="body">${view.email.bodyHtml}</div>
+    <div class="actions">
+      <a class="btn" id="send-mailto" href="${escAttr(view.email.mailtoUrl)}">שלחו במייל</a>
+      <a class="btn" id="send-gmail" href="${escAttr(view.email.gmailUrl)}" target="_blank" rel="noopener">פתחו ב-Gmail</a>
+      <button class="btn secondary" id="copy-btn" type="button">העתקת המכתב</button>
+    </div>`
+    : ''
+
+  // Sms/whatsapp: one link per resolved recipient, wired to a beacon that carries the
+  // contactId so per-official breakdowns work the same way the member detail page does.
+  // Kept inside the same turnstile gate as the email block for a single, consistent gate
+  // rather than a second exemption path.
+  const channelBlocks = (view.channels ?? [])
+    .filter((c) => c.recipients.length > 0)
+    .map((c) => {
+      const links = c.recipients
+        .map((r) => `<a class="recipient" href="${escAttr(r.url)}" data-kind="${c.kind}" data-contact-id="${r.contactId}">שליחה ל${esc(r.displayName)}</a>`)
+        .join('\n      ')
+      return `<div class="channel-block">
+      <h2 class="channel-title">${esc(CHANNEL_LABELS[c.kind])}</h2>
+      ${links}
+    </div>`
+    })
+    .join('\n    ')
+
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -92,6 +137,9 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
   .btn.secondary { background:#e2e8f0; color:#0f172a; }
   .note { color:#64748b; font-size:12px; margin-top:16px; text-align:center; }
   .learn { display:block; text-align:center; margin-top:12px; color:#1d4ed8; font-size:13px; }
+  .channel-block { margin-top:20px; }
+  .channel-title { font-size:14px; color:#475569; margin:0 0 8px; }
+  .recipient { display:block; background:#e2e8f0; color:#0f172a; text-decoration:none; padding:10px 14px; border-radius:8px; margin-bottom:6px; font-weight:600; }
 </style>
 ${gateCallbacks}
 ${turnstileScript}
@@ -102,13 +150,9 @@ ${turnstileScript}
     <div id="letter-content"${hiddenAttr}>
     <div>${tags}</div>
     <h1>${esc(view.title)}</h1>
-    <div class="to">אל: ${recipients}</div>
-    <div class="body">${view.bodyHtml}</div>
-    <div class="actions">
-      <a class="btn" id="send-mailto" href="${escAttr(mailtoUrl)}">שלחו במייל</a>
-      <a class="btn" id="send-gmail" href="${escAttr(gmailUrl)}" target="_blank" rel="noopener">פתחו ב-Gmail</a>
-      <button class="btn secondary" id="copy-btn" type="button">העתקת המכתב</button>
-    </div>
+    ${recipients ? `<div class="to">אל: ${recipients}</div>` : ''}
+    ${emailBlock}
+    ${channelBlocks}
     <p class="note">המשלוחים נספרים באופן אנונימי ומצרפי בלבד — הפלטפורמה אינה מתעדת מי שלח מכתב.</p>
     <a class="learn" href="${learnMoreUrl}">על הליברלים בליכוד ←</a>
     </div>
@@ -116,7 +160,13 @@ ${turnstileScript}
   <script>
     (function () {
       var track = ${JSON.stringify(track)};
-      function ping(action) { try { var t = (window.turnstile && turnstile.getResponse()) || ''; navigator.sendBeacon(track + '?action=' + action, t); } catch (e) {} }
+      function ping(action, contactId) {
+        try {
+          var t = (window.turnstile && turnstile.getResponse()) || '';
+          var url = track + '?action=' + action + (contactId != null ? '&contactId=' + contactId : '');
+          navigator.sendBeacon(url, t);
+        } catch (e) {}
+      }
       var m = document.getElementById('send-mailto'); if (m) m.addEventListener('click', function () { ping('mailto'); });
       var g = document.getElementById('send-gmail'); if (g) g.addEventListener('click', function () { ping('gmail'); });
       var c = document.getElementById('copy-btn');
@@ -132,6 +182,12 @@ ${turnstileScript}
           })]).then(done).catch(function () { navigator.clipboard.writeText(plain).then(done); });
         } else { navigator.clipboard.writeText(plain).then(done); }
       });
+      var recipientLinks = document.querySelectorAll('.recipient');
+      for (var i = 0; i < recipientLinks.length; i++) {
+        (function (a) {
+          a.addEventListener('click', function () { ping(a.getAttribute('data-kind'), a.getAttribute('data-contact-id')); });
+        })(recipientLinks[i]);
+      }
     })();
   </script>
 </body>
