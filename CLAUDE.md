@@ -144,14 +144,24 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `GET`    | `/api/admin/letters/media`         | list R2-hosted letter image assets (admin; 503 when R2 unconfigured) |
 | `POST`   | `/api/admin/letters/media`         | upload raster image to R2 (admin; byte-sniff raster-only + 5 MB; 503 when R2 unconfigured) |
 | `DELETE` | `/api/admin/letters/media/:id`     | delete image from R2 + DB (admin; 503 when R2 unconfigured) |
-| `GET`    | `/api/letters/contacts`            | **requireAuth + `lettersEnabled`.** Read-only address book for the member recipient picker (optional `?q=` search). |
-| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages; records `public_*` analytics buckets (gated by `lettersEnabled` + letter published). When the `publicSendTurnstile` flag is on, verifies a Cloudflare Turnstile token (sent in the request body) via `siteverify` before counting; fails open when `TURNSTILE_SECRET_KEY` is unset. |
+| `GET`    | `/api/letters/contacts`            | **requireAuth + `lettersEnabled`.** Read-only address book for the recipient picker (optional `?q=` search, optional `?channel=email\|sms\|whatsapp` to return only contacts reachable on that channel; unknown channel → 400). Returns widened contacts (email/phone/hasWhatsapp/photoUrl/mkSiteId). |
+| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages, and the member detail page for SMS/WhatsApp. **Query params:** `?action=mailto\|gmail\|copy\|sms\|whatsapp` (+ optional `&contactId=N`); returns **204**. Records the `public_*` bucket **and** rolls into the `lifetime` bucket; for sms/whatsapp with a `contactId`, also records a per-recipient breakdown. Gated by `lettersEnabled` + letter published. When `publicSendTurnstile` is on, verifies a Cloudflare Turnstile token (query param) via `siteverify`; fails open when `TURNSTILE_SECRET_KEY` is unset. |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
-The mailto/Gmail compose-URL builders live in `src/lib/letter-urls.ts` (pure, no deps) so the
-server detail endpoint and the client (member recipient edits) produce identical URLs from one
-source; `server/services/letter-utils.ts` re-exports them.
+**Multi-channel letters (Email / SMS / WhatsApp).** A letter is a *campaign* that goes out over one
+or more channels via **compose-assist deep links — there is no backend sender**; each supporter
+sends from their own mail/SMS/WhatsApp app. The compose-URL builders live in `src/lib/letter-urls.ts`
+(pure, no deps): `buildMailtoUrl`/`buildGmailComposeUrl` for email, `buildWhatsappUrl` (`wa.me`) and
+`buildSmsUrl` (`sms:<phone>?&body=` — the `?&` form works on both iOS and Android) for the deep-link
+channels. `server/services/letter-utils.ts` re-exports them, and `server/services/channel-send.ts`
+`buildChannelSends()` resolves a letter's channels into one mailto/Gmail link for email plus a
+**per-recipient** `sms:`/`wa.me` link list (skipping recipients not reachable on that channel).
+Email `bodyText` (the mailto/Gmail body) is derived server-side as `stripHtml(bodyHtml)` in
+`replaceForLetter`; `renderedHtml` is `bodyHtml` injected into the selected template's `{{CONTENT}}`.
+Recipients are stored as **`contact_id[]` and resolved live** from `letter_contacts` — fixing a
+contact's phone/email updates every letter (draft or published). Member client-side recipient
+editing was removed; the letters admin UI is Hebrew-only (no i18n keys).
 
 Letter & template HTML written via the letter/template admin routes is sanitized
 server-side (`server/services/html-sanitizer.ts`, strict allowlist) before storage,

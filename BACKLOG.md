@@ -1,5 +1,17 @@
 # Backlog
 
+### 🧹 Multi-channel letters — follow-ups (deferred from the 2026-07-15 channels feature)
+
+Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
+`docs/superpowers/specs/2026-07-15-communications-channels-design.md`, plan
+`docs/superpowers/plans/2026-07-17-communications-channels.md`). Deliberately deferred:
+
+- **Contract migration (drop legacy `letters` content columns).** `letters.subject/body_html/body_plain/to_addresses/cc_addresses/bcc_addresses` are now empty and unread (content lives in `letter_channels`). Dropping them is a **deploy-ordering hazard**: `scripts/backfill-channels.ts` *reads* them, and prod must run the backfill *between* the expand deploy and the contract deploy — so it can't be single-pushed. Do it as a separate deploy once prod is backfilled: remove the 7 columns from `server/db/schema/letters.ts`, `npm run db:generate`, and retire the backfill script + its test.
+- **i18n for the letters UI.** The letters admin composer + member detail page use hardcoded Hebrew (zero `t()` calls, consistent with the pre-existing letters UI). If English support is ever needed for these screens, wire them to `react-i18next` and add `letters.*` keys to `he.json`/`en.json`.
+- **Member SMS/WhatsApp sends route through the public endpoint** (`api.letters.publicSend`). Coherent for lifetime totals, but when the `publicSendTurnstile` flag is on, `publicSend` posts an empty token → the authenticated member's send is silently not counted. Consider a member-authed send path for sms/whatsapp, or exempt authed callers from Turnstile.
+- **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
+- **Validate `channel.kind`** against an allowlist at the admin letters create/update API boundary (currently admin-gated and harmless, but a garbage kind falls through to the sms/whatsapp branch).
+
 ### 🐛 Theme tokens: shadcn color utilities render transparent (`bg-primary` etc.) — 2026-07-07
 
 **Symptom.** `bg-primary` (and every other shadcn color token — `bg-secondary`, `bg-muted`,

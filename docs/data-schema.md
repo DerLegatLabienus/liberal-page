@@ -180,7 +180,7 @@ Coupling / High Cohesion:
 | `parliament` | `bills`, `committees`, `committee_sessions`, `mks`, `mk_knesset_terms`, `mk_roles`, `mk_activity`, `mk_votes`, `mk_annotations`, `tracked_bills`, `tracked_committees`, `tracked_mks`, `knesset_members_cache`, `knesset_committees_cache`, `summaries_cache`, `knesset_config` |
 | `auth` | `users`, `refresh_tokens`, `allowed_emails` |
 | `email` | `email_templates`, `sent_emails` |
-| `letters` | `letters`, `letter_contacts`, `letter_issue_tags`, `letter_templates` |
+| `letters` | `letters`, `letter_channels`, `letter_contacts`, `letter_issue_tags`, `letter_templates`, `letter_media_assets` |
 | `analytics` | `join_analytics`, `letter_analytics` |
 | `config` | `feature_flags` |
 
@@ -191,6 +191,23 @@ changes. Migration `0021_domain_schemas.sql` moved the tables non-destructively
 cross-schema foreign keys are `parliament.tracked_* → auth.users`,
 `letters.letters.created_by → auth.users`, and `analytics.letter_analytics → letters.letters`;
 everything else is intra-schema. Spec: `docs/superpowers/specs/2026-06-18-domain-schemas-design.md`.
+
+#### Multi-channel letters (`letter_channels`)
+
+A `letters` row is a campaign holding only shared fields (title, issue tags, status, priority,
+pin/publish, analytics). Its content lives in **`letter_channels`** — one row per medium,
+`UNIQUE(letter_id, kind)` where `kind ∈ {email, sms, whatsapp}`. Each channel row carries `enabled`,
+`recipient_ids`/`cc_ids`/`bcc_ids` (jsonb `number[]` — **contact ids, resolved live**, never
+snapshots), `body_text` (the SMS/WhatsApp message, or email's plain-text alternative derived as
+`stripHtml(body_html)`), and the email-only `subject`/`body_html`/`template_id`. A CHECK enforces
+that an `email` channel has a subject + body_html. `letter_contacts` was widened: `email` is now
+**nullable** (still unique), plus `phone` (E.164), `has_whatsapp`, `photo_url`, `mk_site_id`; a CHECK
+requires email OR phone. Reachability: email ⟺ email present; sms ⟺ phone present; whatsapp ⟺ phone
+present AND has_whatsapp. `analytics.letter_analytics` gained `public_sms`/`public_whatsapp` buckets
+(no schema change — bucket is just a text column). Migration `0027_colorful_nicolaos.sql` (expand);
+`scripts/backfill-channels.ts` turns legacy letters into email channels (run once before serving);
+the legacy `letters.subject/body_html/body_plain/to/cc/bcc_addresses` columns are retained but empty
+and unread, pending a later contract migration. Spec: `docs/superpowers/specs/2026-07-15-communications-channels-design.md`.
 
 ### Design principles
 
