@@ -15,6 +15,17 @@ const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
 
+/** When publishing, every enabled channel must have at least one recipient. Returns an error string or null. */
+function publishGuard(status: string | undefined, channels: LetterChannelInput[] | undefined): string | null {
+  if (status !== 'published' || !channels) return null
+  for (const ch of channels) {
+    if ((ch.enabled ?? true) && (ch.recipientIds?.length ?? 0) === 0) {
+      return `Cannot publish: channel "${ch.kind}" has no recipients`
+    }
+  }
+  return null
+}
+
 router.use(requireAdmin)
 
 // GET /api/admin/letters — all letters with analytics
@@ -49,6 +60,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'title is required' })
     }
     const { title, status, priority, issueTagIds, channels } = body
+    const guardError = publishGuard(status, channels)
+    if (guardError) return res.status(400).json({ error: guardError })
     const letter = await lettersRepo.createCore({ title, status, priority, issueTagIds, createdBy: req.user?.id ?? null })
     await channelsRepo.replaceForLetter(letter.id, channels ?? [])
     setImmediate(() => { syncShareForLetter(letter.id) })
@@ -68,6 +81,8 @@ router.put('/:id', async (req, res) => {
       channels: LetterChannelInput[]
     }>
     const { channels, ...core } = body
+    const guardError = publishGuard(core.status, channels)
+    if (guardError) return res.status(400).json({ error: guardError })
     await lettersRepo.updateCore(id, core)
     if (channels) await channelsRepo.replaceForLetter(id, channels)
     const letter = await lettersRepo.getById(id)
