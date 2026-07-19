@@ -156,6 +156,9 @@ export default function LetterDetailPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
+                        {channel.bodyText && (
+                          <p className="whitespace-pre-wrap rounded border border-border bg-muted/40 p-3 text-sm">{channel.bodyText}</p>
+                        )}
                         {(channel.recipients ?? []).map((r) => (
                           <button
                             key={r.contactId}

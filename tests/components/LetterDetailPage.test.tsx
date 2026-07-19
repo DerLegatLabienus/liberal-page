@@ -31,7 +31,7 @@ const DETAIL: LetterDetailResponse = {
       mailtoUrl: 'mailto:preset@gov.il', renderedHtml: '<p>hi</p>',
     },
     {
-      kind: 'sms', enabled: true, bodyText: 'קצר', unavailableCount: 0,
+      kind: 'sms', enabled: true, bodyText: 'תוכן ההודעה', unavailableCount: 0,
       recipients: [
         { contactId: 1, displayName: 'דן', photoUrl: null, url: 'sms:+972500000001?&body=x' },
         { contactId: 2, displayName: 'מיכל', photoUrl: null, url: 'sms:+972500000002?&body=x' },
@@ -64,6 +64,11 @@ describe('LetterDetailPage (channels)', () => {
     renderAt()
     expect(await screen.findByRole('button', { name: /דן/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /מיכל/ })).toBeInTheDocument()
+  })
+
+  it('renders the SMS message body text', async () => {
+    renderAt()
+    expect(await screen.findByText('תוכן ההודעה')).toBeInTheDocument()
   })
 
   it('records a public send with (id, "sms", contactId) when an SMS recipient is clicked', async () => {
