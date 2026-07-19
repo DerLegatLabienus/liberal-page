@@ -6,7 +6,7 @@ import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repo
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter } from '../services/share-publisher'
-import { getShareConfig, isShareConfigured } from '../services/share-config'
+import { makeShareUrlResolver } from '../services/share-url'
 import type { LetterChannelInput } from '../../src/types'
 
 const router = Router()
@@ -49,16 +49,10 @@ router.get('/', async (_req, res) => {
       analyticsRepo.getLifetimeForLetters(allLetters.map((l) => l.id)),
       attachChannels(allLetters),
     ])
-    const shareBase = isShareConfigured() ? getShareConfig().publicBaseUrl : ''
-    // syncShareForLetter (share-publisher.ts) no-ops when the publicSharePages flag is off —
-    // no R2 object ever gets written — so shareUrl must be gated on the SAME flag, or the
-    // admin UI shows a "copy share link" button pointing at a 404. Read once per request
-    // (not per letter): only bother with the DB round-trip when R2 is configured at all.
-    const sharePagesEnabled = shareBase ? await flagsRepo.isEnabled('publicSharePages') : false
+    const shareUrlFor = await makeShareUrlResolver()
     const withStats = withChannels.map((letter) => {
       const stats = statsById.get(letter.id)
-      const shareUrl = shareBase && sharePagesEnabled && letter.status === 'published' ? `${shareBase}/letter/${letter.id}.html` : null
-      return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {}, shareUrl }
+      return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {}, shareUrl: shareUrlFor(letter) }
     })
     res.json({ letters: withStats })
   } catch (err) {

@@ -7,6 +7,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { LetterContactsRepository } from '../repositories/letter-contacts-repository'
 import { buildChannelSends } from '../services/channel-send'
 import { reachableOn } from '../services/channel-availability'
+import { makeShareUrlResolver } from '../services/share-url'
 import type { ChannelKind } from '../../src/types'
 
 const router = Router()
@@ -81,7 +82,8 @@ router.get('/', async (req, res) => {
     const tagParam = req.query.tags as string | undefined
     const tagIds = tagParam ? tagParam.split(',').map(Number).filter(Boolean) : undefined
     const letterList = await lettersRepo.listPublished(tagIds)
-    res.json({ letters: letterList })
+    const shareUrlFor = await makeShareUrlResolver()
+    res.json({ letters: letterList.map((l) => ({ ...l, shareUrl: shareUrlFor(l) })) })
   } catch (err) {
     console.error('[letters] list failed:', err)
     res.status(500).json({ error: 'Failed to load letters' })
@@ -98,7 +100,8 @@ router.get('/:id', async (req, res) => {
 
     const [letter] = await attachChannels([raw])
     const channels = await buildChannelSends(letter.channels)
-    res.json({ letter, channels })
+    const shareUrlFor = await makeShareUrlResolver()
+    res.json({ letter: { ...letter, shareUrl: shareUrlFor(letter) }, channels })
   } catch (err) {
     console.error('[letters] detail failed:', err)
     res.status(500).json({ error: 'Failed to load letter' })

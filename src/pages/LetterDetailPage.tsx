@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
+import CopyShareLink from '@/components/letters/CopyShareLink'
 import { api } from '@/lib/api-client'
 import { buildLetterPreviewDoc } from '@/lib/letter-preview'
 import { useAuth } from '@/contexts/AuthContext'
@@ -121,7 +122,18 @@ export default function LetterDetailPage() {
           <div className="grid gap-8 md:grid-cols-[350px_1fr]">
             {/* Send Panel */}
             <div className="rounded-lg border bg-card p-6 shadow-sm">
-              <h1 className="mb-4 text-xl font-bold">{data.letter.title}</h1>
+              {/* Share control lives beside the title, not in the preview panel's action bar —
+                  that bar only renders for letters with an email channel, so an SMS/WhatsApp-only
+                  letter would otherwise have no way to copy its share link. */}
+              <div className="mb-4 flex items-start justify-between gap-2">
+                <h1 className="text-xl font-bold">{data.letter.title}</h1>
+                {data.letter.shareUrl && (
+                  <CopyShareLink
+                    url={data.letter.shareUrl}
+                    className="shrink-0 whitespace-nowrap text-xs text-primary hover:underline"
+                  />
+                )}
+              </div>
 
               <div className="space-y-6">
                 {data.channels.filter((c) => c.enabled).map((channel) => {

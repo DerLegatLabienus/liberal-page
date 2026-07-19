@@ -180,6 +180,14 @@ Recipients are stored as **`contact_id[]` and resolved live** from `letter_conta
 contact's phone/email updates every letter (draft or published). Member client-side recipient
 editing was removed; the letters admin UI is Hebrew-only (no i18n keys).
 
+**Share links.** Every published letter gets a public, no-login R2 page at
+`{R2_PUBLIC_BASE_URL}/letter/{id}.html` (written by `share-publisher.ts`). The API attaches a
+`shareUrl` to each letter — on the admin list *and* the member list/detail — via the single
+resolver `server/services/share-url.ts` `makeShareUrlResolver()`, which returns a URL only when R2
+is configured **and** the `publicSharePages` flag is on **and** the letter is published (otherwise
+`null`, so the UI never offers a link to a 404). `src/components/letters/CopyShareLink.tsx` renders
+the copy button wherever `shareUrl` is non-null (admin table, letters list, letter detail).
+
 Letter & template HTML written via the letter/template admin routes is sanitized
 server-side (`server/services/html-sanitizer.ts`, strict allowlist) before storage,
 since it is later opened in a scriptable context (Blob "open in new tab", rich clipboard).

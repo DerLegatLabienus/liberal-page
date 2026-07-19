@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, errorStatus } from '@/lib/api-client'
 import { buildLetterPreviewDoc } from '@/lib/letter-preview'
+import CopyShareLink from '@/components/letters/CopyShareLink'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useMkList } from '@/hooks/useMkList'
@@ -265,24 +266,6 @@ export default function AdminLettersPage() {
         )}
       </div>
     </div>
-  )
-}
-
-function CopyShareLink({ url }: { url: string }) {
-  const [done, setDone] = useState(false)
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try { await navigator.clipboard.writeText(url) } catch { /* clipboard blocked */ }
-        setDone(true)
-        setTimeout(() => setDone(false), 1500)
-      }}
-      className="text-xs font-medium text-muted-foreground hover:text-primary"
-      title={url}
-    >
-      {done ? '✓ הועתק' : 'העתקת קישור שיתוף'}
-    </button>
   )
 }
 

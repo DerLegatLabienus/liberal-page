@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { api } from '@/lib/api-client'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
+import CopyShareLink from '@/components/letters/CopyShareLink'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Letter, LetterIssueTag } from '@/types'
@@ -137,12 +138,15 @@ export default function LettersPage() {
                 </div>
               )}
 
-              <Link
-                to={`/letters/${letter.id}`}
-                className="inline-block rounded bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                פתח מכתב
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to={`/letters/${letter.id}`}
+                  className="inline-block rounded bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  פתח מכתב
+                </Link>
+                {letter.shareUrl && <CopyShareLink url={letter.shareUrl} />}
+              </div>
             </div>
           ))}
         </div>

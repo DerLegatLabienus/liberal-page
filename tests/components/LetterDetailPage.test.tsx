@@ -77,4 +77,31 @@ describe('LetterDetailPage (channels)', () => {
     await u.click(await screen.findByRole('button', { name: /דן/ }))
     expect(api.letters.publicSend).toHaveBeenCalledWith(5, 'sms', 1)
   })
+
+  it('shows no share-link button when the letter has no share page', async () => {
+    renderAt()
+    await screen.findByRole('button', { name: /Gmail/ })
+    expect(screen.queryByRole('button', { name: /קישור שיתוף/ })).not.toBeInTheDocument()
+  })
+
+  it('copies the share link — including for a letter with no email channel', async () => {
+    // SMS-only letter: the preview panel (and its action bar) never renders, so the share
+    // control must live beside the title or it would be unreachable here.
+    vi.mocked(api.letters.detail).mockResolvedValue({
+      ...DETAIL,
+      letter: { ...DETAIL.letter, shareUrl: 'https://cdn.example/letter/5.html' },
+      channels: DETAIL.channels.filter((c) => c.kind === 'sms'),
+    })
+    const u = userEvent.setup({ delay: null })
+    renderAt()
+    const btn = await screen.findByRole('button', { name: /קישור שיתוף/ })
+
+    // happy-dom re-installs its own navigator.clipboard getter during render, so the mock
+    // has to go in after the component is on screen.
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    await u.click(btn)
+    expect(writeText).toHaveBeenCalledWith('https://cdn.example/letter/5.html')
+  })
 })

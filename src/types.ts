@@ -264,12 +264,15 @@ export interface Letter {
   publishedAt: string | null
   createdAt: string
   updatedAt: string
+  /** Public R2 share-page URL, or null when no share page exists (draft / sharing off /
+   *  R2 unconfigured). Optional because letters assembled internally (e.g. attachChannels)
+   *  don't carry it — only the API responses attach it. */
+  shareUrl?: string | null
 }
 
 export interface LetterWithStats extends Letter {
   totalSends: number
   breakdown: Record<string, number>
-  shareUrl: string | null
 }
 
 export interface RecipientSendLink {
