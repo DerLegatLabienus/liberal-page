@@ -56,7 +56,7 @@ const existingLetter: LetterWithStats = {
     bodyText: '', subject: 'נושא קיים', bodyHtml: '<p>גוף קיים</p>', templateId: null,
   }],
   issueTagIds: [], status: 'published', priority: 'normal', pinnedAt: null, activityScore: 0,
-  publishedAt: null, createdAt: '', updatedAt: '', totalSends: 0, breakdown: {},
+  publishedAt: null, createdAt: '', updatedAt: '', totalSends: 0, breakdown: {}, shareUrl: null,
 }
 
 describe('admin composer multi-recipient', () => {
@@ -158,6 +158,26 @@ describe('admin composer multi-recipient', () => {
     await user.click(await screen.findByRole('button', { name: /Regenerate share pages/ }))
     expect(api.admin.letters.regenerateShares).toHaveBeenCalled()
     expect(await screen.findByText(/Regenerated 3 share pages/)).toBeInTheDocument()
+  })
+
+  it('shows a copy-share-link button only for the row with a shareUrl, and copies it', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(api.admin.letters.list).mockResolvedValue({
+      letters: [
+        { ...existingLetter, id: 6, title: 'עם קישור שיתוף', shareUrl: 'https://cdn.example/letter/6.html' },
+        { ...existingLetter, id: 8, title: 'ללא קישור שיתוף', shareUrl: null },
+      ],
+    })
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await screen.findByText('עם קישור שיתוף')
+    const buttons = screen.getAllByRole('button', { name: /קישור שיתוף/ })
+    expect(buttons).toHaveLength(1)
+    // happy-dom resets navigator.clipboard to its own getter during render, so the mock
+    // must be installed after render (right before the interaction), not before.
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await user.click(buttons[0])
+    expect(writeText).toHaveBeenCalledWith('https://cdn.example/letter/6.html')
   })
 })
 

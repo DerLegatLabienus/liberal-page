@@ -205,6 +205,9 @@ export default function AdminLettersPage() {
                       >
                         Delete
                       </button>
+                      {letter.shareUrl && (
+                        <CopyShareLink url={letter.shareUrl} />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -261,6 +264,24 @@ export default function AdminLettersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+function CopyShareLink({ url }: { url: string }) {
+  const [done, setDone] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try { await navigator.clipboard.writeText(url) } catch { /* clipboard blocked */ }
+        setDone(true)
+        setTimeout(() => setDone(false), 1500)
+      }}
+      className="text-xs font-medium text-muted-foreground hover:text-primary"
+      title={url}
+    >
+      {done ? '✓ הועתק' : 'העתקת קישור שיתוף'}
+    </button>
   )
 }
 
