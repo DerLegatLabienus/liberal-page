@@ -5,7 +5,7 @@ import { LetterChannelsRepository } from '../repositories/letter-channels-reposi
 import { LetterAnalyticsRepository } from '../repositories/letter-analytics-repository'
 import { FeatureFlagsRepository } from '../repositories/feature-flags-repository'
 import { beautifyLetterHtml } from '../services/letter-beautifier'
-import { syncShareForLetter, removeShareForLetter } from '../services/share-publisher'
+import { syncShareForLetter, removeShareForLetter, regenerateAllShares } from '../services/share-publisher'
 import { makeShareUrlResolver } from '../services/share-url'
 import type { LetterChannelInput } from '../../src/types'
 
@@ -149,9 +149,8 @@ router.delete('/:id', async (req, res) => {
 // onto existing letters without editing them. Literal path — no collision with /:id.
 router.post('/regenerate-shares', async (_req, res) => {
   try {
-    const published = await lettersRepo.listPublished()
-    for (const l of published) await syncShareForLetter(l.id)
-    res.json({ regenerated: published.length })
+    const regenerated = await regenerateAllShares()
+    res.json({ regenerated })
   } catch (err) {
     console.error('[admin/letters] regenerate-shares failed:', err)
     res.status(500).json({ error: 'Failed to regenerate shares' })

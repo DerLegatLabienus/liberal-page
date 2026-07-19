@@ -11,6 +11,15 @@ const remove = vi.fn().mockResolvedValue(undefined)
 vi.mock('../../server/services/share-publisher', () => ({
   syncShareForLetter: (...a: unknown[]) => sync(...a),
   removeShareForLetter: (...a: unknown[]) => remove(...a),
+  // The route delegates regeneration to the service; this stub mirrors its contract so the
+  // route-level assertions below (per-letter ids, drafts skipped, returned count) still hold.
+  // The real loop runs unmocked in share-regenerate-on-boot.test.ts.
+  regenerateAllShares: async () => {
+    const { LettersRepository } = await import('../../server/repositories/letters-repository')
+    const published = await new LettersRepository().listPublished()
+    for (const l of published) await sync(l.id)
+    return published.length
+  },
 }))
 
 import adminLettersRouter from '../../server/routes/admin-letters'

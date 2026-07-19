@@ -20,6 +20,7 @@ import publicLettersRouter from './routes/public-letters'
 import adminLettersRouter from './routes/admin-letters'
 import adminLetterAssetsRouter from './routes/admin-letter-assets'
 import { startPoller, stopPoller } from './services/poller'
+import { syncSharesIfRendererChanged } from './services/share-publisher'
 import { runMigrations } from './db/migrate'
 import { closeDb } from './db/client'
 
@@ -98,6 +99,9 @@ runMigrations()
     const server = app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`)
       startPoller()
+      // Static share pages go stale whenever the renderer changes; this repairs them
+      // once per renderer version. No-ops when sharing isn't configured. Never throws.
+      void syncSharesIfRendererChanged()
       detectKnessetTransition().then((transitioned) => {
         if (transitioned) console.log('Knesset transition detected and applied on startup')
       }).catch((err) => {

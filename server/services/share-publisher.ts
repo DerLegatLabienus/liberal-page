@@ -7,7 +7,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { buildChannelSends } from './channel-send'
 import { getShareConfig } from './share-config'
 import { isConfigured, putObject, deleteObject } from './r2-client'
-import { renderShareHtml, renderShareImage, type ShareLetterView, type ShareChannelBlock } from './share-renderer'
+import { renderShareHtml, renderShareImage, SHARE_RENDERER_VERSION, type ShareLetterView, type ShareChannelBlock } from './share-renderer'
 
 const lettersRepo = new LettersRepository()
 const tagsRepo = new LetterIssueTagsRepository()
@@ -100,5 +100,44 @@ export async function removeShareForLetter(letterId: number): Promise<void> {
     await deleteObject(imageKey(letterId))
   } catch (err) {
     console.error('[share] remove failed for letter', letterId, err)
+  }
+}
+
+/** Rebuild the share objects for every published letter. Returns how many were processed.
+ *  Each letter is a per-letter no-op when R2 is unconfigured or publicSharePages is off. */
+export async function regenerateAllShares(): Promise<number> {
+  const published = await lettersRepo.listPublished()
+  for (const l of published) await syncShareForLetter(l.id)
+  return published.length
+}
+
+const RENDERER_VERSION_FLAG = 'shareRendererVersion'
+
+/**
+ * Regenerate every share page when the renderer's output has changed since the last run.
+ *
+ * Share pages are static R2 objects: a renderer change silently leaves every existing page
+ * stale until an admin remembers to click "Regenerate share pages". This closes that gap by
+ * comparing SHARE_RENDERER_VERSION against the version stored in the feature-flags table and
+ * regenerating once when they differ.
+ *
+ * Gated rather than unconditional because the service runs on a plan that spins down and
+ * cold-boots often — regenerating on every wake would write R2 objects needlessly. When the
+ * version matches, this costs one flag read. Never throws; boot must not depend on it.
+ */
+export async function syncSharesIfRendererChanged(): Promise<void> {
+  try {
+    if (!isConfigured()) return
+    if (!(await flagsRepo.isEnabled('publicSharePages'))) return
+
+    const flags = await flagsRepo.getAll()
+    const stored = flags[RENDERER_VERSION_FLAG]?.value ?? null
+    if (stored === String(SHARE_RENDERER_VERSION)) return
+
+    const count = await regenerateAllShares()
+    await flagsRepo.setFlag(RENDERER_VERSION_FLAG, true, String(SHARE_RENDERER_VERSION))
+    console.log(`[share] renderer v${SHARE_RENDERER_VERSION} (was ${stored ?? 'none'}) — regenerated ${count} share pages`)
+  } catch (err) {
+    console.error('[share] renderer-version sync failed:', err)
   }
 }

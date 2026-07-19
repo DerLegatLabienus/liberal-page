@@ -26,6 +26,18 @@ export interface ShareEmailBlock {
   gmailUrl: string
 }
 
+/**
+ * Bump this whenever renderShareHtml / renderShareImage output changes.
+ *
+ * Share pages are static R2 objects, so a renderer change leaves every already-published
+ * page stale until someone regenerates it. syncSharesIfRendererChanged() (share-publisher)
+ * compares this against the stored `shareRendererVersion` flag on boot and regenerates
+ * everything once when they differ — so a bump here is all that's needed.
+ *
+ * v2: SMS/WhatsApp channel bodies are rendered as visible content (`.chan-body`).
+ */
+export const SHARE_RENDERER_VERSION = 2
+
 export interface ShareLetterView {
   id: number
   title: string
