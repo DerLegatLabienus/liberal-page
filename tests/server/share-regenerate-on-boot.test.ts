@@ -46,10 +46,10 @@ describe('syncSharesIfRendererChanged (boot self-heal)', () => {
     await seedPublished(2)
     await syncSharesIfRendererChanged()
 
-    // one .html + one .png per letter
+    // per letter: html+png under the slug, plus the legacy id pair = 4 objects
     const keys = put.mock.calls.map((c) => c[0]).sort()
-    expect(keys).toHaveLength(4)
-    expect(keys.filter((k: string) => k.endsWith('.html'))).toHaveLength(2)
+    expect(keys).toHaveLength(8)
+    expect(keys.filter((k: string) => k.endsWith('.html'))).toHaveLength(4)
 
     const stored = (await flags.getAll())['shareRendererVersion']?.value
     expect(stored).toBe('2')

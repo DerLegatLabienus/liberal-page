@@ -255,6 +255,8 @@ export interface LetterMediaAsset {
 export interface Letter {
   id: number
   title: string
+  /** Opaque key for the public share page (the share URL is built from this, not the id). */
+  shareSlug: string
   channels: LetterChannel[]
   issueTagIds: number[]
   status: 'draft' | 'published'

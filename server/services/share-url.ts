@@ -16,11 +16,11 @@ const flagsRepo = new FeatureFlagsRepository()
  * so it's only read when R2 is configured at all. Call this once per request, then apply the
  * returned function to each letter.
  */
-export async function makeShareUrlResolver(): Promise<(letter: { id: number; status: string }) => string | null> {
+export async function makeShareUrlResolver(): Promise<(letter: { status: string; shareSlug: string }) => string | null> {
   const shareBase = isShareConfigured() ? getShareConfig().publicBaseUrl : ''
   const sharePagesEnabled = shareBase ? await flagsRepo.isEnabled('publicSharePages') : false
   return (letter) =>
     shareBase && sharePagesEnabled && letter.status === 'published'
-      ? `${shareBase}/letter/${letter.id}.html`
+      ? `${shareBase}/letter/${letter.shareSlug}.html`
       : null
 }

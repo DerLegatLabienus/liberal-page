@@ -42,7 +42,7 @@ describe('GET /api/admin/letters shareUrl', () => {
     const res = await request(app).get('/api/admin/letters').set('Authorization', `Bearer ${token}`)
     expect(res.status).toBe(200)
     const byId = Object.fromEntries(res.body.letters.map((l: { id: number; shareUrl: string | null }) => [l.id, l.shareUrl]))
-    expect(byId[pub.id]).toBe(`https://cdn.example/letter/${pub.id}.html`)
+    expect(byId[pub.id]).toBe(`https://cdn.example/letter/${pub.shareSlug}.html`)
     expect(byId[draft.id]).toBeNull()
   })
 

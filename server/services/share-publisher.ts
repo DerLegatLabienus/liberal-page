@@ -13,8 +13,11 @@ const lettersRepo = new LettersRepository()
 const tagsRepo = new LetterIssueTagsRepository()
 const flagsRepo = new FeatureFlagsRepository()
 
-const htmlKey = (id: number) => `letter/${id}.html`
-const imageKey = (id: number) => `letter/${id}.png`
+// Canonical keys use the letter's opaque slug so shared URLs don't expose the sequential id.
+// The id-keyed pair is still written as a legacy mirror so links already circulating keep
+// resolving. (Consequence, accepted: the id-keyed pages remain enumerable.)
+const htmlKey = (key: string | number) => `letter/${key}.html`
+const imageKey = (key: string | number) => `letter/${key}.png`
 
 /** Publish a published letter's share objects, or remove them otherwise. Never throws. */
 export async function syncShareForLetter(letterId: number): Promise<void> {
@@ -66,6 +69,7 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
     const tagIds = letter.issueTagIds
     const view: ShareLetterView = {
       id: letter.id,
+      slug: letter.shareSlug,
       title: letter.title,
       recipientNames,
       issueTags: allTags.filter((t) => tagIds.includes(t.id)).map((t) => t.name),
@@ -85,8 +89,11 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
     const { publicBaseUrl, appBaseUrl, apiBaseUrl, turnstileSiteKey } = getShareConfig()
     const html = renderShareHtml(view, { shareBaseUrl: publicBaseUrl, appBaseUrl, apiBaseUrl, turnstileSiteKey })
     const png = await renderShareImage(view)
-    await putObject(htmlKey(letter.id), html, 'text/html; charset=utf-8')
-    await putObject(imageKey(letter.id), png, 'image/png')
+    // Same bytes under both keys; the page's canonical/og URLs always point at the slug.
+    for (const key of [letter.shareSlug, letter.id]) {
+      await putObject(htmlKey(key), html, 'text/html; charset=utf-8')
+      await putObject(imageKey(key), png, 'image/png')
+    }
   } catch (err) {
     console.error('[share] sync failed for letter', letterId, err)
   }
@@ -96,8 +103,15 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
 export async function removeShareForLetter(letterId: number): Promise<void> {
   try {
     if (!isConfigured()) return
-    await deleteObject(htmlKey(letterId))
-    await deleteObject(imageKey(letterId))
+    // The slug lives on the row, so read it before deleting. When the row is already gone
+    // (delete-then-remove ordering) fall back to the legacy id keys only — the slug object
+    // would otherwise be unreachable, which is why deletion reads the row first.
+    const row = await lettersRepo.getById(letterId)
+    const keys: (string | number)[] = row?.shareSlug ? [row.shareSlug, letterId] : [letterId]
+    for (const key of keys) {
+      await deleteObject(htmlKey(key))
+      await deleteObject(imageKey(key))
+    }
   } catch (err) {
     console.error('[share] remove failed for letter', letterId, err)
   }

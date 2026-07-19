@@ -35,11 +35,15 @@ export interface ShareEmailBlock {
  * everything once when they differ — so a bump here is all that's needed.
  *
  * v2: SMS/WhatsApp channel bodies are rendered as visible content (`.chan-body`).
+ * v3: canonical/og URLs point at the opaque share slug instead of the letter id.
  */
-export const SHARE_RENDERER_VERSION = 2
+export const SHARE_RENDERER_VERSION = 3
 
 export interface ShareLetterView {
   id: number
+  /** Opaque share-page key. The canonical URL and og:image point here, so even the legacy
+   *  id-keyed copy of this page advertises the slug URL. */
+  slug: string
   title: string
   recipientNames: string[]
   issueTags: string[]
@@ -70,8 +74,8 @@ function description(text: string): string {
 const CHANNEL_LABELS: Record<ShareChannelBlock['kind'], string> = { sms: 'SMS', whatsapp: 'WhatsApp' }
 
 export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: string; appBaseUrl: string; apiBaseUrl: string; turnstileSiteKey?: string }): string {
-  const shareUrl = `${opts.shareBaseUrl}/letter/${view.id}.html`
-  const imageUrl = `${opts.shareBaseUrl}/letter/${view.id}.png`
+  const shareUrl = `${opts.shareBaseUrl}/letter/${view.slug}.html`
+  const imageUrl = `${opts.shareBaseUrl}/letter/${view.slug}.png`
   const learnMoreUrl = `${opts.appBaseUrl}/letters/${view.id}?src=share`
   // Fall back to the title when there's no email body to summarize (sms/whatsapp-only letter).
   const desc = description(view.email?.bodyPlain || view.title)

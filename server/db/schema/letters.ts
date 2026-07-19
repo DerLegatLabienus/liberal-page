@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { serial, integer, text, timestamp, jsonb, primaryKey, boolean, unique } from 'drizzle-orm/pg-core'
 import { users } from './tracking'
 import { lettersSchema, analyticsSchema } from './schemas'
@@ -33,6 +34,10 @@ export const letterTemplates = lettersSchema.table('letter_templates', {
 export const letters = lettersSchema.table('letters', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
+  /** Opaque key for the public share page, so shared URLs don't expose the sequential id.
+   *  Stored (not derived) because share pages regenerate on renderer-version bumps — a
+   *  derived slug would change the URL and break every link already shared. */
+  shareSlug: text('share_slug').notNull().unique().default(sql`replace(gen_random_uuid()::text, '-', '')`),
   subject: text('subject'),
   bodyHtml: text('body_html'),
   bodyPlain: text('body_plain'),

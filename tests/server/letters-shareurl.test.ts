@@ -14,6 +14,7 @@ app.use('/api/letters', lettersRouter)
 const flags = new FeatureFlagsRepository()
 let token: string
 let letterId: number
+let letterSlug: string
 
 function configureR2() {
   vi.stubEnv('R2_ACCOUNT_ID', 'a')
@@ -37,6 +38,7 @@ describe('member letters endpoints expose shareUrl', () => {
       title: 'Shareable', status: 'published', priority: 'normal', publishedAt: new Date(),
     }).returning()
     letterId = l.id
+    letterSlug = l.shareSlug
   })
 
   afterEach(() => { vi.unstubAllEnvs() })
@@ -48,11 +50,11 @@ describe('member letters endpoints expose shareUrl', () => {
     const list = await request(app).get('/api/letters').set('Authorization', `Bearer ${token}`)
     expect(list.status).toBe(200)
     expect(list.body.letters.find((l: { id: number }) => l.id === letterId).shareUrl)
-      .toBe(`https://cdn.example/letter/${letterId}.html`)
+      .toBe(`https://cdn.example/letter/${letterSlug}.html`)
 
     const detail = await request(app).get(`/api/letters/${letterId}`).set('Authorization', `Bearer ${token}`)
     expect(detail.status).toBe(200)
-    expect(detail.body.letter.shareUrl).toBe(`https://cdn.example/letter/${letterId}.html`)
+    expect(detail.body.letter.shareUrl).toBe(`https://cdn.example/letter/${letterSlug}.html`)
   })
 
   it('returns null when the publicSharePages flag is off (no R2 object is ever written)', async () => {

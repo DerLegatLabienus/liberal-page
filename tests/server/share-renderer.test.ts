@@ -7,6 +7,7 @@ const mk = { email: 'mk@knesset.gov.il', display_name: 'ח"כ ישראל ישר�
 
 const view: ShareLetterView = {
   id: 42,
+  slug: 'slug42',
   title: 'עצרו את חוק X',
   recipientNames: ['ח"כ ישראל ישראלי'],
   issueTags: ['חירות אזרחית'],
@@ -27,8 +28,8 @@ describe('renderShareHtml', () => {
   })
   it('emits Open Graph tags with title, description, image and url', () => {
     expect(html).toContain('<meta property="og:title" content="עצרו את חוק X">')
-    expect(html).toContain('property="og:image" content="https://share.example.org/letter/42.png"')
-    expect(html).toContain('property="og:url" content="https://share.example.org/letter/42.html"')
+    expect(html).toContain('property="og:image" content="https://share.example.org/letter/slug42.png"')
+    expect(html).toContain('property="og:url" content="https://share.example.org/letter/slug42.html"')
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
     // description = first ~150 chars of the email body
     expect(html).toMatch(/property="og:description" content="שלום רב/)
@@ -65,7 +66,7 @@ describe('renderShareHtml (sms/whatsapp-only letter, no email channel)', () => {
 describe('buildOgCardNode', () => {
   it('reorders the card title to visual order', () => {
     const node = buildOgCardNode({
-      id: 1, title: 'חוק הבריאות 2026',
+      id: 1, slug: 'slug1', title: 'חוק הבריאות 2026',
       recipientNames: [], issueTags: [],
     })
     const children = node.props.children as Array<{ props: { children: string } }>
@@ -75,7 +76,7 @@ describe('buildOgCardNode', () => {
 
 describe('renderShareHtml (public send page)', () => {
   const view = {
-    id: 7, title: 'חוק הבריאות',
+    id: 7, slug: 'slug7', title: 'חוק הבריאות',
     recipientNames: ['ח"כ פלוני'], issueTags: ['בריאות'],
     email: {
       subject: 'נושא', bodyHtml: '<p>גוף המכתב</p>', bodyPlain: 'גוף המכתב',
@@ -87,7 +88,7 @@ describe('renderShareHtml (public send page)', () => {
 
   it('has the OG image meta', () => {
     expect(html).toContain('property="og:image"')
-    expect(html).toContain('https://pub.r2.dev/letter/7.png')
+    expect(html).toContain('https://pub.r2.dev/letter/slug7.png')
   })
   it('has a mailto send link to the MK with the subject and body', () => {
     expect(html).toContain('href="mailto:mk@knesset.gov.il?')

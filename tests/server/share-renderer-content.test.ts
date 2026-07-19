@@ -8,7 +8,7 @@ import { renderShareHtml, type ShareLetterView } from '../../server/services/sha
 // and asserts the actual email + per-recipient sms content lands in the output HTML.
 
 const view: ShareLetterView = {
-  id: 101,
+  id: 101, slug: 'slug101',
   title: 'מכתב לדוגמה',
   recipientNames: ['ח"כ ישראל ישראלי', 'דנה כהן', 'יוסי לוי'],
   issueTags: ['חירות אזרחית'],
@@ -96,7 +96,7 @@ describe('renderShareHtml — real content assembled from channels (no mocks)', 
 
 describe('renderShareHtml — WhatsApp channels', () => {
   const whatsappView: ShareLetterView = {
-    id: 102,
+    id: 102, slug: 'slug102',
     title: 'מכתב לדוגמה',
     recipientNames: ['ח"כ ישראל ישראלי', 'דנה כהן'],
     issueTags: ['חירות אזרחית'],

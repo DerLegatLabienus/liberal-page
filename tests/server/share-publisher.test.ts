@@ -30,19 +30,31 @@ describe('share-publisher', () => {
     await flags.setFlag('publicSharePages', true, null, 'x')
   })
 
-  it('publishes both objects for a published letter when the flag is on', async () => {
+  it('publishes under the opaque slug AND the legacy id key (so old links keep working)', async () => {
     const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
     await syncShareForLetter(l.id)
-    expect(put).toHaveBeenCalledTimes(2)
+    expect(put).toHaveBeenCalledTimes(4)
     const keys = put.mock.calls.map((c) => c[0]).sort()
-    expect(keys).toEqual([`letter/${l.id}.html`, `letter/${l.id}.png`])
+    expect(keys).toEqual([
+      `letter/${l.id}.html`, `letter/${l.id}.png`,
+      `letter/${l.shareSlug}.html`, `letter/${l.shareSlug}.png`,
+    ].sort())
+    // the slug is opaque: a 32-char random hex, not the id in any form
+    expect(l.shareSlug).toMatch(/^[0-9a-f]{32}$/)
+    expect(l.shareSlug).not.toBe(String(l.id))
+    const other = await lettersRepo.createCore({ ...BASE, status: 'published' })
+    expect(other.shareSlug).not.toBe(l.shareSlug)
+    // both copies are byte-identical
+    const htmls = put.mock.calls.filter((c) => String(c[0]).endsWith('.html')).map((c) => c[1])
+    expect(htmls[0]).toBe(htmls[1])
   })
 
   it('removes objects for a draft (non-published) letter', async () => {
     const l = await lettersRepo.createCore({ ...BASE, status: 'draft' })
     await syncShareForLetter(l.id)
     expect(put).not.toHaveBeenCalled()
-    expect(del).toHaveBeenCalledTimes(2)
+    // slug pair + legacy id pair
+    expect(del).toHaveBeenCalledTimes(4)
   })
 
   it('does nothing when the flag is off', async () => {
@@ -52,7 +64,18 @@ describe('share-publisher', () => {
     expect(put).not.toHaveBeenCalled(); expect(del).not.toHaveBeenCalled()
   })
 
-  it('removeShareForLetter deletes both objects', async () => {
+  it('removeShareForLetter deletes the slug pair and the legacy id pair', async () => {
+    const l = await lettersRepo.createCore({ ...BASE, status: 'published' })
+    del.mockClear()
+    await removeShareForLetter(l.id)
+    const keys = del.mock.calls.map((c) => c[0]).sort()
+    expect(keys).toEqual([
+      `letter/${l.id}.html`, `letter/${l.id}.png`,
+      `letter/${l.shareSlug}.html`, `letter/${l.shareSlug}.png`,
+    ].sort())
+  })
+
+  it('removeShareForLetter falls back to the legacy id keys when the row is already gone', async () => {
     await removeShareForLetter(99)
     const keys = del.mock.calls.map((c) => c[0]).sort()
     expect(keys).toEqual(['letter/99.html', 'letter/99.png'])

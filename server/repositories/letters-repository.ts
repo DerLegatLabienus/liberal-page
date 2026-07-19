@@ -30,7 +30,7 @@ function toApiChannel(r: typeof letterChannels.$inferSelect): LetterChannel {
 export async function attachChannels(rows: Letter[]): Promise<LetterApi[]> {
   const byLetter = await channelsRepo.listByLetterIds(rows.map((r) => r.id))
   return rows.map((r) => ({
-    id: r.id, title: r.title, issueTagIds: r.issueTagIds,
+    id: r.id, title: r.title, shareSlug: r.shareSlug, issueTagIds: r.issueTagIds,
     status: r.status as LetterApi['status'], priority: r.priority as LetterApi['priority'],
     pinnedAt: r.pinnedAt?.toISOString() ?? null, activityScore: r.activityScore,
     publishedAt: r.publishedAt?.toISOString() ?? null,
