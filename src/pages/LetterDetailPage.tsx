@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import { api } from '@/lib/api-client'
+import { buildLetterPreviewDoc } from '@/lib/letter-preview'
 import { useAuth } from '@/contexts/AuthContext'
 import type { LetterDetailResponse, ChannelSend, RecipientSendLink } from '@/types'
 
@@ -39,6 +40,9 @@ export default function LetterDetailPage() {
 
   const emailChannel = data?.channels.find((c) => c.kind === 'email' && c.enabled)
   const previewHtml = emailChannel?.renderedHtml
+  // Rendered through the shared preview shell so an untemplated letter (a bare body
+  // fragment) still gets RTL + typography — identical to the composer's live preview.
+  const previewDoc = previewHtml ? buildLetterPreviewDoc(previewHtml) : undefined
 
   const handleMailto = useCallback((channel: ChannelSend) => {
     if (!id || !channel.mailtoUrl) return
@@ -94,12 +98,12 @@ export default function LetterDetailPage() {
   // Chrome and Firefox block top-level navigation to data: URLs. The object URL is
   // revoked after a delay so the opened tab has time to load it.
   const handleOpenInTab = useCallback(() => {
-    if (!previewHtml) return
-    const blob = new Blob([previewHtml], { type: 'text/html;charset=utf-8' })
+    if (!previewDoc) return
+    const blob = new Blob([previewDoc], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank', 'noopener,noreferrer')
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  }, [previewHtml])
+  }, [previewDoc])
 
   return (
     <div className="min-h-screen bg-background">
@@ -210,7 +214,7 @@ export default function LetterDetailPage() {
                   </button>
                 </div>
                 <iframe
-                  srcDoc={previewHtml}
+                  srcDoc={previewDoc}
                   title="תצוגת מכתב"
                   className="h-[600px] w-full border-0"
                   sandbox="allow-same-origin"

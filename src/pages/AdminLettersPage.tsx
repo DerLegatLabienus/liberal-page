@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, errorStatus } from '@/lib/api-client'
+import { buildLetterPreviewDoc } from '@/lib/letter-preview'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useMkList } from '@/hooks/useMkList'
@@ -883,8 +884,10 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
             <p className="mb-1 text-xs text-muted-foreground">Live preview:</p>
             <iframe
               title="composer-preview"
-              srcDoc={(templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
-                .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>')}
+              srcDoc={buildLetterPreviewDoc(
+                (templates.find((t) => t.id === templateId)?.html ?? '{{CONTENT}}')
+                  .replace('{{CONTENT}}', bodyHtml || '<em>תוכן המכתב…</em>'),
+              )}
               className="h-48 w-full rounded border"
               sandbox="allow-same-origin"
             />
