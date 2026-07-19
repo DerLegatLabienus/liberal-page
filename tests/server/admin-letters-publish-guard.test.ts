@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
+import { eq } from 'drizzle-orm'
 import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
 import { users, refreshTokens, letters, letterChannels } from '../../server/db/schema'
@@ -83,5 +84,40 @@ describe('admin-letters publish guard', () => {
     expect(res.body.error).toMatch(/sms/)
     const list = await db.select().from(letters)
     expect(list.find((l) => l.id === id)?.status).toBe('draft')
+  })
+
+  it('PUT: installing a zero-recipient channel on an ALREADY-published letter with no status key → 400, channels left untouched', async () => {
+    const created = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'X', status: 'published', channels: [{ kind: 'sms', recipientIds: [1], bodyText: 'hi' }] })
+    const id = created.body.letter.id
+    const res = await request(app).put(`/api/admin/letters/${id}`).set('Authorization', `Bearer ${token}`)
+      .send({ channels: [{ kind: 'sms', recipientIds: [], bodyText: 'hi' }] })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/sms/)
+    const stored = await db.select().from(letterChannels).where(eq(letterChannels.letterId, id))
+    expect(stored[0].recipientIds).toEqual([1]) // untouched — the bad channel set was never persisted
+  })
+
+  it('PUT: demoting an already-published letter to draft while installing a zero-recipient channel → allowed (200)', async () => {
+    const created = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'X', status: 'published', channels: [{ kind: 'sms', recipientIds: [1], bodyText: 'hi' }] })
+    const id = created.body.letter.id
+    const res = await request(app).put(`/api/admin/letters/${id}`).set('Authorization', `Bearer ${token}`)
+      .send({ status: 'draft', channels: [{ kind: 'sms', recipientIds: [], bodyText: 'hi' }] })
+    expect(res.status).toBe(200)
+  })
+
+  it('POST: publishing with the channels key entirely omitted → 400, nothing persisted', async () => {
+    const res = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'X', status: 'published' })
+    expect(res.status).toBe(400)
+    expect(await db.select().from(letters)).toHaveLength(0)
+  })
+
+  it('POST: publishing with an empty channels array → 400, nothing persisted', async () => {
+    const res = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'X', status: 'published', channels: [] })
+    expect(res.status).toBe(400)
+    expect(await db.select().from(letters)).toHaveLength(0)
   })
 })

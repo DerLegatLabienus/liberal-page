@@ -50,9 +50,14 @@ router.get('/', async (_req, res) => {
       attachChannels(allLetters),
     ])
     const shareBase = isShareConfigured() ? getShareConfig().publicBaseUrl : ''
+    // syncShareForLetter (share-publisher.ts) no-ops when the publicSharePages flag is off —
+    // no R2 object ever gets written — so shareUrl must be gated on the SAME flag, or the
+    // admin UI shows a "copy share link" button pointing at a 404. Read once per request
+    // (not per letter): only bother with the DB round-trip when R2 is configured at all.
+    const sharePagesEnabled = shareBase ? await flagsRepo.isEnabled('publicSharePages') : false
     const withStats = withChannels.map((letter) => {
       const stats = statsById.get(letter.id)
-      const shareUrl = shareBase && letter.status === 'published' ? `${shareBase}/letter/${letter.id}.html` : null
+      const shareUrl = shareBase && sharePagesEnabled && letter.status === 'published' ? `${shareBase}/letter/${letter.id}.html` : null
       return { ...letter, totalSends: stats?.total ?? 0, breakdown: stats?.breakdown ?? {}, shareUrl }
     })
     res.json({ letters: withStats })
@@ -73,6 +78,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'title is required' })
     }
     const { title, status, priority, issueTagIds, channels } = body
+    // publishGuard only validates recipients WITHIN a supplied channels array — it short-
+    // circuits (no error) when `channels` is omitted entirely, which would otherwise let
+    // `{status:'published'}` with no channels key create a published letter with zero
+    // channels (same empty-share-page symptom as a zero-recipient channel).
+    if (status === 'published' && (!channels || channels.length === 0)) {
+      return res.status(400).json({ error: 'Cannot publish a letter with no channels' })
+    }
     const guardError = publishGuard(status, channels)
     if (guardError) return res.status(400).json({ error: guardError })
     const letter = await lettersRepo.createCore({ title, status, priority, issueTagIds, createdBy: req.user?.id ?? null })
@@ -102,6 +114,16 @@ router.put('/:id', async (req, res) => {
     if (!guardError && core.status === 'published' && !channels) {
       const stored = await channelsRepo.listByLetter(id)
       guardError = findZeroRecipientChannel(stored)
+    }
+    // A PUT that supplies `channels` but no `status` key (or a status that isn't a demotion
+    // to draft) against an ALREADY-published letter bypasses publishGuard above, since that
+    // only fires when the INCOMING status is 'published' — so a zero-recipient channel could
+    // otherwise be installed on a live letter without ever re-triggering the publish check.
+    if (!guardError && channels && core.status !== 'draft') {
+      const existing = await lettersRepo.getById(id)
+      if (existing?.status === 'published') {
+        guardError = findZeroRecipientChannel(channels)
+      }
     }
     if (guardError) return res.status(400).json({ error: guardError })
     await lettersRepo.updateCore(id, core)

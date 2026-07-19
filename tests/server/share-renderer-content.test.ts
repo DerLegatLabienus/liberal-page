@@ -65,7 +65,32 @@ describe('renderShareHtml — real content assembled from channels (no mocks)', 
     // Strip href attribute values before asserting, so a match can only come from visible markup.
     const withoutHrefs = html.replace(/href="[^"]*"/g, 'href="STRIPPED"')
     expect(withoutHrefs).toContain('הודעת בדיקה לשיתוף')
-    expect(html).toContain('<div class="body">הודעת בדיקה לשיתוף</div>')
+    // Channel bodies use their own class ("chan-body"), not the email's ".body" — so the
+    // copy-to-clipboard script's `.body` selector keeps resolving to the email body only.
+    expect(html).toContain('<div class="chan-body">הודעת בדיקה לשיתוף</div>')
+  })
+
+  it('renders a multi-line channel body with preserved newlines (white-space: pre-wrap on .chan-body)', () => {
+    const multiline: ShareLetterView = {
+      ...view,
+      channels: [
+        {
+          kind: 'sms',
+          bodyText: 'שורה ראשונה\nשורה שנייה\nשורה שלישית',
+          recipients: [{ contactId: 501, displayName: 'דנה כהן', url: 'sms:+972500000001?&body=x' }],
+        },
+      ],
+    }
+    const multilineHtml = renderShareHtml(multiline, opts)
+    // esc() doesn't touch newlines — they must survive raw inside the chan-body div, and the
+    // page's CSS carries `white-space: pre-wrap` on .chan-body so they render as line breaks.
+    expect(multilineHtml).toContain('<div class="chan-body">שורה ראשונה\nשורה שנייה\nשורה שלישית</div>')
+    expect(multilineHtml).toMatch(/\.chan-body\s*\{[^}]*white-space:\s*pre-wrap/)
+  })
+
+  it('the copy script still targets the email .body, unaffected by the channel body\'s class rename', () => {
+    expect(html).toContain("document.querySelector('.body')")
+    expect(html).toContain('<div class="body">')
   })
 })
 
@@ -110,6 +135,6 @@ describe('renderShareHtml — WhatsApp channels', () => {
   it('renders the whatsapp message body as visible content, not only percent-encoded inside an href', () => {
     const withoutHrefs = html.replace(/href="[^"]*"/g, 'href="STRIPPED"')
     expect(withoutHrefs).toContain('הודעת בדיקה לשיתוף בוואטסאפ')
-    expect(html).toContain('<div class="body">הודעת בדיקה לשיתוף בוואטסאפ</div>')
+    expect(html).toContain('<div class="chan-body">הודעת בדיקה לשיתוף בוואטסאפ</div>')
   })
 })

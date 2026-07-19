@@ -5,6 +5,7 @@ import { setupTestDb } from './db-harness'
 import { db } from '../../server/db/client'
 import { users, refreshTokens, letters } from '../../server/db/schema'
 import { issueAccessToken } from '../../server/services/auth-service'
+import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
 
 const sync = vi.fn().mockResolvedValue(undefined)
 const remove = vi.fn().mockResolvedValue(undefined)
@@ -30,10 +31,11 @@ describe('GET /api/admin/letters shareUrl', () => {
   })
   afterEach(() => { vi.unstubAllEnvs() })
 
-  it('published letter with R2 + publicBaseUrl configured → shareUrl; draft → null', async () => {
+  it('published letter with R2 + publicBaseUrl configured + publicSharePages ON → shareUrl; draft → null', async () => {
     vi.stubEnv('R2_ACCOUNT_ID', 'a'); vi.stubEnv('R2_ACCESS_KEY_ID', 'b')
     vi.stubEnv('R2_SECRET_ACCESS_KEY', 'c'); vi.stubEnv('R2_BUCKET', 'd')
     vi.stubEnv('R2_PUBLIC_BASE_URL', 'https://cdn.example')
+    await new FeatureFlagsRepository().setFlag('publicSharePages', true, null)
     const [pub] = await db.insert(letters).values({ title: 'P', status: 'published', priority: 'normal', publishedAt: new Date() }).returning()
     const [draft] = await db.insert(letters).values({ title: 'D', status: 'draft', priority: 'normal' }).returning()
 
@@ -46,8 +48,20 @@ describe('GET /api/admin/letters shareUrl', () => {
 
   it('published but R2 unconfigured → shareUrl null', async () => {
     vi.stubEnv('R2_PUBLIC_BASE_URL', ''); vi.stubEnv('R2_ACCOUNT_ID', '')
+    await new FeatureFlagsRepository().setFlag('publicSharePages', true, null)
     const [pub] = await db.insert(letters).values({ title: 'P', status: 'published', priority: 'normal', publishedAt: new Date() }).returning()
     const res = await request(app).get('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+    expect(res.body.letters.find((l: { id: number }) => l.id === pub.id).shareUrl).toBeNull()
+  })
+
+  it('published + R2 configured but publicSharePages flag OFF → shareUrl null', async () => {
+    vi.stubEnv('R2_ACCOUNT_ID', 'a'); vi.stubEnv('R2_ACCESS_KEY_ID', 'b')
+    vi.stubEnv('R2_SECRET_ACCESS_KEY', 'c'); vi.stubEnv('R2_BUCKET', 'd')
+    vi.stubEnv('R2_PUBLIC_BASE_URL', 'https://cdn.example')
+    await new FeatureFlagsRepository().setFlag('publicSharePages', false, null)
+    const [pub] = await db.insert(letters).values({ title: 'P', status: 'published', priority: 'normal', publishedAt: new Date() }).returning()
+    const res = await request(app).get('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
     expect(res.body.letters.find((l: { id: number }) => l.id === pub.id).shareUrl).toBeNull()
   })
 })

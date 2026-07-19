@@ -31,7 +31,12 @@ describe('admin-letters share hooks', () => {
     token = issueAccessToken({ id: u.id, email: 'a@x.com', name: 'A', role: 'admin' })
   })
 
-  const body = { title: 't', subject: 's', bodyHtml: '<p>x</p>', toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], status: 'published' }
+  // Publishing now requires at least one channel with a recipient (publish guard) — carry a
+  // minimal email channel alongside the legacy top-level fields these tests otherwise exercise.
+  const body = {
+    title: 't', subject: 's', bodyHtml: '<p>x</p>', toAddresses: [{ email: 'mk@k.il', display_name: 'ח"כ' }], status: 'published',
+    channels: [{ kind: 'email', recipientIds: [1], bodyText: 'x', subject: 's', bodyHtml: '<p>x</p>' }],
+  }
 
   it('syncs share on create', async () => {
     const res = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`).send(body)

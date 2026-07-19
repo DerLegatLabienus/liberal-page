@@ -108,7 +108,7 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
           return `<a class="recipient" href="${escAttr(r.url)}" data-kind="${c.kind}" data-contact-id="${r.contactId}"${targetRel}>שליחה ל${esc(r.displayName)}</a>`
         })
         .join('\n      ')
-      const bodyBlock = c.bodyText ? `<div class="body">${esc(c.bodyText)}</div>` : ''
+      const bodyBlock = c.bodyText ? `<div class="chan-body">${esc(c.bodyText)}</div>` : ''
       return `<div class="channel-block">
       <h2 class="channel-title">${esc(CHANNEL_LABELS[c.kind])}</h2>
       ${bodyBlock}
@@ -140,6 +140,7 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
   h1 { font-size:24px; margin:12px 0; }
   .to { color:#475569; font-size:14px; margin-bottom:16px; }
   .body { line-height:1.7; }
+  .chan-body { line-height:1.7; white-space:pre-wrap; }
   .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
   .btn { flex:1 1 160px; text-align:center; background:#1d4ed8; color:#fff; text-decoration:none; padding:14px; border-radius:8px; font-weight:600; border:0; font-size:16px; cursor:pointer; }
   .btn.secondary { background:#e2e8f0; color:#0f172a; }

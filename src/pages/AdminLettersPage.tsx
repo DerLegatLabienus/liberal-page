@@ -828,7 +828,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
 
           <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipients</div>
           <div className="col-span-2 space-y-3">
-            <RecipientEditor label="To *" value={toIds} onChange={setToIds} contacts={emailContacts} />
+            <RecipientEditor label="To *" value={toIds} onChange={(next) => { setToIds(next); setSubmitError(null) }} contacts={emailContacts} />
             {showCc
               ? <RecipientEditor label="Cc" value={ccIds} onChange={setCcIds} contacts={emailContacts} />
               : <button type="button" onClick={() => setShowCc(true)} className="text-xs text-primary hover:underline">+ add Cc</button>}
@@ -897,7 +897,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
         <ChannelBodyTab
           mode="sms"
           body={smsBody} onBody={setSmsBody}
-          ids={smsIds} onIds={setSmsIds}
+          ids={smsIds} onIds={(next) => { setSmsIds(next); setSubmitError(null) }}
           contacts={smsContacts}
         />
       )}
@@ -907,7 +907,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
         <ChannelBodyTab
           mode="whatsapp"
           body={waBody} onBody={setWaBody}
-          ids={waIds} onIds={setWaIds}
+          ids={waIds} onIds={(next) => { setWaIds(next); setSubmitError(null) }}
           contacts={waContacts}
         />
       )}
