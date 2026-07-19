@@ -619,6 +619,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
   const [showBcc, setShowBcc] = useState((seedEmail?.bccIds?.length ?? 0) > 0)
   const [beautifying, setBeautifying] = useState(false)
   const [beautifyError, setBeautifyError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // SMS channel state
   const [smsIds, setSmsIds] = useState<number[]>(seedSms?.recipientIds ?? [])
@@ -706,10 +707,19 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError(null)
     if (!valid()) return
+    const built = buildChannels()
+    if (status === 'published') {
+      const empty = built.find((c) => (c.enabled ?? true) && (c.recipientIds?.length ?? 0) === 0)
+      if (empty) {
+        setSubmitError(`לא ניתן לפרסם: לערוץ "${empty.kind}" אין נמענים`)
+        return
+      }
+    }
     setSaving(true)
     try {
-      await onSubmit({ title, status, priority, issueTagIds, channels: buildChannels() })
+      await onSubmit({ title, status, priority, issueTagIds, channels: built })
       // Create mode resets the form for the next letter; edit mode is torn down by the
       // parent (clears editingLetter → the keyed remount resets everything).
       if (!isEdit) {
@@ -902,6 +912,7 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
         />
       )}
 
+      {submitError && <p className="text-xs text-destructive">{submitError}</p>}
       <button type="submit" disabled={saving || !valid()}
         className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
         {saving ? 'Saving...' : (isEdit ? 'Save' : 'Create Letter')}
@@ -927,6 +938,11 @@ function ChannelBodyTab({ mode, body, onBody, ids, onIds, contacts }: {
         <label className="mb-1 block text-xs font-medium text-muted-foreground">{label} Body *</label>
         <SmsBodyEditor value={body} onChange={onBody} mode={mode} channelLabel={`${label} body`} />
       </div>
+      {contacts.length === 0 && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          אין אנשי קשר עם {mode === 'whatsapp' ? 'וואטסאפ' : 'טלפון'} — הוסיפו מספרי טלפון לאנשי הקשר לפני הפעלת הערוץ.
+        </p>
+      )}
       <RecipientEditor label="Recipients" value={ids} onChange={onIds} contacts={contacts} />
       <p className="text-xs text-muted-foreground">
         {unreachable} מתוך {ids.length} נמענים ללא ערוץ זה

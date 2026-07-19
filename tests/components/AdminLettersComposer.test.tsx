@@ -99,10 +99,13 @@ describe('admin composer multi-recipient', () => {
     await user.click(screen.getByRole('checkbox', { name: /toggle SMS channel/ }))
     await user.click(screen.getByRole('checkbox', { name: /toggle Email channel/ }))
     await user.type(screen.getByLabelText('SMS body'), 'שלום זו הודעת SMS')
+    // Publishing requires at least one recipient on every enabled channel.
+    await user.type(screen.getByPlaceholderText('הקלד שם או אימייל…'), 'דובר')
+    await user.click(await screen.findByRole('button', { name: /דובר חינוך/ }))
     await user.click(screen.getByRole('button', { name: /Create Letter/ }))
     expect(api.admin.letters.create).toHaveBeenCalledWith(expect.objectContaining({
       channels: expect.arrayContaining([
-        expect.objectContaining({ kind: 'sms', bodyText: 'שלום זו הודעת SMS' }),
+        expect.objectContaining({ kind: 'sms', bodyText: 'שלום זו הודעת SMS', recipientIds: [1] }),
       ]),
     }))
   })
@@ -158,6 +161,37 @@ describe('admin composer multi-recipient', () => {
     await user.click(await screen.findByRole('button', { name: /Regenerate share pages/ }))
     expect(api.admin.letters.regenerateShares).toHaveBeenCalled()
     expect(await screen.findByText(/Regenerated 3 share pages/)).toBeInTheDocument()
+  })
+
+  it('shows an empty-picker note when the WhatsApp channel has no reachable contacts', async () => {
+    vi.mocked(api.letters.contacts).mockImplementation(async (_q, channel) =>
+      channel === 'whatsapp' ? { contacts: [] } : { contacts: [
+        { id: 1, displayName: 'דובר חינוך', email: 'dover@education.gov.il', phone: '050-1234567', hasWhatsapp: true, photoUrl: null, mkSiteId: null, category: 'ministry', createdAt: '' },
+      ] })
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /New Letter/ }))
+    await user.click(screen.getByRole('checkbox', { name: /toggle WhatsApp channel/ }))
+    expect(await screen.findByText(/אין אנשי קשר.*וואטסאפ/)).toBeInTheDocument()
+  })
+
+  it('blocks publishing a letter with an enabled channel that has zero recipients, but allows saving as draft', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: /New Letter/ }))
+    await user.type(screen.getByPlaceholderText('Internal title'), 'כותרת')
+    await user.click(screen.getByRole('checkbox', { name: /toggle SMS channel/ }))
+    await user.click(screen.getByRole('checkbox', { name: /toggle Email channel/ }))
+    await user.type(screen.getByLabelText('SMS body'), 'שלום זו הודעת SMS')
+    // status defaults to Published; no SMS recipients selected → publish must be blocked.
+    await user.click(screen.getByRole('button', { name: /Create Letter/ }))
+    expect(api.admin.letters.create).not.toHaveBeenCalled()
+    expect(await screen.findByText(/לא ניתן לפרסם/)).toBeInTheDocument()
+
+    // Switching to draft with the same empty channel must proceed.
+    await user.selectOptions(screen.getByDisplayValue('Published'), 'draft')
+    await user.click(screen.getByRole('button', { name: /Create Letter/ }))
+    expect(api.admin.letters.create).toHaveBeenCalled()
   })
 
   it('shows a copy-share-link button only for the row with a shareUrl, and copies it', async () => {
