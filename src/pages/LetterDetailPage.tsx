@@ -4,20 +4,12 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import CopyShareLink from '@/components/letters/CopyShareLink'
+import ChannelTabs from '@/components/letters/ChannelTabs'
+import ChannelMessage from '@/components/letters/ChannelMessage'
+import ChannelSendButton from '@/components/letters/ChannelSendButton'
 import { api } from '@/lib/api-client'
-import { buildLetterPreviewDoc } from '@/lib/letter-preview'
 import { useAuth } from '@/contexts/AuthContext'
-import type { LetterDetailResponse, ChannelSend, RecipientSendLink } from '@/types'
-
-const CHANNEL_LABELS: Record<ChannelSend['kind'], string> = {
-  email: 'דוא"ל',
-  sms: 'SMS',
-  whatsapp: 'WhatsApp',
-}
-
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('')
-}
+import type { LetterDetailResponse, ChannelSend, RecipientSendLink, ChannelKind } from '@/types'
 
 export default function LetterDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -39,11 +31,15 @@ export default function LetterDetailPage() {
       .finally(() => setLoading(false))
   }, [id, authed])
 
-  const emailChannel = data?.channels.find((c) => c.kind === 'email' && c.enabled)
-  const previewHtml = emailChannel?.renderedHtml
-  // Rendered through the shared preview shell so an untemplated letter (a bare body
-  // fragment) still gets RTL + typography — identical to the composer's live preview.
-  const previewDoc = previewHtml ? buildLetterPreviewDoc(previewHtml) : undefined
+  // Tabs show one channel at a time. Default to email when the letter has one (it's the
+  // richest surface), otherwise the first enabled channel — so an SMS-only letter opens
+  // straight onto its message instead of an empty pane.
+  const [tab, setTab] = useState<ChannelKind | null>(null)
+  const enabled = data ? data.channels.filter((c) => c.enabled) : []
+  const kinds = enabled.map((c) => c.kind)
+  const active = enabled.find((c) => c.kind === tab)
+    ?? enabled.find((c) => c.kind === 'email')
+    ?? enabled[0]
 
   const handleMailto = useCallback((channel: ChannelSend) => {
     if (!id || !channel.mailtoUrl) return
@@ -107,116 +103,43 @@ export default function LetterDetailPage() {
         {(!ready || (authed && loading)) && <p className="text-muted-foreground">טוען...</p>}
         {authed && error && <p className="text-destructive">{error}</p>}
 
-        {data && (
-          <div className="grid gap-8 md:grid-cols-[350px_1fr]">
-            {/* Send Panel */}
-            <div className="rounded-lg border bg-card p-6 shadow-sm">
-              {/* Share control lives beside the title, not in the preview panel's action bar —
-                  that bar only renders for letters with an email channel, so an SMS/WhatsApp-only
-                  letter would otherwise have no way to copy its share link. */}
-              <div className="mb-4 flex items-start justify-between gap-2">
-                <h1 className="text-xl font-bold">{data.letter.title}</h1>
-                {data.letter.shareUrl && (
-                  <CopyShareLink
-                    url={data.letter.shareUrl}
-                    className="shrink-0 whitespace-nowrap text-xs text-primary hover:underline"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-6">
-                {data.channels.filter((c) => c.enabled).map((channel) => {
-                  // Bind the narrowed kind so the recipient click closures keep the
-                  // non-email type (publicSend rejects 'email').
-                  const nonEmailKind: 'sms' | 'whatsapp' = channel.kind === 'whatsapp' ? 'whatsapp' : 'sms'
-                  return (
-                  <section key={channel.kind}>
-                    <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-                      {CHANNEL_LABELS[channel.kind]}
-                    </h2>
-
-                    {channel.kind === 'email' ? (
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => handleMailto(channel)}
-                          className="mb-2 w-full rounded bg-primary px-4 py-2.5 font-medium text-primary-foreground hover:bg-primary/90"
-                        >
-                          ✉️ שלח ממייל שלי
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleGmail(channel)}
-                          className="mb-3 w-full rounded border border-border px-4 py-2.5 font-medium hover:bg-muted"
-                        >
-                          פתח ב-Gmail
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyHtml(channel)}
-                          className="w-full rounded border border-border px-3 py-2 text-sm hover:bg-muted"
-                        >
-                          {copied ? '✓ הועתק!' : '📋 העתק גוף'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {channel.bodyText && (
-                          <p className="whitespace-pre-wrap rounded border border-border bg-muted/40 p-3 text-sm">{channel.bodyText}</p>
-                        )}
-                        {(channel.recipients ?? []).map((r) => (
-                          <button
-                            key={r.contactId}
-                            type="button"
-                            onClick={() => handleRecipient(nonEmailKind, r)}
-                            className="flex w-full items-center gap-3 rounded border border-border px-3 py-2 text-right hover:bg-muted"
-                          >
-                            {r.photoUrl ? (
-                              <img src={r.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
-                            ) : (
-                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                                {initials(r.displayName)}
-                              </span>
-                            )}
-                            <span className="text-sm font-medium">{r.displayName}</span>
-                          </button>
-                        ))}
-                        {channel.unavailableCount > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            {channel.unavailableCount} נמענים אינם זמינים בערוץ זה.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </section>
-                  )
-                })}
-              </div>
-
-              <p className="mt-4 text-xs text-muted-foreground">
-                &ldquo;שלח ממייל שלי&rdquo; פותח את תוכנת המייל שבמכשיר. במחשב, אם לא נפתח דבר,
-                השתמשו ב&rdquo;פתח ב-Gmail&rdquo; לחלון חיבור ישירות בדפדפן.
-              </p>
-
-              <LetterPrivacyNotice className="mt-3 border-t border-border pt-3" />
+        {data && active && (
+          <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border bg-card shadow-sm">
+            <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+              <h1 className="text-xl font-bold">{data.letter.title}</h1>
+              {data.letter.shareUrl && (
+                <CopyShareLink
+                  url={data.letter.shareUrl}
+                  className="shrink-0 whitespace-nowrap rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                />
+              )}
             </div>
 
-            {/* Preview Panel */}
-            {previewHtml && (
-              <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-                <div className="border-b px-4 py-2">
-                  <span className="text-sm font-medium text-muted-foreground">תצוגה מקדימה</span>
-                </div>
-                <iframe
-                  srcDoc={previewDoc}
-                  title="תצוגת מכתב"
-                  className="h-[600px] w-full border-0"
-                  sandbox="allow-same-origin"
-                />
-              </div>
-            )}
+            <ChannelTabs kinds={kinds} selected={active.kind} onSelect={setTab} />
+
+            <div className="px-5 py-5">
+              <ChannelMessage channel={active} />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
+              <ChannelSendButton
+                channel={active}
+                copied={copied}
+                onPrimary={() => handleMailto(active)}
+                onGmail={() => handleGmail(active)}
+                onCopy={() => handleCopyHtml(active)}
+                onRecipient={(r) => handleRecipient(active.kind === 'whatsapp' ? 'whatsapp' : 'sms', r)}
+              />
+              {active.unavailableCount > 0 && (
+                <p className="text-xs text-amber-700">
+                  {active.unavailableCount} נמענים אינם זמינים בערוץ זה.
+                </p>
+              )}
+            </div>
           </div>
         )}
+
+        {data && <LetterPrivacyNotice className="mx-auto mt-4 max-w-3xl" />}
       </main>
       <Footer />
     </div>

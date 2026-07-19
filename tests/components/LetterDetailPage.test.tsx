@@ -55,45 +55,46 @@ describe('LetterDetailPage (channels)', () => {
     vi.spyOn(window, 'open').mockImplementation(() => null)
   })
 
-  it('renders the Gmail email action', async () => {
-    renderAt()
-    expect(await screen.findByRole('button', { name: /Gmail/ })).toBeInTheDocument()
+  it('defaults to the email channel and shows its letter in the pane', async () => {
+    const { container } = renderAt()
+    await screen.findByRole('button', { name: /שליחה במייל/ })
+    expect(container.querySelector('iframe')).toBeInTheDocument()
   })
 
-  it('renders one send button per SMS recipient', async () => {
+  it('renders exactly one send control per channel (the old stacked buttons are gone)', async () => {
     renderAt()
-    expect(await screen.findByRole('button', { name: /דן/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /מיכל/ })).toBeInTheDocument()
+    await screen.findByRole('button', { name: /שליחה במייל/ })
+    expect(screen.queryByRole('button', { name: /פתח ב-Gmail/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /העתק גוף/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /בלשונית חדשה/ })).not.toBeInTheDocument()
   })
 
-  it('renders the SMS message body text', async () => {
-    renderAt()
-    expect(await screen.findByText('תוכן ההודעה')).toBeInTheDocument()
-  })
-
-  it('records a public send with (id, "sms", contactId) when an SMS recipient is clicked', async () => {
+  it('email primary click opens the mailto compose and records the send', async () => {
     const u = userEvent.setup({ delay: null })
     renderAt()
-    await u.click(await screen.findByRole('button', { name: /דן/ }))
-    expect(api.letters.publicSend).toHaveBeenCalledWith(5, 'sms', 1)
+    await u.click(await screen.findByRole('button', { name: /שליחה במייל/ }))
+    expect(api.letters.recordSend).toHaveBeenCalledWith(5, 'mailto')
   })
 
-  it('has no "open in new tab" action, but still renders the preview', async () => {
-    const { container } = renderAt()
-    await screen.findByRole('button', { name: /Gmail/ })
-    expect(screen.queryByRole('button', { name: /בלשונית חדשה/ })).not.toBeInTheDocument()
-    expect(container.querySelector('iframe')).toBeInTheDocument()
+  it('switching to the SMS tab shows the message and sends to a chosen recipient', async () => {
+    const u = userEvent.setup({ delay: null })
+    renderAt()
+    await u.click(await screen.findByRole('tab', { name: /SMS/ }))
+    expect(screen.getByText('תוכן ההודעה')).toBeInTheDocument()
+    await u.click(screen.getByRole('button', { name: /שליחה/ }))
+    await u.click(screen.getByRole('menuitem', { name: /דן/ }))
+    expect(api.letters.publicSend).toHaveBeenCalledWith(5, 'sms', 1)
   })
 
   it('shows no share-link button when the letter has no share page', async () => {
     renderAt()
-    await screen.findByRole('button', { name: /Gmail/ })
+    await screen.findByRole('button', { name: /שליחה במייל/ })
     expect(screen.queryByRole('button', { name: /קישור שיתוף/ })).not.toBeInTheDocument()
   })
 
   it('copies the share link — including for a letter with no email channel', async () => {
-    // SMS-only letter: the preview panel (and its action bar) never renders, so the share
-    // control must live beside the title or it would be unreachable here.
+    // SMS-only letter: proves the share control lives in the header, reachable for a
+    // letter that has no email channel at all.
     vi.mocked(api.letters.detail).mockResolvedValue({
       ...DETAIL,
       letter: { ...DETAIL.letter, shareUrl: 'https://cdn.example/letter/5.html' },
