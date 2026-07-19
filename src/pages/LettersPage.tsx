@@ -106,7 +106,7 @@ export default function LettersPage() {
           {letters.map((letter) => (
             <div
               key={letter.id}
-              className={`rounded-lg border bg-card p-5 shadow-sm ${letter.pinnedAt ? 'border-primary/50' : ''}`}
+              className={`relative rounded-lg border bg-card p-5 shadow-sm transition hover:border-primary/50 hover:shadow-md ${letter.pinnedAt ? 'border-primary/50' : ''}`}
             >
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
@@ -138,15 +138,21 @@ export default function LettersPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <Link
-                  to={`/letters/${letter.id}`}
-                  className="inline-block rounded bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  פתח מכתב
-                </Link>
-                {letter.shareUrl && <CopyShareLink url={letter.shareUrl} />}
-              </div>
+              {letter.shareUrl && (
+                // Raised above the stretched link below so copying doesn't navigate.
+                <div className="relative z-10 inline-flex">
+                  <CopyShareLink url={letter.shareUrl} />
+                </div>
+              )}
+
+              {/* The whole card is the click target. A stretched <Link> (rather than wrapping
+                  the card in an <a>) keeps real anchor semantics — keyboard focus, middle-click,
+                  open-in-new-tab — without nesting the copy <button> inside an anchor. */}
+              <Link
+                to={`/letters/${letter.id}`}
+                aria-label={letter.title}
+                className="absolute inset-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              />
             </div>
           ))}
         </div>

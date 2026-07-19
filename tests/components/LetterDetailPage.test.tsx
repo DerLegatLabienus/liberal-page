@@ -78,6 +78,13 @@ describe('LetterDetailPage (channels)', () => {
     expect(api.letters.publicSend).toHaveBeenCalledWith(5, 'sms', 1)
   })
 
+  it('has no "open in new tab" action, but still renders the preview', async () => {
+    const { container } = renderAt()
+    await screen.findByRole('button', { name: /Gmail/ })
+    expect(screen.queryByRole('button', { name: /בלשונית חדשה/ })).not.toBeInTheDocument()
+    expect(container.querySelector('iframe')).toBeInTheDocument()
+  })
+
   it('shows no share-link button when the letter has no share page', async () => {
     renderAt()
     await screen.findByRole('button', { name: /Gmail/ })

@@ -187,6 +187,8 @@
   },
   "letters": {
     "privacy_title": "Privacy",
-    "privacy_body": "We count how many times each letter is sent — anonymously and in aggregate only. Your identity is never linked to any individual send."
+    "privacy_body": "We count how many times each letter is sent — anonymously and in aggregate only. Your identity is never linked to any individual send.",
+    "copy_share_link": "Copy share link",
+    "copied": "✓ Copied"
   }
 }

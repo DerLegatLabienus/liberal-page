@@ -39,6 +39,18 @@ describe('LettersPage share link', () => {
     expect(screen.getAllByRole('button', { name: /קישור שיתוף/ })).toHaveLength(1)
   })
 
+  it('makes the whole card a link to the letter, with no separate open button', async () => {
+    vi.mocked(api.letters.list).mockResolvedValue({
+      letters: [{ ...base, title: 'מכתב משותף', shareUrl: null }],
+    })
+    renderPage()
+    // the card itself is the click target (stretched link), labelled by the letter title
+    const link = await screen.findByRole('link', { name: 'מכתב משותף' })
+    expect(link).toHaveAttribute('href', '/letters/1')
+    // the redundant "open letter" button is gone
+    expect(screen.queryByText('פתח מכתב')).not.toBeInTheDocument()
+  })
+
   it('copies the share URL to the clipboard on click', async () => {
     vi.mocked(api.letters.list).mockResolvedValue({
       letters: [{ ...base, shareUrl: 'https://cdn.example/letter/1.html' }],

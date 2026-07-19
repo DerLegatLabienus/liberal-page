@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 /**
  * Copies a letter's public share-page URL to the clipboard, with a brief "copied"
@@ -6,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
  * `letter.shareUrl` for null), so this component always receives a real URL.
  */
 export default function CopyShareLink({ url, className }: { url: string; className?: string }) {
+  const { t } = useTranslation()
   const [done, setDone] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -28,7 +30,7 @@ export default function CopyShareLink({ url, className }: { url: string; classNa
       className={className ?? 'text-xs font-medium text-muted-foreground hover:text-primary'}
       title={url}
     >
-      {done ? '✓ הועתק' : 'העתקת קישור שיתוף'}
+      {done ? t('letters.copied') : t('letters.copy_share_link')}
     </button>
   )
 }

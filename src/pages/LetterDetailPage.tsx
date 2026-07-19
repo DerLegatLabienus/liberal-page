@@ -95,17 +95,6 @@ export default function LetterDetailPage() {
     api.letters.publicSend(Number(id), kind, r.contactId).catch(() => {})
   }, [id])
 
-  // Open the rendered letter in a new tab. Uses a Blob URL rather than a data: URL —
-  // Chrome and Firefox block top-level navigation to data: URLs. The object URL is
-  // revoked after a delay so the opened tab has time to load it.
-  const handleOpenInTab = useCallback(() => {
-    if (!previewDoc) return
-    const blob = new Blob([previewDoc], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  }, [previewDoc])
-
   return (
     <div className="min-h-screen bg-background">
       <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
@@ -215,15 +204,8 @@ export default function LetterDetailPage() {
             {/* Preview Panel */}
             {previewHtml && (
               <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-                <div className="flex items-center justify-between border-b px-4 py-2">
+                <div className="border-b px-4 py-2">
                   <span className="text-sm font-medium text-muted-foreground">תצוגה מקדימה</span>
-                  <button
-                    type="button"
-                    onClick={handleOpenInTab}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    פתח בלשונית חדשה
-                  </button>
                 </div>
                 <iframe
                   srcDoc={previewDoc}
