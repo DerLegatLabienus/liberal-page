@@ -7,6 +7,7 @@ import { LetterContactsRepository } from '../repositories/letter-contacts-reposi
 import { LetterTemplatesRepository } from '../repositories/letter-templates-repository'
 import { LetterMediaAssetsRepository } from '../repositories/letter-media-assets-repository'
 import { normalizePhone } from '../../src/lib/phone'
+import { resolveMkPhotoUrl } from '../services/mk-photo'
 import { sanitizeLetterHtml } from '../services/html-sanitizer'
 import * as r2 from '../services/r2-client'
 import { validateImage } from '../services/image-validator'
@@ -100,17 +101,25 @@ function parseContact(body: ContactBody): { error: string } | { input: Parameter
   }
 }
 
+/** When a contact is linked to an MK, its photo is the MK's — resolved and stored so it flows to
+ *  the letter send links and the share page (which read the stored photo), not just the admin table.
+ *  The MK link wins over a manually-typed photo, matching the display precedence in contactPhotoUrl. */
+async function withMkPhoto(input: Parameters<LetterContactsRepository['create']>[0]) {
+  if (input.mkSiteId != null) return { ...input, photoUrl: await resolveMkPhotoUrl(input.mkSiteId) }
+  return input
+}
+
 router.post('/contacts', async (req, res) => {
   const parsed = parseContact(req.body as ContactBody)
   if ('error' in parsed) return res.status(400).json({ error: parsed.error })
-  const contact = await contactsRepo.create(parsed.input)
+  const contact = await contactsRepo.create(await withMkPhoto(parsed.input))
   res.status(201).json({ contact })
 })
 
 router.put('/contacts/:id', async (req, res) => {
   const parsed = parseContact(req.body as ContactBody)
   if ('error' in parsed) return res.status(400).json({ error: parsed.error })
-  await contactsRepo.update(Number(req.params.id), parsed.input)
+  await contactsRepo.update(Number(req.params.id), await withMkPhoto(parsed.input))
   res.json({ ok: true })
 })
 

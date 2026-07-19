@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { db } from '../db/client'
 import { knessetMembersCache } from '../db/schema'
 import type { KnessetMember } from '../../src/types'
@@ -13,6 +14,15 @@ export class MkListRepository {
       siteId: r.siteId, name: r.name, party: r.party,
       photoUrl: r.photoUrl, isLiberal: r.isLiberal, isSupporter: r.isSupporter,
     }))
+  }
+
+  async getBySiteId(siteId: number): Promise<KnessetMember | null> {
+    const [r] = await db.select().from(knessetMembersCache).where(eq(knessetMembersCache.siteId, siteId))
+    if (!r) return null
+    return {
+      siteId: r.siteId, name: r.name, party: r.party,
+      photoUrl: r.photoUrl, isLiberal: r.isLiberal, isSupporter: r.isSupporter,
+    }
   }
 
   async set(members: KnessetMember[]): Promise<void> {
