@@ -15,15 +15,28 @@ const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
 
-/** When publishing, every enabled channel must have at least one recipient. Returns an error string or null. */
-function publishGuard(status: string | undefined, channels: LetterChannelInput[] | undefined): string | null {
-  if (status !== 'published' || !channels) return null
+/** Shared shape for the zero-recipient check, satisfied by both incoming LetterChannelInput
+ *  payloads and stored LetterChannelRow db rows. */
+interface ChannelGuardInput {
+  kind: string
+  enabled?: boolean | null
+  recipientIds?: number[] | null
+}
+
+/** Every enabled channel must have at least one recipient. Returns an error string or null. */
+function findZeroRecipientChannel(channels: ChannelGuardInput[]): string | null {
   for (const ch of channels) {
     if ((ch.enabled ?? true) && (ch.recipientIds?.length ?? 0) === 0) {
       return `Cannot publish: channel "${ch.kind}" has no recipients`
     }
   }
   return null
+}
+
+/** When publishing, every enabled channel must have at least one recipient. Returns an error string or null. */
+function publishGuard(status: string | undefined, channels: LetterChannelInput[] | undefined): string | null {
+  if (status !== 'published' || !channels) return null
+  return findZeroRecipientChannel(channels)
 }
 
 router.use(requireAdmin)
@@ -81,7 +94,15 @@ router.put('/:id', async (req, res) => {
       channels: LetterChannelInput[]
     }>
     const { channels, ...core } = body
-    const guardError = publishGuard(core.status, channels)
+    let guardError = publishGuard(core.status, channels)
+    // publishGuard short-circuits when `channels` is omitted — it only validates what's in
+    // this request body. A PUT that sets status: 'published' without a channels key must
+    // still be checked against the letter's STORED channels, or a draft with an enabled
+    // zero-recipient channel can be published unreachable through this path.
+    if (!guardError && core.status === 'published' && !channels) {
+      const stored = await channelsRepo.listByLetter(id)
+      guardError = findZeroRecipientChannel(stored)
+    }
     if (guardError) return res.status(400).json({ error: guardError })
     await lettersRepo.updateCore(id, core)
     if (channels) await channelsRepo.replaceForLetter(id, channels)

@@ -72,4 +72,16 @@ describe('admin-letters publish guard', () => {
       .send({ title: 'Renamed' })
     expect(res.status).toBe(200)
   })
+
+  it('PUT: publishing via status-only body (no channels key) must still guard the STORED zero-recipient channel', async () => {
+    const created = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'X', status: 'draft', channels: [{ kind: 'sms', recipientIds: [], bodyText: 'hi' }] })
+    const id = created.body.letter.id
+    const res = await request(app).put(`/api/admin/letters/${id}`).set('Authorization', `Bearer ${token}`)
+      .send({ status: 'published' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/sms/)
+    const list = await db.select().from(letters)
+    expect(list.find((l) => l.id === id)?.status).toBe('draft')
+  })
 })
