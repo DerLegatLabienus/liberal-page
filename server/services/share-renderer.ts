@@ -11,6 +11,8 @@ export interface ShareRecipientLink {
 /** One sms/whatsapp channel's resolved per-recipient send links. */
 export interface ShareChannelBlock {
   kind: 'sms' | 'whatsapp'
+  /** The channel's message text, shown as a visible block above the recipient links. */
+  bodyText?: string
   recipients: ShareRecipientLink[]
 }
 
@@ -106,8 +108,10 @@ export function renderShareHtml(view: ShareLetterView, opts: { shareBaseUrl: str
           return `<a class="recipient" href="${escAttr(r.url)}" data-kind="${c.kind}" data-contact-id="${r.contactId}"${targetRel}>שליחה ל${esc(r.displayName)}</a>`
         })
         .join('\n      ')
+      const bodyBlock = c.bodyText ? `<div class="body">${esc(c.bodyText)}</div>` : ''
       return `<div class="channel-block">
       <h2 class="channel-title">${esc(CHANNEL_LABELS[c.kind])}</h2>
+      ${bodyBlock}
       ${links}
     </div>`
     })

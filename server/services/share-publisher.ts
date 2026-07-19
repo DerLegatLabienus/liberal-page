@@ -54,6 +54,7 @@ export async function syncShareForLetter(letterId: number): Promise<void> {
       .filter((s) => s.enabled && (s.kind === 'sms' || s.kind === 'whatsapp'))
       .map((s) => ({
         kind: s.kind as 'sms' | 'whatsapp',
+        bodyText: s.bodyText,
         recipients: (s.recipients ?? []).map((r) => ({ contactId: r.contactId, displayName: r.displayName, url: r.url })),
       }))
       .filter((b) => b.recipients.length > 0)

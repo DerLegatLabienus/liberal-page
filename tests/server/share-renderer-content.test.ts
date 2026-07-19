@@ -22,6 +22,7 @@ const view: ShareLetterView = {
   channels: [
     {
       kind: 'sms',
+      bodyText: 'הודעת בדיקה לשיתוף',
       recipients: [
         { contactId: 501, displayName: 'דנה כהן', url: 'sms:+972500000001?&body=%D7%92%D7%95%D7%A3' },
         { contactId: 502, displayName: 'יוסי לוי', url: 'sms:+972500000002?&body=%D7%92%D7%95%D7%A3' },
@@ -59,6 +60,13 @@ describe('renderShareHtml — real content assembled from channels (no mocks)', 
   it('wires the recipient links to the sms track kind via data-kind', () => {
     expect(html).toContain('data-kind="sms"')
   })
+
+  it('renders the sms message body as visible content, not only percent-encoded inside an href', () => {
+    // Strip href attribute values before asserting, so a match can only come from visible markup.
+    const withoutHrefs = html.replace(/href="[^"]*"/g, 'href="STRIPPED"')
+    expect(withoutHrefs).toContain('הודעת בדיקה לשיתוף')
+    expect(html).toContain('<div class="body">הודעת בדיקה לשיתוף</div>')
+  })
 })
 
 describe('renderShareHtml — WhatsApp channels', () => {
@@ -77,6 +85,7 @@ describe('renderShareHtml — WhatsApp channels', () => {
     channels: [
       {
         kind: 'whatsapp',
+        bodyText: 'הודעת בדיקה לשיתוף בוואטסאפ',
         recipients: [
           { contactId: 601, displayName: 'דנה כהן', url: 'https://wa.me/+972500000001' },
           { contactId: 602, displayName: 'יוסי לוי', url: 'https://wa.me/+972500000002' },
@@ -96,5 +105,11 @@ describe('renderShareHtml — WhatsApp channels', () => {
 
   it('wires WhatsApp recipient links to the whatsapp track kind', () => {
     expect(html).toContain('data-kind="whatsapp"')
+  })
+
+  it('renders the whatsapp message body as visible content, not only percent-encoded inside an href', () => {
+    const withoutHrefs = html.replace(/href="[^"]*"/g, 'href="STRIPPED"')
+    expect(withoutHrefs).toContain('הודעת בדיקה לשיתוף בוואטסאפ')
+    expect(html).toContain('<div class="body">הודעת בדיקה לשיתוף בוואטסאפ</div>')
   })
 })
