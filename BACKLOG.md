@@ -12,6 +12,21 @@ Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
 - **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
 - **Validate `channel.kind`** against an allowlist at the admin letters create/update API boundary (currently admin-gated and harmless, but a garbage kind falls through to the sms/whatsapp branch).
 
+### ✅ All current-Knesset MKs imported as letter contacts — 2026-07-20
+
+`scripts/import-mk-contacts.ts` (`npm run db:import-mks`, idempotent, `--dry-run`) populated
+`letter_contacts` with all **132** current MKs: name + photo + `mk_site_id`, plus the official
+`@knesset.gov.il` email for the 120 sendable ones. The 12 Norwegian-Law ministers are photo/name
+directory entries (no channel) — migration `0029` relaxed the reachability check to allow an MK
+contact identified by `mk_site_id`. Prod result: 133 `mk` rows / 132 distinct Site IDs / 120 email /
+132 photo / 12 photo-only ministers.
+
+**Residual (manual cleanup, 1 row):** אופיר כץ has two contacts — #15 (email-only, `okatz@`) and #24
+(phone `+972…238` + photo + Site ID 976). The importer left both because **both are referenced by
+existing letters** and it never deletes a referenced row. To merge: repoint the letter(s) using #15
+onto #24, add #24's email, then delete #15. Ministers' personal phones can also be added over time
+(as on 23/24) to make them sendable via SMS/WhatsApp.
+
 ### ✅ FIXED — MK photos broke site-wide (`mk_{siteId}.jpg` 404) — fixed 2026-07-20
 
 **Was:** The Knesset removed `PictureDeputyUrl` from OData (absent from `KNS_Person` metadata
