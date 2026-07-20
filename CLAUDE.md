@@ -20,6 +20,7 @@ npm test                 # Vitest run (no servers needed)
 npm run build            # tsc -b && vite build
 npm run db:generate      # generate a Drizzle migration after schema changes
 npm run db:seed          # one-time JSON → DB seed (requires DATABASE_URL)
+npm run db:import-mks    # import all current-Knesset MKs as letter_contacts (idempotent; --dry-run supported; requires DATABASE_URL)
 npm run db:up            # start local Postgres (Docker)
 npm run db:down          # stop local Postgres
 npm run db:reset         # wipe volume and start fresh (ephemeral)

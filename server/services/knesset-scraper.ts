@@ -29,11 +29,35 @@ interface KnessetActivityResponse {
 interface MkHeaderResponse {
   MkImage?: string | null
   LobbyImage?: string | null
+  Email?: string | null
 }
 
 const absoluteUrl = (s: string | null | undefined): string | null => {
   const v = s?.trim()
   return v && /^https?:\/\//i.test(v) ? v : null
+}
+
+async function fetchMkHeader(siteId: number): Promise<MkHeaderResponse | null> {
+  const url = `${KNESSET_WEBSITE_API}/MKs/GetMkdetailsHeader?mkId=${siteId}&languageKey=he`
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
+    })
+    if (!res.ok) return null
+    // A 200 can still be an HTML bot/maintenance page; parsing it as JSON throws → caught below.
+    return (await res.json()) as MkHeaderResponse
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The MK's official `@knesset.gov.il` email from the live Knesset header API, or null.
+ * Norwegian-Law ministers (who resigned their seat) return an empty email — treated as null.
+ */
+export async function fetchMkEmail(siteId: number): Promise<string | null> {
+  const email = (await fetchMkHeader(siteId))?.Email?.trim()
+  return email || null
 }
 
 /**
@@ -46,18 +70,9 @@ const absoluteUrl = (s: string | null | undefined): string | null => {
  * but still carry the same photo under `LobbyImage`, so fall back to that.
  */
 export async function fetchMkImageUrl(siteId: number): Promise<string | null> {
-  const url = `${KNESSET_WEBSITE_API}/MKs/GetMkdetailsHeader?mkId=${siteId}&languageKey=he`
-  try {
-    const res = await fetchWithTimeout(url, {
-      headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
-    })
-    if (!res.ok) return null
-    // A 200 can still be an HTML bot/maintenance page; parsing it as JSON throws → caught below.
-    const data = (await res.json()) as MkHeaderResponse
-    return absoluteUrl(data.MkImage) ?? absoluteUrl(data.LobbyImage)
-  } catch {
-    return null
-  }
+  const data = await fetchMkHeader(siteId)
+  if (!data) return null
+  return absoluteUrl(data.MkImage) ?? absoluteUrl(data.LobbyImage)
 }
 
 function parsePlenaryDate(s: string): string {

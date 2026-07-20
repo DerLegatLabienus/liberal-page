@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { fetchMkActivity, fetchMkImageUrl } from '../../server/services/knesset-scraper'
+import { fetchMkActivity, fetchMkImageUrl, fetchMkEmail } from '../../server/services/knesset-scraper'
 
 const ACTIVITY_RESPONSE = {
   PrivateBills: [
@@ -143,5 +143,28 @@ describe('fetchMkImageUrl', () => {
   it('returns null when fetch rejects (after retries)', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('network error'))
     expect(await fetchMkImageUrl(1116)).toBeNull()
+  })
+})
+
+describe('fetchMkEmail', () => {
+  beforeEach(() => { vi.mocked(fetch).mockReset() })
+
+  it('returns the Email from GetMkdetailsHeader', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ Email: 'danillouz@knesset.gov.il' }) } as Response)
+    expect(await fetchMkEmail(1116)).toBe('danillouz@knesset.gov.il')
+    expect((vi.mocked(fetch).mock.calls[0][0] as string)).toContain('GetMkdetailsHeader?mkId=1116')
+  })
+
+  it('returns null for an empty email (Norwegian-Law minister)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ Email: '' }) } as Response)
+    expect(await fetchMkEmail(831)).toBeNull()
+  })
+
+  it('returns null on a non-ok response or network failure', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
+    expect(await fetchMkEmail(1116)).toBeNull()
+
+    vi.mocked(fetch).mockRejectedValue(new Error('network error'))
+    expect(await fetchMkEmail(1116)).toBeNull()
   })
 })
