@@ -12,6 +12,28 @@ Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
 - **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
 - **Validate `channel.kind`** against an allowlist at the admin letters create/update API boundary (currently admin-gated and harmless, but a garbage kind falls through to the sms/whatsapp branch).
 
+### ✅ FIXED — MK photos broke site-wide (`mk_{siteId}.jpg` 404) — fixed 2026-07-20
+
+**Was:** The Knesset removed `PictureDeputyUrl` from OData (absent from `KNS_Person` metadata
+and every row), so `knesset-members.ts` and `mk-photo.ts` always fell to the hardcoded
+`https://www.knesset.gov.il/mk/images/members/mk_{siteId}.jpg` pattern — now a hard 404 —
+breaking every MK photo (parliament `MkCard`/`MkCombobox`/`MkActivityCard`, `LiberalsShowcase`,
+`HomePanels`, and letter MK-contacts).
+
+**Fix:** `fetchMkImageUrl(siteId)` (`server/services/knesset-scraper.ts`) hits the open
+`MKs/GetMkdetailsHeader?mkId=…&languageKey=he` endpoint (same host the poller already uses) and
+returns its `MkImage` — a full `fs.knesset.gov.il/globaldocs/…` URL — falling back to `LobbyImage`
+for Norwegian-Law ministers (`IsCurrentMk: false`, whose `MkImage` is null). Used as the source of
+truth for the MK cache (all surfaces) and letter-contact resolution; the dead deterministic pattern
+is gone. Prod MK cache + the 2 MK letter-contacts were backfilled (one contact also had a
+transposed Site ID: שלמה קרעי was 1101→ corrected to 1011).
+
+**Follow-up (not yet done):** the MK-cache refresh resolves photos with **one header fetch per MK
+(~132)**, so a stale `GET /api/mks/list` blocks ~85s while it rebuilds. It's a 24h-TTL background
+refresh, but the first request after expiry eats the latency. Consider moving the rebuild into the
+poller (background), or a bulk image source (e.g. `Faction/GetFactionDetails` returns MKs with
+`ImagePath` in far fewer calls).
+
 ### ✅ FIXED — Theme tokens rendered transparent (`bg-primary` etc.) — fixed 2026-07-19
 
 **Was:** `tailwind.config.ts` emitted `hsl(var(--x))` while the CSS variables held full
