@@ -134,8 +134,8 @@ export const api = {
     logout: (refreshToken: string) =>
       apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     me: () => apiFetch<{ user: AuthUser }>('/auth/me'),
-    updateMe: (emailAlerts: boolean) =>
-      apiFetch<{ user: AuthUser }>(`/auth/me`, { method: 'PATCH', body: JSON.stringify({ emailAlerts }) }),
+    updateMe: (patch: { emailAlerts?: boolean; name?: string }) =>
+      apiFetch<{ user: AuthUser }>(`/auth/me`, { method: 'PATCH', body: JSON.stringify(patch) }),
   },
   admin: {
     listInvites: () => apiFetch<{ invites: Invite[] }>('/admin/invites'),

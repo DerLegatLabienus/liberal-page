@@ -70,8 +70,10 @@ describe('AuthControl sign-in toasts', () => {
     })
     renderControl()
     await userEvent.click(await openLoginModal())
+    // Email alerts now live inside the account dropdown — open it, then toggle.
+    await userEvent.click(await screen.findByRole('button', { name: /תפריט משתמש|account menu/i }))
     const checkbox = await screen.findByRole('checkbox', { name: /alerts|התראות/i })
     await userEvent.click(checkbox)
-    expect(api.auth.updateMe).toHaveBeenCalledWith(false)
+    expect(api.auth.updateMe).toHaveBeenCalledWith({ emailAlerts: false })
   })
 })

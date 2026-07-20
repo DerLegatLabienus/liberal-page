@@ -151,6 +151,10 @@ export class AuthRepository {
     await db.update(users).set({ emailAlerts: value }).where(eq(users.id, id))
   }
 
+  async setName(id: number, name: string): Promise<void> {
+    await db.update(users).set({ name }).where(eq(users.id, id))
+  }
+
   /** Members with email alerts enabled — excludes group and admin accounts. */
   async listMembersForAlerts(): Promise<{ email: string; name: string | null }[]> {
     const rows = await db

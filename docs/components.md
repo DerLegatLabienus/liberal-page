@@ -122,10 +122,18 @@ No data is persisted on our side. Configuration: `CALENDLY_API_TOKEN` env var + 
 
 ### `AuthControl`
 
-Lives in the sticky header (right side). Renders nothing until the auth session is restored (`ready = true`).
+Lives in the sticky header's right-hand control cluster. Renders nothing until the auth session is restored (`ready = true`).
 
-- **Logged out:** Google sign-in button (`@react-oauth/google`). `VITE_GOOGLE_CLIENT_ID` must be set for the button to function; sign-in errors report invite-gate (`403`) vs. generic failure via toast.
-- **Logged in:** user name/email, email-alerts checkbox, sign-out button. Admins additionally see the "Admin" link that opens `AdminPanel`.
+- **Logged out:** an outline "Sign in" pill opening a modal (Google `@react-oauth/google` + passwordless magic-link). `VITE_GOOGLE_CLIENT_ID` must be set for the Google button to function; sign-in errors report invite-gate (`403`) vs. generic failure.
+- **Logged in:** delegates to `UserMenu`.
+
+### `UserMenu`
+
+The signed-in account control — an outline trigger (avatar + name + chevron) opening a dropdown (lightweight outside-click + `Escape` mechanics, same as `letters/ChannelSendButton`, no extra dependency). Holds: name + email header, an inline **display-name rename** (`api.auth.updateMe({ name })`), the **email-alerts** toggle (`updateMe({ emailAlerts })`), the **Admin** panel entry (admins only, lazy-loaded), and **sign out**. Props: `user`, `onSignOut`, `onUpdateUser`.
+
+### `LanguageToggle`
+
+Compact bordered he⇄en toggle (`Button variant="outline"` + globe icon) sitting first in the header control cluster. `ui.lang_toggle` holds the *target* language label; clicking flips `i18n` language, `document.documentElement.lang/dir`, the `?lang=` param, and persisted `localStorage.lang`. Optional `onToggle` (used to close the mobile menu).
 
 ### `AdminPanel`
 

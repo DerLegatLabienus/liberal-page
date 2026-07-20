@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import AuthControl from '@/components/layout/AuthControl'
+import LanguageToggle from '@/components/layout/LanguageToggle'
 import { useDirection } from '@/hooks/useDirection'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
@@ -19,7 +20,7 @@ interface HeaderProps {
 }
 
 export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnabled }: HeaderProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const direction = useDirection()
   const flags = useFeatureFlags()
   const { user } = useAuth()
@@ -36,15 +37,6 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
     { label: t('ui.nav_about'), href: '#about' },
     { label: t('ui.nav_join'), href: '#join' },
   ]
-
-  const toggleLang = () => {
-    const next = i18n.language === 'he' ? 'en' : 'he'
-    i18n.changeLanguage(next)
-    document.documentElement.lang = next
-    document.documentElement.dir = next === 'he' ? 'rtl' : 'ltr'
-    localStorage.setItem('lang', next)
-    history.replaceState(null, '', `?lang=${next}`)
-  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -65,46 +57,47 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
           <span className="font-bold text-foreground">{t('site.party_name')}</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={navHref(link.href)}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </a>
-          ))}
-          {showLetters && (
-            <Link
-              to="/letters"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t('ui.nav_letters')}
-            </Link>
-          )}
-          <button
-            onClick={toggleLang}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t('ui.lang_toggle')}
-          </button>
-          <AuthControl />
-          <div className="relative">
-            <Button
-              onClick={trackerEnabled ? onOpenDrawer : undefined}
-              className="gap-2"
-              variant="default"
-              size="sm"
-              disabled={!trackerEnabled}
-              title={trackerEnabled ? undefined : 'Available in Hebrew'}
-            >
-              <span>{t('ui.nav_tracker')}</span>
-              <Menu className={`h-4 w-4 ${direction === 'ltr' ? 'scale-x-[-1]' : ''}`} />
-            </Button>
-            {hasNewParliamentData && (
-              <span className="absolute -top-1 ltr:-right-1 rtl:-left-1 h-2.5 w-2.5 rounded-full bg-blue-400 ring-2 ring-white" />
+        <nav className="hidden items-center md:flex">
+          <div className="flex items-center gap-6">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={navHref(link.href)}
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </a>
+            ))}
+            {showLetters && (
+              <Link
+                to="/letters"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {t('ui.nav_letters')}
+              </Link>
             )}
+          </div>
+
+          {/* Right-hand control cluster: utility + account controls, styled as real buttons. */}
+          <div className="ms-6 flex items-center gap-2 border-s border-border ps-6">
+            <LanguageToggle />
+            <div className="relative">
+              <Button
+                onClick={trackerEnabled ? onOpenDrawer : undefined}
+                className="gap-2"
+                variant="default"
+                size="sm"
+                disabled={!trackerEnabled}
+                title={trackerEnabled ? undefined : 'Available in Hebrew'}
+              >
+                <span>{t('ui.nav_tracker')}</span>
+                <Menu className={`h-4 w-4 ${direction === 'ltr' ? 'scale-x-[-1]' : ''}`} />
+              </Button>
+              {hasNewParliamentData && (
+                <span className="absolute -top-1 ltr:-right-1 rtl:-left-1 h-2.5 w-2.5 rounded-full bg-blue-400 ring-2 ring-white" />
+              )}
+            </div>
+            <AuthControl />
           </div>
         </nav>
 
@@ -139,12 +132,9 @@ export default function Header({ hasNewParliamentData, onOpenDrawer, trackerEnab
                 {t('ui.nav_letters')}
               </Link>
             )}
-            <button
-              onClick={() => { toggleLang(); setMobileOpen(false) }}
-              className="text-start text-sm text-muted-foreground"
-            >
-              {t('ui.lang_toggle')}
-            </button>
+            <div className="flex items-center gap-2 pt-1">
+              <LanguageToggle onToggle={() => setMobileOpen(false)} />
+            </div>
             <Button
               onClick={() => { if (trackerEnabled) { onOpenDrawer(); setMobileOpen(false) } }}
               size="sm"

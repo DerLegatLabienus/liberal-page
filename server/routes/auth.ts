@@ -46,9 +46,19 @@ router.get('/me', requireAuth, async (req, res) => {
 })
 
 router.patch('/me', requireAuth, async (req, res) => {
-  const { emailAlerts } = req.body as { emailAlerts?: unknown }
-  if (typeof emailAlerts !== 'boolean') return res.status(400).json({ error: 'emailAlerts must be boolean' })
-  await authRepo.setEmailAlerts(req.user!.id, emailAlerts)
+  const { emailAlerts, name } = req.body as { emailAlerts?: unknown; name?: unknown }
+  if (emailAlerts === undefined && name === undefined) {
+    return res.status(400).json({ error: 'emailAlerts or name required' })
+  }
+  if (emailAlerts !== undefined) {
+    if (typeof emailAlerts !== 'boolean') return res.status(400).json({ error: 'emailAlerts must be boolean' })
+    await authRepo.setEmailAlerts(req.user!.id, emailAlerts)
+  }
+  if (name !== undefined) {
+    const trimmed = typeof name === 'string' ? name.trim() : ''
+    if (!trimmed || trimmed.length > 80) return res.status(400).json({ error: 'name must be 1–80 characters' })
+    await authRepo.setName(req.user!.id, trimmed)
+  }
   const user = await authRepo.findUserById(req.user!.id)
   if (!user) return res.status(404).json({ error: 'User not found' })
   res.json({ user: publicUser(user) })
