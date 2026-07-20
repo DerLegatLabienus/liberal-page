@@ -1,11 +1,13 @@
 import type { KnessetMember } from '../../src/types'
 import { odataGet, odataGetAllPages } from './odata'
+import { fetchMkImageUrl } from './knesset-scraper'
 
 const BATCH_SIZE = 40
 const FACTION_POSITION_ID = 54 // "חבר/ת סיעה" — has FactionName directly
+const PHOTO_CONCURRENCY = 8
 
 interface SiteCodeRow { SiteId: number; KnsID: number }
-interface PersonRow { PersonID: number; FirstName: string; LastName: string; PictureDeputyUrl?: string | null }
+interface PersonRow { PersonID: number; FirstName: string; LastName: string }
 interface FactionPositionRow { PersonID: number; FactionName: string | null }
 
 const odataFetch = <T>(path: string): Promise<T[]> => odataGet<T>(path, { errorContext: 'OData' })
@@ -51,22 +53,26 @@ export async function fetchAllKnessetMembers(): Promise<KnessetMember[]> {
   const knsIdToSiteId = new Map(siteCodes.map((sc) => [sc.KnsID, sc.SiteId]))
 
   // Step 4: assemble — only MKs who have a site code
-  return knsIds
+  const members: KnessetMember[] = knsIds
     .filter((id) => knsIdToSiteId.has(id))
     .map((id) => {
       const person = personMap.get(id)!
-      const siteId = knsIdToSiteId.get(id)!
-      const pictureUrl = person.PictureDeputyUrl
-      const photoUrl = pictureUrl
-        ? `https://www.knesset.gov.il${pictureUrl}`
-        : `https://www.knesset.gov.il/mk/images/members/mk_${siteId}.jpg`
       return {
-        siteId,
+        siteId: knsIdToSiteId.get(id)!,
         name: `${person.FirstName} ${person.LastName}`.trim(),
         party: personFactionMap.get(id) ?? '',
-        photoUrl,
+        photoUrl: null,
         isLiberal: false,
         isSupporter: false,
       }
     })
+
+  // Step 5: resolve each photo from the live header API (OData no longer carries it).
+  // Bounded concurrency, per-MK null fallback so one failure can't fail the whole refresh.
+  for (let i = 0; i < members.length; i += PHOTO_CONCURRENCY) {
+    const chunk = members.slice(i, i + PHOTO_CONCURRENCY)
+    await Promise.all(chunk.map(async (m) => { m.photoUrl = await fetchMkImageUrl(m.siteId) }))
+  }
+
+  return members
 }

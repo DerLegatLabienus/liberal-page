@@ -26,6 +26,33 @@ interface KnessetActivityResponse {
   AgendaProposals: unknown[]
 }
 
+interface MkHeaderResponse {
+  MkImage?: string | null
+}
+
+/**
+ * The MK's face-photo URL from the live Knesset header API, or null if unavailable.
+ *
+ * The Knesset removed `PictureDeputyUrl` from OData, so the old deterministic
+ * `mk_{siteId}.jpg` pattern is now a hard 404. `GetMkdetailsHeader.MkImage` is the current
+ * source — a full `fs.knesset.gov.il/globaldocs/...` URL whose per-MK doc id isn't derivable.
+ */
+export async function fetchMkImageUrl(siteId: number): Promise<string | null> {
+  const url = `${KNESSET_WEBSITE_API}/MKs/GetMkdetailsHeader?mkId=${siteId}&languageKey=he`
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: { Accept: 'application/json', Referer: 'https://main.knesset.gov.il/' },
+    })
+    if (!res.ok) return null
+    // A 200 can still be an HTML bot/maintenance page; parsing it as JSON throws → caught below.
+    const data = (await res.json()) as MkHeaderResponse
+    const img = data.MkImage?.trim()
+    return img && /^https?:\/\//i.test(img) ? img : null
+  } catch {
+    return null
+  }
+}
+
 function parsePlenaryDate(s: string): string {
   // "13/05/2026, בשעה 11:42" → "2026-05-13T11:42:00"
   const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})(?:.*?(\d{2}):(\d{2}))?/)

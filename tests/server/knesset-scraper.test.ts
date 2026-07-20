@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { fetchMkActivity } from '../../server/services/knesset-scraper'
+import { fetchMkActivity, fetchMkImageUrl } from '../../server/services/knesset-scraper'
 
 const ACTIVITY_RESPONSE = {
   PrivateBills: [
@@ -101,5 +101,41 @@ describe('fetchMkActivity', () => {
     const result = await fetchMkActivity(1116, 10)
     const vote = result.find((r) => r.type === 'vote')!
     expect(vote.sourceUrl).toContain('45944')
+  })
+})
+
+describe('fetchMkImageUrl', () => {
+  const IMG = 'https://fs.knesset.gov.il/globaldocs/MK/1116/1_1116_3_19861.jpeg?v=20260719_25594'
+
+  beforeEach(() => { vi.mocked(fetch).mockReset() })
+
+  it('returns the MkImage URL from GetMkdetailsHeader', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: IMG }) } as Response)
+
+    expect(await fetchMkImageUrl(1116)).toBe(IMG)
+    expect((vi.mocked(fetch).mock.calls[0][0] as string)).toContain('GetMkdetailsHeader?mkId=1116')
+  })
+
+  it('returns null on a non-ok response', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
+    expect(await fetchMkImageUrl(1116)).toBeNull()
+  })
+
+  it('returns null when the body is an HTML bot page (non-JSON)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => { throw new SyntaxError('Unexpected token <') } } as unknown as Response)
+    expect(await fetchMkImageUrl(1116)).toBeNull()
+  })
+
+  it('returns null when MkImage is missing or not an absolute URL', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: null }) } as Response)
+    expect(await fetchMkImageUrl(1116)).toBeNull()
+
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: '/relative/path.png' }) } as Response)
+    expect(await fetchMkImageUrl(1116)).toBeNull()
+  })
+
+  it('returns null when fetch rejects (after retries)', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('network error'))
+    expect(await fetchMkImageUrl(1116)).toBeNull()
   })
 })
