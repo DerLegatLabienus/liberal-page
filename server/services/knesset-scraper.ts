@@ -28,6 +28,12 @@ interface KnessetActivityResponse {
 
 interface MkHeaderResponse {
   MkImage?: string | null
+  LobbyImage?: string | null
+}
+
+const absoluteUrl = (s: string | null | undefined): string | null => {
+  const v = s?.trim()
+  return v && /^https?:\/\//i.test(v) ? v : null
 }
 
 /**
@@ -36,6 +42,8 @@ interface MkHeaderResponse {
  * The Knesset removed `PictureDeputyUrl` from OData, so the old deterministic
  * `mk_{siteId}.jpg` pattern is now a hard 404. `GetMkdetailsHeader.MkImage` is the current
  * source — a full `fs.knesset.gov.il/globaldocs/...` URL whose per-MK doc id isn't derivable.
+ * Ministers who resigned their seat (Norwegian Law, `IsCurrentMk: false`) have a null `MkImage`
+ * but still carry the same photo under `LobbyImage`, so fall back to that.
  */
 export async function fetchMkImageUrl(siteId: number): Promise<string | null> {
   const url = `${KNESSET_WEBSITE_API}/MKs/GetMkdetailsHeader?mkId=${siteId}&languageKey=he`
@@ -46,8 +54,7 @@ export async function fetchMkImageUrl(siteId: number): Promise<string | null> {
     if (!res.ok) return null
     // A 200 can still be an HTML bot/maintenance page; parsing it as JSON throws → caught below.
     const data = (await res.json()) as MkHeaderResponse
-    const img = data.MkImage?.trim()
-    return img && /^https?:\/\//i.test(img) ? img : null
+    return absoluteUrl(data.MkImage) ?? absoluteUrl(data.LobbyImage)
   } catch {
     return null
   }

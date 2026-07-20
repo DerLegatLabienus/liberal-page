@@ -126,8 +126,14 @@ describe('fetchMkImageUrl', () => {
     expect(await fetchMkImageUrl(1116)).toBeNull()
   })
 
-  it('returns null when MkImage is missing or not an absolute URL', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: null }) } as Response)
+  it('falls back to LobbyImage when MkImage is null (Norwegian-Law ministers)', async () => {
+    const lobby = 'https://fs.knesset.gov.il/globaldocs/MK/831/1_831_3_1946.jpeg'
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: null, LobbyImage: lobby }) } as Response)
+    expect(await fetchMkImageUrl(831)).toBe(lobby)
+  })
+
+  it('returns null when neither MkImage nor LobbyImage is an absolute URL', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: null, LobbyImage: null }) } as Response)
     expect(await fetchMkImageUrl(1116)).toBeNull()
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ MkImage: '/relative/path.png' }) } as Response)
