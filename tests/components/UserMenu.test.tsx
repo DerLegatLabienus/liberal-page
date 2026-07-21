@@ -25,6 +25,7 @@ function renderMenu(overrides: Partial<{ user: AuthUser; onSignOut: () => void; 
         <Routes>
           <Route path="/" element={<UserMenu user={overrides.user ?? USER} onSignOut={onSignOut} onUpdateUser={onUpdateUser} />} />
           <Route path="/admin" element={<div>ADMIN ROUTE</div>} />
+          <Route path="/letters/manage" element={<div>MANAGE LETTERS ROUTE</div>} />
         </Routes>
       </ToastProvider>
     </MemoryRouter>,
@@ -80,16 +81,24 @@ describe('UserMenu', () => {
     expect(onSignOut).toHaveBeenCalled()
   })
 
-  it('shows no admin item for a member', async () => {
+  it('shows no admin or manage-letters items for a member', async () => {
     renderMenu()
     await openMenu()
-    expect(screen.queryByRole('menuitem', { name: /ניהול/ })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'ניהול' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'ניהול מכתבים' })).toBeNull()
   })
 
   it('navigates an admin to /admin from the menu', async () => {
     renderMenu({ user: { ...USER, role: 'admin' } })
     await openMenu()
-    await userEvent.click(screen.getByRole('menuitem', { name: /ניהול/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'ניהול' }))
     expect(screen.getByText('ADMIN ROUTE')).toBeInTheDocument()
+  })
+
+  it('navigates an admin to /letters/manage from the Manage letters item', async () => {
+    renderMenu({ user: { ...USER, role: 'admin' } })
+    await openMenu()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'ניהול מכתבים' }))
+    expect(screen.getByText('MANAGE LETTERS ROUTE')).toBeInTheDocument()
   })
 })

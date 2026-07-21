@@ -10,6 +10,7 @@ import { splitSends } from '@/lib/letter-sends'
 import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
 import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
+import LettersModeTabs from '@/components/letters/LettersModeTabs'
 import SmsBodyEditor from '@/components/letters/SmsBodyEditor'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterChannelInput, ChannelKind } from '@/types'
 
@@ -74,13 +75,14 @@ export default function AdminLettersPage() {
   return (
     // Admin UI is English-only; force LTR so it aligns correctly on the RTL (Hebrew) site.
     <div className="min-h-screen bg-background" dir="ltr">
-      <header className="flex items-center gap-4 border-b px-8 py-4">
-        <Link to="/" className="text-sm text-muted-foreground hover:underline">← Back to site</Link>
-        <h1 className="text-xl font-semibold">Admin — Letters</h1>
+      <header className="flex items-center gap-4 border-b border-border px-8 py-4">
+        <Link to="/letters" className="text-sm text-muted-foreground hover:underline">← Letters</Link>
+        <h1 className="text-xl font-semibold">Manage Letters</h1>
       </header>
 
       <div className="mx-auto max-w-6xl px-8 py-6">
-        <div className="mb-6 flex gap-2 border-b">
+        <LettersModeTabs className="mb-6" />
+        <div className="mb-6 flex gap-2 border-b border-border">
           {TABS.map((t) => (
             <button
               key={t.key}

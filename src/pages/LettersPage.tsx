@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer'
 import { api } from '@/lib/api-client'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import CopyShareLink from '@/components/letters/CopyShareLink'
+import LettersModeTabs from '@/components/letters/LettersModeTabs'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Letter, LetterIssueTag } from '@/types'
@@ -69,6 +70,7 @@ export default function LettersPage() {
     <div className="min-h-screen bg-background">
       <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
       <main className="mx-auto max-w-5xl px-4 py-10" dir="rtl">
+        <LettersModeTabs className="mb-6" />
         <h1 className="mb-2 text-2xl font-bold">מכתבים לנבחרי ציבור</h1>
         <LetterPrivacyNotice className="mb-6" />
 

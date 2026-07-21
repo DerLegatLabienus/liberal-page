@@ -20,7 +20,9 @@ export default function App() {
         <Route path="/letters" element={<LettersPage />} />
         <Route path="/letters/:id" element={<LetterDetailPage />} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/letters" element={<AdminLettersPage />} />
+        <Route path="/letters/manage" element={<AdminLettersPage />} />
+        {/* Letters management moved out of /admin into the Letters section — keep old links working. */}
+        <Route path="/admin/letters" element={<Navigate to="/letters/manage" replace />} />
         <Route path="/auth/magic-link" element={<MagicLinkPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

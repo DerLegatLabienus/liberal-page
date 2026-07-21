@@ -153,7 +153,18 @@ states). A tab bar switches between five **self-contained section components** i
 | **`JoinAnalyticsSection`** | All-time click count, per-combo breakdown sorted by count, collapsible last-14-days. Read-only; `GET /api/admin/analytics/join`. |
 | **`FeatureFlagsSection`** | `Select` chooses the flag; checkbox for `enabled`; `Input` for `value` (empty → `null`). Save → `PUT /api/admin/feature-flags/:name`. |
 
-Feedback on every action is via `useToast` (no inline error text); `/admin/letters` is linked from the header.
+Feedback on every action is via `useToast` (no inline error text). Letters management is **not** part
+of this hub — it lives in the Letters section (see below).
+
+### Letters section (`/letters` + `/letters/manage`)
+
+Letters is one section with two modes, unified by `letters/LettersModeTabs` (a View ⇄ Manage switch
+shown only to users where `canManageLetters(user)` — `src/lib/permissions.ts`, admin-only for now):
+
+- **`/letters`** (`LettersPage`) — the member browse/send view (Hebrew, RTL).
+- **`/letters/manage`** (`AdminLettersPage`) — admin management (letters, issue tags, contacts, letter
+  templates). Self-guards admin-only. Reached via the mode switch, a direct **"Manage letters"** item
+  in the `UserMenu`, or the legacy `/admin/letters` (now redirects here).
 
 ### `MediaPanel`
 
@@ -167,7 +178,7 @@ Images from this library are intended for insertion into letter body HTML (copy-
 
 ### `HtmlCodeEditor`
 
-Shared syntax-highlighting code editor (CodeMirror 6) for the admin's raw-HTML fields: the letter body, letter templates (new/edit) in `AdminLettersPage`, and the email-template editor in `AdminPanel`. Props: `{ value, onChange, placeholder?, ariaLabel?, minHeight? }` — a drop-in replacement for the old `<textarea>` (plain `string` in/out).
+Shared syntax-highlighting code editor (CodeMirror 6) for the admin's raw-HTML fields: the letter body, letter templates (new/edit) in `AdminLettersPage`, and the email-template editor in `EmailTemplatesSection`. Props: `{ value, onChange, placeholder?, ariaLabel?, minHeight? }` — a drop-in replacement for the old `<textarea>` (plain `string` in/out).
 
 - HTML syntax highlighting, line numbers, auto-indent, bracket matching + auto-close, line wrapping.
 - **`dir="ltr"`** on the editor container (the app document is `dir="rtl"`, so the editor forces LTR); Hebrew renders right-to-left within lines via bidi.

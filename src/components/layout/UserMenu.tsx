@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useToastOptional } from '@/contexts/ToastContext'
 import { api } from '@/lib/api-client'
 import type { AuthUser } from '@/lib/api-client'
+import { canManageLetters } from '@/lib/permissions'
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('') || '?'
@@ -139,6 +140,17 @@ export default function UserMenu({ user, onSignOut, onUpdateUser }: UserMenuProp
             />
             {t('auth.email_alerts')}
           </label>
+
+          {canManageLetters(user) && (
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => { setOpen(false); navigate('/letters/manage') }}
+              className="block w-full rounded-lg px-3 py-2 text-start text-sm text-foreground hover:bg-muted"
+            >
+              {t('auth.manage_letters')}
+            </button>
+          )}
 
           {user.role === 'admin' && (
             <button

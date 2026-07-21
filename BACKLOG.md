@@ -12,6 +12,17 @@ Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
 - **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
 - **Validate `channel.kind`** against an allowlist at the admin letters create/update API boundary (currently admin-gated and harmless, but a garbage kind falls through to the sms/whatsapp branch).
 
+### 🔑 Split the `admin` role into granular capabilities
+
+Today there's one blanket `admin` role. As the team grows, break it into capability-scoped roles —
+e.g. **letter manager**, **Knesset-tracker editor**, **feature-flag editor** — so a contributor can
+be granted just what they need. The first seam already exists: **`canManageLetters(user)`**
+(`src/lib/permissions.ts`) gates the letters-management surface (route guard + `UserMenu` entry +
+`LettersModeTabs`) — widen that one function (and add sibling `can*` helpers) instead of scattering
+`role === 'admin'` checks. Needs: a role/capability model (roles table or a capability set on the
+user), the invite/role admin UI, and switching the remaining `role === 'admin'` guards to capability
+checks.
+
 ### ✅ All current-Knesset MKs imported as letter contacts — 2026-07-20
 
 `scripts/import-mk-contacts.ts` (`npm run db:import-mks`, idempotent, `--dry-run`) populated

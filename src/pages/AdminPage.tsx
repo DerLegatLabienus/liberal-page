@@ -33,7 +33,6 @@ export default function AdminPage() {
       <header className="flex items-center gap-4 border-b border-border px-8 py-4">
         <Link to="/" className="text-sm text-muted-foreground hover:underline">← Back to site</Link>
         <h1 className="text-xl font-semibold">Admin</h1>
-        <Link to="/admin/letters" className="ms-auto text-sm text-primary hover:underline">Letters →</Link>
       </header>
 
       <div className="mx-auto max-w-4xl px-8 py-6">
