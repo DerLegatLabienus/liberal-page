@@ -126,10 +126,17 @@ Build from `src/components/ui/*`. Reach for these; don't reimplement them.
   with `type ∈ {success, error, info}` (`contexts/ToastContext.tsx`). Save succeeded → success toast;
   failed → error toast. Reserve inline messages for modal-blocked contexts where a toast would render
   behind an inert backdrop (see the login dialog).
-- **Loading**: use the translucent pulsing **`Skeleton`** (`ui/skeleton.tsx`); for a full-page /
-  session-restore / lazy-route wait use **`PageSkeleton`** (`components/PageSkeleton.tsx`) — it's
-  dir-neutral (no visible text, so it can't reproduce the RTL bidi "…Loading" bug) and carries an
-  `sr-only role="status"`. Don't render bare "Loading…" text on an RTL page.
+- **Loading**: use the translucent pulsing **`Skeleton`** (`ui/skeleton.tsx`). Match the skeleton to
+  what's loading:
+  - *Unknown layout* (session restore, lazy-route Suspense — could resolve to any page or a denial):
+    the generic **`PageSkeleton`** (`components/PageSkeleton.tsx`) — dir-neutral (no visible text, so
+    it can't reproduce the RTL bidi "…Loading" bug), `sr-only role="status"`.
+  - *Known layout* (a list/table/cards fetching data): a **structural** skeleton that mirrors the real
+    DOM — same wrapper classes/spacing, one `Skeleton` box per element, repeated N times — so content
+    lands with no layout shift. Examples: `letters/LettersListSkeleton` (member card list),
+    `ui/table-skeleton` `TableSkeleton` (generic table/row-list). Co-locate a structural skeleton with
+    the component it mirrors and keep it coarse (match the big boxes, not every pixel).
+  - Never render bare "Loading…" text on an RTL page.
 - **Disabled**: disable a submit while its request is in flight; disable invalid actions (empty field,
   self-role-toggle).
 - **Inaccessible states**: a page a user can't see (permissions, a caught render error) must offer a

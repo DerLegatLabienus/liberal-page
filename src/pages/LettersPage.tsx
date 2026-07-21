@@ -7,6 +7,7 @@ import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import CopyShareLink from '@/components/letters/CopyShareLink'
 import LettersModeTabs from '@/components/letters/LettersModeTabs'
 import PageSkeleton from '@/components/PageSkeleton'
+import LettersListSkeleton from '@/components/letters/LettersListSkeleton'
 import BackToHome from '@/components/BackToHome'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
@@ -99,7 +100,7 @@ export default function LettersPage() {
           </div>
         )}
 
-        {loading && <p className="text-muted-foreground">טוען מכתבים...</p>}
+        {loading && <LettersListSkeleton />}
 
         {!loading && letters.length === 0 && (
           <p className="text-muted-foreground">אין מכתבים זמינים כרגע.</p>

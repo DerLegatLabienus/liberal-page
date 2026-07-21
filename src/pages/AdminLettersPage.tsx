@@ -12,6 +12,7 @@ import MediaPanel from '@/components/letters/MediaPanel'
 import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
 import LettersModeTabs from '@/components/letters/LettersModeTabs'
 import PageSkeleton from '@/components/PageSkeleton'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import BackToHome from '@/components/BackToHome'
 import SmsBodyEditor from '@/components/letters/SmsBodyEditor'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterChannelInput, ChannelKind } from '@/types'
@@ -104,7 +105,9 @@ export default function AdminLettersPage() {
           ))}
         </div>
 
-        {loading && <PageSkeleton className="px-0" />}
+        {loading && (tab === 'letters'
+          ? <TableSkeleton cols={6} rows={5} />
+          : <TableSkeleton cols={2} rows={4} />)}
 
         {!loading && tab === 'letters' && (
           <div>

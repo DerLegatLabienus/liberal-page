@@ -242,7 +242,8 @@ Understated, i18n-driven privacy notice rendered on both Civic Letters pages (`L
 
 **Loading & access states** (see `docs/design-system.md` §7):
 - `ui/skeleton.tsx` `Skeleton` — a translucent pulsing placeholder block (reduced-motion aware).
-- `components/PageSkeleton.tsx` — a full-page faint pulsing placeholder for session-restore / lazy-route waits; dir-neutral with an `sr-only role="status"`. Used by the `App` Suspense fallback and the `!ready` guards on `AdminPage` / `AdminLettersPage` / `LettersPage`.
+- `components/PageSkeleton.tsx` — a **generic** full-page faint placeholder for *unknown-layout* waits (session-restore / lazy-route); dir-neutral with an `sr-only role="status"`. Used by the `App` Suspense fallback and the `!ready` guards on `AdminPage` / `AdminLettersPage` / `LettersPage`.
+- **Structural** content skeletons (mirror the real layout, no shift): `letters/LettersListSkeleton.tsx` (member letter cards) and `ui/table-skeleton.tsx` `TableSkeleton` (generic table/row-list — used per-tab on the manage page). Used by the inner `{loading && …}` data gates.
 - `components/BackToHome.tsx` — a `Link to="/"` styled as an outline button; the "way out" on permission-denied states. The `ErrorBoundary` fallback offers an equivalent home link (plain `<a>`, since it wraps the Router).
 
 Some UI primitive files export both components and style helpers. ESLint reports `react-refresh/only-export-components` warnings for those files, but the current build and tests pass.
