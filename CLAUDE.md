@@ -255,6 +255,7 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 |---|---|
 | Dev workflow, scripts, ports | `CLAUDE.md` |
 | Architecture, data flow, API | `docs/architecture.md` |
+| Frontend/UX rules — tokens, components, RTL, feedback, a11y | `docs/design-system.md` |
 | UI components — props, responsibilities | `docs/components.md` |
 | Data shapes, JSON schema | `docs/data-schema.md` |
 | Feature design / requirements | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |

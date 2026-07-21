@@ -11,6 +11,7 @@
 | Doc | Purpose |
 |-----|---------|
 | [architecture.md](./architecture.md) | Runtime architecture, routes, data flow, and project structure |
+| [design-system.md](./design-system.md) | Frontend/UX source of truth — tokens, components, RTL, feedback, a11y |
 | [components.md](./components.md) | Current frontend component reference |
 | [data-schema.md](./data-schema.md) | TypeScript interfaces, Postgres schema, and JSON shapes |
 | [backlog.md](../BACKLOG.md) | Prioritized feature and technical backlog |
