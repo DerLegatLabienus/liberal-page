@@ -40,16 +40,17 @@ describe('AdminPage', () => {
     useAuthMock.mockReturnValue({ user: { id: 1, role: 'admin' }, ready: true })
   })
 
-  it('waits for session restore', () => {
+  it('shows a loading skeleton while the session restores', () => {
     useAuthMock.mockReturnValue({ user: null, ready: false })
     renderPage()
-    expect(screen.getByText(/Loading/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument() // skeleton, not "…Loading" text
   })
 
-  it('denies a non-admin', () => {
+  it('denies a non-admin and offers a way home', () => {
     useAuthMock.mockReturnValue({ user: { id: 1, role: 'member' }, ready: true })
     renderPage()
-    expect(screen.getByText(/Admin access required/)).toBeInTheDocument()
+    expect(screen.getByText(/don't have access/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to home/i })).toHaveAttribute('href', '/')
   })
 
   it('renders the section tabs for an admin and defaults to Invites', async () => {

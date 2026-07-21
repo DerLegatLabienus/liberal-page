@@ -11,6 +11,8 @@ import RecipientEditor from '@/components/letters/RecipientEditor'
 import MediaPanel from '@/components/letters/MediaPanel'
 import HtmlCodeEditor from '@/components/admin/HtmlCodeEditor'
 import LettersModeTabs from '@/components/letters/LettersModeTabs'
+import PageSkeleton from '@/components/PageSkeleton'
+import BackToHome from '@/components/BackToHome'
 import SmsBodyEditor from '@/components/letters/SmsBodyEditor'
 import type { Letter, LetterWithStats, LetterIssueTag, LetterContact, LetterTemplate, LetterChannelInput, ChannelKind } from '@/types'
 
@@ -57,12 +59,15 @@ export default function AdminLettersPage() {
 
   // Wait for session restore before deciding access — a fresh load starts with user=null
   // until the refresh token is exchanged, which would otherwise flash "access required".
-  if (!ready) {
-    return <div className="p-8 text-center text-muted-foreground">Loading…</div>
-  }
+  if (!ready) return <PageSkeleton className="pt-16" />
 
   if (!isAdmin) {
-    return <div className="p-8 text-center text-muted-foreground">Admin access required.</div>
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center" dir="ltr">
+        <p className="text-muted-foreground">You don't have access to this page.</p>
+        <BackToHome />
+      </div>
+    )
   }
 
   const TABS: { key: Tab; label: string }[] = [
@@ -99,7 +104,7 @@ export default function AdminLettersPage() {
           ))}
         </div>
 
-        {loading && <p className="text-muted-foreground">Loading...</p>}
+        {loading && <PageSkeleton className="px-0" />}
 
         {!loading && tab === 'letters' && (
           <div>

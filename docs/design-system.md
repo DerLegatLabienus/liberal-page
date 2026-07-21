@@ -126,11 +126,18 @@ Build from `src/components/ui/*`. Reach for these; don't reimplement them.
   with `type ∈ {success, error, info}` (`contexts/ToastContext.tsx`). Save succeeded → success toast;
   failed → error toast. Reserve inline messages for modal-blocked contexts where a toast would render
   behind an inert backdrop (see the login dialog).
-- **Loading & disabled**: disable a submit while its request is in flight; disable actions that aren't
-  valid (e.g. empty field, self-role-toggle). Show a light loading state for async lists.
+- **Loading**: use the translucent pulsing **`Skeleton`** (`ui/skeleton.tsx`); for a full-page /
+  session-restore / lazy-route wait use **`PageSkeleton`** (`components/PageSkeleton.tsx`) — it's
+  dir-neutral (no visible text, so it can't reproduce the RTL bidi "…Loading" bug) and carries an
+  `sr-only role="status"`. Don't render bare "Loading…" text on an RTL page.
+- **Disabled**: disable a submit while its request is in flight; disable invalid actions (empty field,
+  self-role-toggle).
+- **Inaccessible states**: a page a user can't see (permissions, a caught render error) must offer a
+  way out — render **`BackToHome`** (`components/BackToHome.tsx`, a `Link to="/"` styled as an outline
+  button). Broken/unknown routes already redirect home via the catch-all route in `App.tsx`.
 - **Empty states**: every list renders an explicit empty state (a muted one-line "No X yet"), never a
   bare blank area.
-- **Motion**: subtle and purposeful; respect `prefers-reduced-motion`.
+- **Motion**: subtle and purposeful; respect `prefers-reduced-motion` (the skeleton/spinner do).
 
 ---
 

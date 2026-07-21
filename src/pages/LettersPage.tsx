@@ -6,6 +6,8 @@ import { api } from '@/lib/api-client'
 import LetterPrivacyNotice from '@/components/LetterPrivacyNotice'
 import CopyShareLink from '@/components/letters/CopyShareLink'
 import LettersModeTabs from '@/components/letters/LettersModeTabs'
+import PageSkeleton from '@/components/PageSkeleton'
+import BackToHome from '@/components/BackToHome'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Letter, LetterIssueTag } from '@/types'
@@ -43,9 +45,7 @@ export default function LettersPage() {
     return (
       <div className="min-h-screen bg-background">
         <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
-        <main className="flex min-h-[60vh] items-center justify-center">
-          <p className="text-muted-foreground">טוען…</p>
-        </main>
+        <main className="pt-6"><PageSkeleton /></main>
         <Footer />
       </div>
     )
@@ -55,8 +55,9 @@ export default function LettersPage() {
     return (
       <div className="min-h-screen bg-background">
         <Header hasNewParliamentData={false} onOpenDrawer={() => {}} trackerEnabled={false} />
-        <main className="flex min-h-[60vh] items-center justify-center">
+        <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4" dir="rtl">
           <p className="text-muted-foreground">הגישה לדף זה מוגבלת לחברים מורשים.</p>
+          <BackToHome label="חזרה לדף הבית" />
         </main>
         <Footer />
       </div>

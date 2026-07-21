@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import PageSkeleton from '@/components/PageSkeleton'
+import BackToHome from '@/components/BackToHome'
 import InvitesSection from '@/components/admin/InvitesSection'
 import UsersSection from '@/components/admin/UsersSection'
 import EmailTemplatesSection from '@/components/admin/EmailTemplatesSection'
@@ -24,8 +26,15 @@ export default function AdminPage() {
 
   // Wait for session restore before deciding access — a fresh load / deep link starts with
   // user=null until the refresh token is exchanged, which would otherwise flash the denial.
-  if (!ready) return <div className="p-8 text-center text-muted-foreground">Loading…</div>
-  if (!isAdmin) return <div className="p-8 text-center text-muted-foreground">Admin access required.</div>
+  if (!ready) return <PageSkeleton className="pt-16" />
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center" dir="ltr">
+        <p className="text-muted-foreground">You don't have access to this page.</p>
+        <BackToHome />
+      </div>
+    )
+  }
 
   return (
     // Admin UI is English-only; force LTR so it aligns correctly on the RTL (Hebrew) site.

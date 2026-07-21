@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import HomePage from '@/pages/HomePage'
+import PageSkeleton from '@/components/PageSkeleton'
 
 // HomePage is the landing route and stays eager. The off-home pages are lazy-loaded so the
 // common (homepage) visitor doesn't download the constitution, letters, and admin pages up front.
@@ -13,7 +14,7 @@ const MagicLinkPage = lazy(() => import('@/pages/MagicLinkPage'))
 
 export default function App() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">…</div>}>
+    <Suspense fallback={<PageSkeleton className="pt-16" />}>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/constitution" element={<ConstitutionPage />} />

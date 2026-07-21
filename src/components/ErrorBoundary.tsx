@@ -31,17 +31,29 @@ export default class ErrorBoundary extends Component<Props, State> {
         }}
       >
         <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>אירעה שגיאה בלתי צפויה</h1>
-        <p style={{ color: '#555' }}>אנו מתנצלים. נסו לרענן את הדף.</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          style={{
-            background: '#0a4595', color: '#fff', border: 0, borderRadius: 6,
-            padding: '0.5rem 1.25rem', cursor: 'pointer', fontSize: '0.95rem',
-          }}
-        >
-          רענון הדף
-        </button>
+        <p style={{ color: '#555' }}>אנו מתנצלים. נסו לרענן את הדף או לחזור לדף הבית.</p>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              background: '#0a4595', color: '#fff', border: 0, borderRadius: 6,
+              padding: '0.5rem 1.25rem', cursor: 'pointer', fontSize: '0.95rem',
+            }}
+          >
+            רענון הדף
+          </button>
+          {/* Plain <a> (not react-router Link): the boundary wraps the Router in main.tsx. */}
+          <a
+            href={import.meta.env.BASE_URL}
+            style={{
+              background: '#fff', color: '#0a4595', border: '1px solid #0a4595', borderRadius: 6,
+              padding: '0.5rem 1.25rem', cursor: 'pointer', fontSize: '0.95rem', textDecoration: 'none',
+            }}
+          >
+            חזרה לדף הבית
+          </a>
+        </div>
       </div>
     )
   }

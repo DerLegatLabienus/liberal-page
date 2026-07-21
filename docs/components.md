@@ -238,7 +238,12 @@ Understated, i18n-driven privacy notice rendered on both Civic Letters pages (`L
 
 ## UI Primitives
 
-`src/components/ui/` contains local shadcn-style primitives such as `button`, `card`, `input`, `sheet`, `tabs`, `badge`, `accordion`, and `separator`.
+`src/components/ui/` contains local shadcn-style primitives such as `button`, `card`, `input`, `select`, `skeleton`, `sheet`, `tabs`, `badge`, `accordion`, and `separator`.
+
+**Loading & access states** (see `docs/design-system.md` §7):
+- `ui/skeleton.tsx` `Skeleton` — a translucent pulsing placeholder block (reduced-motion aware).
+- `components/PageSkeleton.tsx` — a full-page faint pulsing placeholder for session-restore / lazy-route waits; dir-neutral with an `sr-only role="status"`. Used by the `App` Suspense fallback and the `!ready` guards on `AdminPage` / `AdminLettersPage` / `LettersPage`.
+- `components/BackToHome.tsx` — a `Link to="/"` styled as an outline button; the "way out" on permission-denied states. The `ErrorBoundary` fallback offers an equivalent home link (plain `<a>`, since it wraps the Router).
 
 Some UI primitive files export both components and style helpers. ESLint reports `react-refresh/only-export-components` warnings for those files, but the current build and tests pass.
 
