@@ -83,8 +83,8 @@ export default function AuthControl() {
         open={loginOpen}
         onOpenChange={(open) => { setLoginOpen(open); if (!open) { setMagicSent(false); setMagicEmail(''); setLoginError(null) } }}
       >
-        {/* Opaque inner card (not bg on the positioning Popup, which renders see-through) —
-            same pattern as AdminPanel. Light card regardless of theme; the site is light-first. */}
+        {/* Opaque inner card (not bg on the positioning Popup, which renders see-through).
+            Light card regardless of theme; the site is light-first. */}
         <DialogContent className="max-w-[25rem]">
           <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl" dir="rtl">
             <DialogClose

@@ -8,6 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend:** Express 5 + `tsx` (port 3001)
 - Both live in the same repo. Vite proxies `/api/*` → `localhost:3001`.
 
+## Frontend/UX rules
+
+**Any frontend/UI change must follow [`docs/design-system.md`](docs/design-system.md).** In short:
+compose from `src/components/ui/*` and the documented patterns; use **token utilities only**
+(`bg-primary`, `text-muted-foreground`, `border-border`) — never hardcode `#hex`/`slate-*`/`red-*`;
+public surfaces are Hebrew-first RTL + i18n with logical properties, admin/internal tools are
+English + `dir="ltr"`; give feedback via toasts (`useToast`), lists an empty state, and every widget
+a keyboard/focus/`aria` baseline. Read the doc before building or reviewing UI.
+
 ## Commands
 
 ```bash

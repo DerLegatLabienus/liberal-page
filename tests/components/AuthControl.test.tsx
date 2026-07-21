@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 // Mock the Google button: render a plain button that fires onSuccess with a credential.
 vi.mock('@react-oauth/google', () => ({
@@ -26,11 +27,14 @@ import AuthControl from '@/components/layout/AuthControl'
 
 function renderControl() {
   return render(
-    <ToastProvider>
-      <AuthProvider>
-        <AuthControl />
-      </AuthProvider>
-    </ToastProvider>,
+    // Signing in mounts UserMenu, whose admin item uses useNavigate — needs a Router.
+    <MemoryRouter>
+      <ToastProvider>
+        <AuthProvider>
+          <AuthControl />
+        </AuthProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   )
 }
 

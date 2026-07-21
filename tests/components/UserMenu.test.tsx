@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 vi.mock('@/lib/api-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api-client')>()
@@ -18,9 +19,15 @@ function renderMenu(overrides: Partial<{ user: AuthUser; onSignOut: () => void; 
   const onSignOut = overrides.onSignOut ?? vi.fn()
   const onUpdateUser = overrides.onUpdateUser ?? vi.fn()
   render(
-    <ToastProvider>
-      <UserMenu user={overrides.user ?? USER} onSignOut={onSignOut} onUpdateUser={onUpdateUser} />
-    </ToastProvider>,
+    // UserMenu's admin item uses useNavigate — needs a Router. The /admin route lets us assert nav.
+    <MemoryRouter initialEntries={['/']}>
+      <ToastProvider>
+        <Routes>
+          <Route path="/" element={<UserMenu user={overrides.user ?? USER} onSignOut={onSignOut} onUpdateUser={onUpdateUser} />} />
+          <Route path="/admin" element={<div>ADMIN ROUTE</div>} />
+        </Routes>
+      </ToastProvider>
+    </MemoryRouter>,
   )
   return { onSignOut, onUpdateUser }
 }
@@ -71,5 +78,18 @@ describe('UserMenu', () => {
     await openMenu()
     await userEvent.click(screen.getByRole('menuitem', { name: /התנתק/ }))
     expect(onSignOut).toHaveBeenCalled()
+  })
+
+  it('shows no admin item for a member', async () => {
+    renderMenu()
+    await openMenu()
+    expect(screen.queryByRole('menuitem', { name: /ניהול/ })).toBeNull()
+  })
+
+  it('navigates an admin to /admin from the menu', async () => {
+    renderMenu({ user: { ...USER, role: 'admin' } })
+    await openMenu()
+    await userEvent.click(screen.getByRole('menuitem', { name: /ניהול/ }))
+    expect(screen.getByText('ADMIN ROUTE')).toBeInTheDocument()
   })
 })

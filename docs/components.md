@@ -135,23 +135,29 @@ The signed-in account control — an outline trigger (avatar + name + chevron) o
 
 Compact bordered he⇄en toggle (`Button variant="outline"` + globe icon) sitting first in the header control cluster. `ui.lang_toggle` holds the *target* language label; clicking flips `i18n` language, `document.documentElement.lang/dir`, the `?lang=` param, and persisted `localStorage.lang`. Optional `onToggle` (used to close the mobile menu).
 
-### `AdminPanel`
+### `AdminPage` (`/admin`)
 
-Modal dialog for admin-only site management. Opened from `AuthControl`; always `dir="rtl"` (internal Hebrew-first tool). All labels are in English regardless of the active site language.
+Admin-only **route** (`src/pages/AdminPage.tsx`) for site management — reached from the `UserMenu`
+"admin" item (which `navigate('/admin')`). Lazy-loaded. Self-guards via `useAuth`
+(`ready && role === 'admin'`), waiting for session restore before deciding access, mirroring
+`AdminLettersPage`. English + `dir="ltr"` per the admin convention (see `docs/design-system.md`).
+Built from the design system (token utilities, `Button`/`Input`/`Select`, toast feedback, empty
+states). A tab bar switches between five **self-contained section components** in
+`src/components/admin/` — only the active section mounts, so each fetches its own data on demand:
 
-Loads all data in parallel on open (`listInvites`, `listUsers`, `emailTemplates.list`, `featureFlags.get`, `analytics.joinSummary`). Has five sections:
-
-| Section | What it does |
+| Section (`*.tsx`) | What it does |
 |---------|-------------|
-| **Invites** | Add an email + role to the allowlist; list and remove existing invites. Adding fires an invitation email via Resend. |
-| **Users** | List all registered users; toggle admin ↔ member (self-toggle disabled). |
-| **Email templates** | Accordion — one item per template (`invite`, `bill_digest`, etc.). Each item has a subject field and a Source / Preview tab. The Preview tab renders the raw Handlebars HTML in a sandboxed `<iframe>`. Save commits to DB via `PUT /api/admin/email-templates/:name`. |
-| **Join analytics** | All-time click count, per-combo breakdown sorted by count, and a collapsible last-14-days list. Read-only; sourced from `GET /api/admin/analytics/join`. |
-| **Feature flags** | Combobox (select) chooses the flag; checkbox for `enabled`; text input for `value` (e.g. Calendly event-type URI for `meetUs`). Save commits to DB via `PUT /api/admin/feature-flags/:name`. |
+| **`InvitesSection`** | Add an email (lowercased) + role to the allowlist; list and remove. Adding fires an invitation email via Resend. |
+| **`UsersSection`** | List all registered users; toggle admin ↔ member (self-toggle disabled). |
+| **`EmailTemplatesSection`** | Accordion — one item per template. Subject field + Source / Preview tabs; Preview renders the HTML in a sandboxed `<iframe>`. Save → `PUT /api/admin/email-templates/:name`. |
+| **`JoinAnalyticsSection`** | All-time click count, per-combo breakdown sorted by count, collapsible last-14-days. Read-only; `GET /api/admin/analytics/join`. |
+| **`FeatureFlagsSection`** | `Select` chooses the flag; checkbox for `enabled`; `Input` for `value` (empty → `null`). Save → `PUT /api/admin/feature-flags/:name`. |
+
+Feedback on every action is via `useToast` (no inline error text); `/admin/letters` is linked from the header.
 
 ### `MediaPanel`
 
-Admin-only panel for managing the R2-hosted letter image library. Rendered as a section inside `AdminPanel`.
+Admin-only panel for managing the R2-hosted letter image library. Rendered inside `AdminLettersPage`.
 
 - **Upload:** file picker (raster images only) → `POST /api/admin/letters/media`. Byte-sniff validation and the 5 MB cap are enforced server-side; the panel shows an inline error on rejection.
 - **Asset list:** thumbnails with filename, size, and upload date. Each row has a "Copy `<img>` snippet" button that puts a ready-to-paste HTML tag (pointing at the public R2 URL) on the clipboard, and a delete button that calls `DELETE /api/admin/letters/media/:id`.

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ChevronDown, LogOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -6,9 +7,6 @@ import { Input } from '@/components/ui/input'
 import { useToastOptional } from '@/contexts/ToastContext'
 import { api } from '@/lib/api-client'
 import type { AuthUser } from '@/lib/api-client'
-
-// Admin-only and heavy — lazy so non-admins never pay for it (mirrors the old AuthControl import).
-const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('') || '?'
@@ -28,9 +26,9 @@ export interface UserMenuProps {
  */
 export default function UserMenu({ user, onSignOut, onUpdateUser }: UserMenuProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const toastCtx = useToastOptional()
   const [open, setOpen] = useState(false)
-  const [adminOpen, setAdminOpen] = useState(false)
   const [name, setName] = useState(user.name ?? '')
   const [savingName, setSavingName] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
@@ -146,7 +144,7 @@ export default function UserMenu({ user, onSignOut, onUpdateUser }: UserMenuProp
             <button
               role="menuitem"
               type="button"
-              onClick={() => { setAdminOpen(true); setOpen(false) }}
+              onClick={() => { setOpen(false); navigate('/admin') }}
               className="block w-full rounded-lg px-3 py-2 text-start text-sm text-foreground hover:bg-muted"
             >
               {t('admin.title')}
@@ -163,12 +161,6 @@ export default function UserMenu({ user, onSignOut, onUpdateUser }: UserMenuProp
             {t('auth.sign_out')}
           </button>
         </div>
-      )}
-
-      {adminOpen && (
-        <Suspense fallback={null}>
-          <AdminPanel open onClose={() => setAdminOpen(false)} />
-        </Suspense>
       )}
     </div>
   )
