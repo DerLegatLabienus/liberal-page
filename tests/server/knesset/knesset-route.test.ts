@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 
 vi.mock('../../../server/services/knesset-config', () => ({
   getCurrentKnesset: vi.fn().mockReturnValue(25),
@@ -11,9 +11,7 @@ vi.mock('../../../server/services/knesset-config', () => ({
 import knessetRouter from '../../../server/routes/knesset'
 import { detectKnessetTransition, runTransition, getCurrentKnesset } from '../../../server/services/knesset-config'
 
-const app = express()
-app.use(express.json())
-app.use('/api/knesset', knessetRouter)
+const app = createTestApp('/api/knesset', knessetRouter)
 
 describe('POST /api/knesset/transition', () => {
   beforeEach(() => vi.clearAllMocks())

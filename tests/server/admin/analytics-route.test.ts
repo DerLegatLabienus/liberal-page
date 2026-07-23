@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import { joinAnalytics } from '../../../server/db/schema'
 import { eq } from 'drizzle-orm'
 import analyticsRouter from '../../../server/routes/analytics'
 
-const app = express()
-app.use(express.json())
-app.use('/api/analytics', analyticsRouter)
+const app = createTestApp('/api/analytics', analyticsRouter)
 
 describe('POST /api/analytics/join', () => {
   beforeAll(async () => { await setupTestDb() })

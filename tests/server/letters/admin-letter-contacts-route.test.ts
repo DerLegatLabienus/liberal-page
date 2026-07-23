@@ -1,6 +1,6 @@
 // tests/server/admin-letter-contacts-route.test.ts
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -15,9 +15,7 @@ const mockFetchMkImageUrl = vi.mocked(fetchMkImageUrl)
 
 const LIVE_MK_PHOTO = 'https://fs.knesset.gov.il/globaldocs/MK/1116/1_1116_3_19861.jpeg'
 
-const app = express()
-app.use(express.json())
-app.use('/api/admin/letters', adminLetterAssetsRouter)
+const app = createTestApp('/api/admin/letters', adminLetterAssetsRouter)
 
 let adminToken: string
 

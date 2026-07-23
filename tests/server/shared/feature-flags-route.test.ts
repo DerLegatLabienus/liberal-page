@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import { featureFlags } from '../../../server/db/schema'
 import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 import featureFlagsRouter from '../../../server/routes/feature-flags'
 
-const app = express()
-app.use(express.json())
-app.use('/api/feature-flags', featureFlagsRouter)
+const app = createTestApp('/api/feature-flags', featureFlagsRouter)
 
 describe('GET /api/feature-flags', () => {
   const repo = new FeatureFlagsRepository()

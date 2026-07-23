@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -8,9 +8,7 @@ import { issueAccessToken } from '../../../server/services/auth-service'
 import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 import lettersRouter from '../../../server/routes/letters'
 
-const app = express()
-app.use(express.json())
-app.use('/api/letters', lettersRouter)
+const app = createTestApp('/api/letters', lettersRouter)
 const flags = new FeatureFlagsRepository()
 let token: string
 

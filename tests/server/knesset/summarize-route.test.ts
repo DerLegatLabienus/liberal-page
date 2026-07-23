@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 
 // Control the SSRF guard and the summarizer from the test; keep the real error class.
@@ -17,9 +17,7 @@ import summarizeRouter, { _resetSummarizeLimiter } from '../../../server/routes/
 import { UrlNotAllowedError } from '../../../server/services/url-guard'
 import { issueAccessToken } from '../../../server/services/auth-service'
 
-const app = express()
-app.use(express.json())
-app.use('/api/summarize', summarizeRouter)
+const app = createTestApp('/api/summarize', summarizeRouter)
 
 const token = issueAccessToken({ id: 1, email: 'm@x.com', name: 'M', role: 'member' })
 const KNESSET_URL = 'https://main.knesset.gov.il/x.pdf'

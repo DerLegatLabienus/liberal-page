@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 
 const mockGetAll = vi.fn().mockResolvedValue({})
 
@@ -21,9 +21,7 @@ import {
   fetchRecentBills, fetchPolicyAlignedBills, fetchTrendingBills,
 } from '../../../server/services/knesset-bills'
 
-const app = express()
-app.use(express.json())
-app.use('/api/bills', billsRouter)
+const app = createTestApp('/api/bills', billsRouter)
 
 const ITEM = {
   billId: 1, title: 'x', statusId: 101, status: 'הכנה', committee: '',

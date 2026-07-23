@@ -1,6 +1,6 @@
 import { vi, describe, it, expect } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 
 vi.mock('../../../server/services/knesset-members', () => ({
   fetchAllKnessetMembers: vi.fn().mockResolvedValue([
@@ -27,9 +27,7 @@ vi.mock('../../../server/repositories/mk-annotations-repository', () => ({
 
 import mksRouter from '../../../server/routes/mks'
 
-const app = express()
-app.use(express.json())
-app.use('/api/mks', mksRouter)
+const app = createTestApp('/api/mks', mksRouter)
 
 describe('GET /api/mks/list', () => {
   it('returns 200 with array of KnessetMember', async () => {

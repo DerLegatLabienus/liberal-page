@@ -1,6 +1,6 @@
 import { createHash } from 'crypto'
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { eq } from 'drizzle-orm'
 import { setupTestDb } from '../db-harness'
@@ -13,9 +13,7 @@ vi.mock('../../../server/services/email', () => ({ sendEmail: sendEmailMock }))
 import authRouter, { _resetMagicLinkLimiter } from '../../../server/routes/auth'
 import { verifyMagicLink } from '../../../server/services/auth-providers/magic-link'
 
-const app = express()
-app.use(express.json())
-app.use('/api/auth', authRouter)
+const app = createTestApp('/api/auth', authRouter)
 
 function extractToken(): string {
   const call = sendEmailMock.mock.calls.at(-1)?.[0] as { params: { link: string } }

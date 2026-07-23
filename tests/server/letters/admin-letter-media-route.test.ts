@@ -1,6 +1,6 @@
 // tests/server/admin-letter-media-route.test.ts
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -18,9 +18,7 @@ vi.mock('../../../server/services/r2-client', () => ({
 import * as r2 from '../../../server/services/r2-client'
 import adminLetterAssetsRouter from '../../../server/routes/admin-letter-assets'
 
-const app = express()
-app.use(express.json())
-app.use('/api/admin/letters', adminLetterAssetsRouter)
+const app = createTestApp('/api/admin/letters', adminLetterAssetsRouter)
 
 const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])
 let adminToken: string

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import { trackedCommittees, committees, users } from '../../../server/db/schema'
@@ -21,9 +21,7 @@ vi.mock('../../../server/repositories/committee-list-repository', () => ({
 
 import committeesRouter from '../../../server/routes/committees'
 
-const app = express()
-app.use(express.json())
-app.use('/api/committees', committeesRouter)
+const app = createTestApp('/api/committees', committeesRouter)
 
 const ODATA_COMMITTEES = [
   { CommitteeID: 2, Name: 'ועדת הכספים' },

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import { users, bills, trackedBills } from '../../../server/db/schema'
@@ -9,9 +9,7 @@ import { BillsRepository } from '../../../server/repositories/bills-repository'
 import { TrackedBillsRepository } from '../../../server/repositories/tracked-bills-repository'
 import parliamentRouter from '../../../server/routes/parliament'
 
-const app = express()
-app.use(express.json())
-app.use('/api/parliament', parliamentRouter)
+const app = createTestApp('/api/parliament', parliamentRouter)
 
 describe('GET /api/parliament/:type', () => {
   beforeAll(async () => { await setupTestDb() })

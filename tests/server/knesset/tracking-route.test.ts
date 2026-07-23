@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import {
@@ -36,9 +36,7 @@ vi.mock('../../../server/services/knesset-config', () => ({ getCurrentKnesset: v
 
 import trackingRouter from '../../../server/routes/tracking'
 
-const app = express()
-app.use(express.json())
-app.use('/api/tracking', trackingRouter)
+const app = createTestApp('/api/tracking', trackingRouter)
 
 describe('tracking routes (auth + scope)', () => {
   const usersRepo = new UsersRepository()

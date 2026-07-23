@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -14,9 +14,7 @@ vi.mock('../../../server/services/auth-service', async (importOriginal) => {
 import { verifyGoogleIdToken } from '../../../server/services/auth-service'
 import authRouter from '../../../server/routes/auth'
 
-const app = express()
-app.use(express.json())
-app.use('/api/auth', authRouter)
+const app = createTestApp('/api/auth', authRouter)
 
 function asGoogle(email: string, sub = 'gsub', name = 'Name', emailVerified = true) {
   vi.mocked(verifyGoogleIdToken).mockResolvedValueOnce({ email, sub, name, emailVerified })

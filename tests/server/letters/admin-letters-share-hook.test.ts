@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -24,9 +24,7 @@ vi.mock('../../../server/services/share-publisher', () => ({
 
 import adminLettersRouter from '../../../server/routes/admin-letters'
 
-const app = express()
-app.use(express.json())
-app.use('/api/admin/letters', adminLettersRouter)
+const app = createTestApp('/api/admin/letters', adminLettersRouter)
 let token: string
 
 async function flush() { await new Promise((r) => setImmediate(r)) }

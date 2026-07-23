@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
@@ -8,9 +8,7 @@ import { users, allowedEmails, refreshTokens, joinAnalytics } from '../../../ser
 import { issueAccessToken } from '../../../server/services/auth-service'
 import adminRouter from '../../../server/routes/admin'
 
-const app = express()
-app.use(express.json())
-app.use('/api/admin', adminRouter)
+const app = createTestApp('/api/admin', adminRouter)
 
 let adminToken: string
 let memberToken: string

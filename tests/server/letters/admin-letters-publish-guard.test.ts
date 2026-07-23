@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { eq } from 'drizzle-orm'
 import { setupTestDb } from '../db-harness'
@@ -14,9 +14,7 @@ vi.mock('../../../server/services/share-publisher', () => ({
 
 import adminLettersRouter from '../../../server/routes/admin-letters'
 
-const app = express()
-app.use(express.json())
-app.use('/api/admin/letters', adminLettersRouter)
+const app = createTestApp('/api/admin/letters', adminLettersRouter)
 let token: string
 
 describe('admin-letters publish guard', () => {

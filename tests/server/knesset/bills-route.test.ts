@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
-import express from 'express'
+import { createTestApp } from '../../support/test-app'
 import { setupTestDb } from '../db-harness'
 import { db } from '../../../server/db/client'
 import { trackedBills, bills, users } from '../../../server/db/schema'
@@ -13,9 +13,7 @@ vi.stubGlobal('fetch', vi.fn())
 
 import billsRouter from '../../../server/routes/bills'
 
-const app = express()
-app.use(express.json())
-app.use('/api/bills', billsRouter)
+const app = createTestApp('/api/bills', billsRouter)
 
 const ODATA_BILLS = [
   { BillID: 1038990, Name: 'הצעת חוק חופש העיסוק, התשפ"ו-2026', StatusID: 141 },
