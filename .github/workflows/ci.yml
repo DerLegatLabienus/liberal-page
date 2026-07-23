@@ -36,14 +36,7 @@ jobs:
       - run: npm ci
       - name: Build
         run: npm run build
-      - name: Smoke test — start server and hit /api/health
+      - name: Smoke test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/liberal_dev
-        run: |
-          npx tsx server/index.ts &
-          SERVER_PID=$!
-          sleep 5
-          curl -f http://localhost:3001/api/health
-          CURL_EXIT=$?
-          kill $SERVER_PID 2>/dev/null || true
-          exit $CURL_EXIT
+        run: npm run smoke

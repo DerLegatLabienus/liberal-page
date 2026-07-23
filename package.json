@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "smoke": "tsx scripts/smoke.ts",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx scripts/seed-db.ts",
     "db:backfill-channels": "tsx scripts/backfill-channels.ts",
