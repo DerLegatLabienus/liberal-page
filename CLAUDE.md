@@ -64,6 +64,30 @@ After backend changes, smoke-test the API:
 curl http://localhost:3001/api/health
 ```
 
+### Local full-stack dev — what's real vs. faked
+
+`npm run dev` runs the full frontend+backend+DB stack locally, but the external
+integrations beyond Postgres are **not** stood up locally. Every one of them fails
+closed or no-ops on a missing var rather than crashing the server, so it's safe to
+run without any of this configured — you just won't exercise the real behavior:
+
+- **Real locally:** Postgres — Docker (`db:up`) for `npm run dev`, in-memory pglite
+  (zero setup) for `npm test`.
+- **Intentionally faked/no-op, not worth a local stand-in:** Resend email (`sendEmail()`
+  logs + returns `{status:'skipped'}` without `RESEND_API_KEY` — this is deliberate,
+  not a gap); Cloudflare Turnstile (fails open — verification skipped without
+  `TURNSTILE_SECRET_KEY`, sends still counted); Calendly (`/api/meetings/booking-link`
+  returns 409 `not_configured` without `CALENDLY_API_TOKEN`).
+- **No local stand-in today, mocked only in tests:** R2 object storage (routes return
+  503 without the `R2_*` vars — see `server/services/r2-client.ts` /
+  `share-config.ts`), Anthropic (503 on summarize/beautify without
+  `ANTHROPIC_API_KEY`), the external Knesset OData/scraper APIs (live-hit only when
+  `RUN_LIVE_KNESSET_TESTS` is set; unit tests mock `fetch` otherwise). Resend and
+  Anthropic are hosted/opaque APIs with no meaningful local fake, so mocking them in
+  tests is correct and isn't expected to change. R2 is the one exception — see
+  `docker-compose.yml` for a local MinIO service if you need to actually exercise
+  letter-media uploads/share-page publishing locally.
+
 ## Restarting
 
 - **Backend (`server/`):** `tsx watch` auto-reloads when using `npm run dev:server`. If started manually, kill and restart.
