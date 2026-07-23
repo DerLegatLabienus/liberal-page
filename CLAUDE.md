@@ -26,6 +26,8 @@ npm run dev:server       # Express only on :3001
 npm run lint             # ESLint 9
 npx tsc --noEmit         # type check (both app and server tsconfigs)
 npm test                 # Vitest run (no servers needed)
+npm run smoke            # boots the real server against DATABASE_URL, checks a few routes
+npm run smoke:browser    # Playwright golden-path check — needs `npm run dev` already running
 npm run build            # tsc -b && vite build
 npm run db:generate      # generate a Drizzle migration after schema changes
 npm run db:seed          # one-time JSON → DB seed (requires DATABASE_URL)
@@ -268,9 +270,25 @@ Each cycle: polls bills via oknesset, fetches committee sessions and runs `commi
 
 ### Tests
 
-- `tests/components/` — happy-dom environment, `react-i18next` auto-mocked via `src/__mocks__/react-i18next.ts`
-- `tests/server/` — node environment (see `vitest.config.ts` `environmentMatchGlobs`)
-- `tests/unit/` — pure logic, happy-dom
+Top level is split by test type (this is what `vitest.config.ts`'s `environmentMatchGlobs`
+and CI's `--shard` file discovery key on): `tests/components/` (happy-dom, `react-i18next`
+auto-mocked via `src/__mocks__/react-i18next.ts`), `tests/server/` (node environment),
+`tests/unit/` (pure logic, happy-dom — also holds the one hook test, folded in from a
+now-removed `tests/hooks/`). Within each, tests are nested one level deeper by **feature**:
+`letters/`, `knesset/`, `auth/`, plus `admin/` and `shared/` for cross-cutting
+routes/repositories (`tests/components/` only uses `letters/knesset/auth`). A few
+features (Calendly/meetings) and generic site/static components aren't scattered enough
+to need a folder and stay flat. New test files should land in the matching feature
+folder, not flat in the type directory.
+
+`tests/support/test-app.ts` (`createTestApp(basePath, router)`) and `tests/support/fixtures.ts`
+hold shared route-test bootstrap and repeated object fixtures — reuse them for new route
+tests instead of hand-rolling `express(); app.use(express.json()); app.use(path, router)`.
+
+Most `tests/server/*-route.test.ts` files are already real integration tests — a real
+Express router + supertest + a real (in-memory pglite) Postgres via Drizzle repositories,
+only external I/O (fetch, Turnstile, email) mocked. `npm run smoke` / `npm run smoke:browser`
+cover the layer those can't: booting the actual server process and a real browser page load.
 
 ## Project Skills
 
