@@ -15,5 +15,25 @@ services:
       timeout: 3s
       retries: 10
 
+  # Optional local S3-compatible stand-in for Cloudflare R2 (letter image media library +
+  # public share pages). R2 speaks the S3 API, so r2-client.ts needs no code changes — just
+  # point the R2_* env vars in .env at this instead (see .env.example). Not part of the
+  # default `npm run dev`/`npm test` path: only starts when named explicitly.
+  # Console at http://localhost:9001 (user/pass below) — create the bucket there once.
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_DOMAIN: localhost
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    volumes:
+      - liberal_minio_data:/data
+    profiles: ["minio"]
+
 volumes:
   liberal_pgdata:
+  liberal_minio_data:

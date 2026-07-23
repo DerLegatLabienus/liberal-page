@@ -78,15 +78,23 @@ run without any of this configured — you just won't exercise the real behavior
   not a gap); Cloudflare Turnstile (fails open — verification skipped without
   `TURNSTILE_SECRET_KEY`, sends still counted); Calendly (`/api/meetings/booking-link`
   returns 409 `not_configured` without `CALENDLY_API_TOKEN`).
-- **No local stand-in today, mocked only in tests:** R2 object storage (routes return
-  503 without the `R2_*` vars — see `server/services/r2-client.ts` /
-  `share-config.ts`), Anthropic (503 on summarize/beautify without
-  `ANTHROPIC_API_KEY`), the external Knesset OData/scraper APIs (live-hit only when
-  `RUN_LIVE_KNESSET_TESTS` is set; unit tests mock `fetch` otherwise). Resend and
-  Anthropic are hosted/opaque APIs with no meaningful local fake, so mocking them in
-  tests is correct and isn't expected to change. R2 is the one exception — see
-  `docker-compose.yml` for a local MinIO service if you need to actually exercise
-  letter-media uploads/share-page publishing locally.
+- **No local stand-in today, mocked only in tests:** Anthropic (503 on
+  summarize/beautify without `ANTHROPIC_API_KEY`), the external Knesset
+  OData/scraper APIs (live-hit only when `RUN_LIVE_KNESSET_TESTS` is set; unit tests
+  mock `fetch` otherwise). Both are hosted/opaque APIs with no meaningful local fake,
+  so mocking them in tests is correct and isn't expected to change.
+- **R2 object storage — optional local stand-in via MinIO:** routes return 503
+  without the `R2_*` vars (see `server/services/r2-client.ts` / `share-config.ts`).
+  `docker compose --profile minio up -d minio` runs a local S3-compatible server
+  (R2 itself speaks the S3 API, so `r2-client.ts` needs no code changes — just point
+  the `R2_*` vars at it, see `.env.example`). Verified working end-to-end (put/get
+  round trip through the app's exact `S3Client` construction) — the one catch found
+  by testing it: MinIO only recognizes the AWS SDK's default bucket-as-subdomain
+  addressing when `MINIO_DOMAIN` is set (already configured in `docker-compose.yml`),
+  and the public base URL relies on `*.localhost` resolving to loopback (true on
+  Linux/WSL2/macOS out of the box). Not part of the default `npm run dev`/`npm test`
+  path — the `minio` service only starts when named explicitly (`--profile minio` or
+  `docker compose up -d minio`).
 
 ## Restarting
 
