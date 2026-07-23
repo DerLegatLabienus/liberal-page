@@ -3,7 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 const lookupMock = vi.fn()
 vi.mock('dns/promises', () => ({ lookup: (...args: unknown[]) => lookupMock(...args) }))
 
-import { assertAllowedDocumentUrl, UrlNotAllowedError } from '../../server/services/url-guard'
+import { assertAllowedDocumentUrl, UrlNotAllowedError } from '../../../server/services/url-guard'
 
 // Default: resolve to a real-world public address.
 beforeEach(() => {

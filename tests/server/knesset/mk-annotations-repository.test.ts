@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { mkAnnotations } from '../../server/db/schema'
-import { MkAnnotationsRepository } from '../../server/repositories/mk-annotations-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { mkAnnotations } from '../../../server/db/schema'
+import { MkAnnotationsRepository } from '../../../server/repositories/mk-annotations-repository'
 
 describe('MkAnnotationsRepository', () => {
   const repo = new MkAnnotationsRepository()

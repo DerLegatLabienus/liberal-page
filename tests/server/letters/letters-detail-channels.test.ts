@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { db } from '../../server/db/client'
-import { letterContacts, letterTemplates } from '../../server/db/schema'
-import { buildChannelSends } from '../../server/services/channel-send'
-import { renderLetterHtml } from '../../server/services/letter-utils'
+import { db } from '../../../server/db/client'
+import { letterContacts, letterTemplates } from '../../../server/db/schema'
+import { buildChannelSends } from '../../../server/services/channel-send'
+import { renderLetterHtml } from '../../../server/services/letter-utils'
 
 describe('buildChannelSends', () => {
   let email = 0, sms = 0, smsOnly = 0

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 describe('publicSharePages flag (migration 0022)', () => {
   beforeAll(async () => { await setupTestDb() })

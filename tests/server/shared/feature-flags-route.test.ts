@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { featureFlags } from '../../server/db/schema'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
-import featureFlagsRouter from '../../server/routes/feature-flags'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { featureFlags } from '../../../server/db/schema'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
+import featureFlagsRouter from '../../../server/routes/feature-flags'
 
 const app = express()
 app.use(express.json())

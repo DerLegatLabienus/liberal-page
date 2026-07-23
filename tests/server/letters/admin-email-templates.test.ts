@@ -4,19 +4,19 @@ import request from 'supertest'
 
 const getAll = vi.hoisted(() => vi.fn())
 const update = vi.hoisted(() => vi.fn())
-vi.mock('../../server/repositories/email-templates-repository', () => ({
+vi.mock('../../../server/repositories/email-templates-repository', () => ({
   EmailTemplatesRepository: vi.fn().mockImplementation(() => ({ getAll, update })),
 }))
-vi.mock('../../server/repositories/auth-repository', () => ({
+vi.mock('../../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn().mockImplementation(() => ({})),
 }))
-vi.mock('../../server/services/email', () => ({ sendEmail: vi.fn() }))
-vi.mock('../../server/middleware/auth', () => ({
+vi.mock('../../../server/services/email', () => ({ sendEmail: vi.fn() }))
+vi.mock('../../../server/middleware/auth', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requireAdmin: (req: any, _res: any, next: any) => { req.user = { id: 1, role: 'admin' }; next() },
 }))
 
-import adminRouter from '../../server/routes/admin'
+import adminRouter from '../../../server/routes/admin'
 
 function app() { const a = express(); a.use(express.json()); a.use('/api/admin', adminRouter); return a }
 

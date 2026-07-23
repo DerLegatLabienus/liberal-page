@@ -1,25 +1,25 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
 import {
   users, bills, trackedBills,
   committees, trackedCommittees,
   mks, trackedMks, mkKnessetTerms, mkRoles, mkActivity, mkVotes,
-} from '../../server/db/schema'
-import { UsersRepository } from '../../server/repositories/users-repository'
-import { TrackedBillsRepository } from '../../server/repositories/tracked-bills-repository'
-import { issueAccessToken } from '../../server/services/auth-service'
+} from '../../../server/db/schema'
+import { UsersRepository } from '../../../server/repositories/users-repository'
+import { TrackedBillsRepository } from '../../../server/repositories/tracked-bills-repository'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
-vi.mock('../../server/services/oknesset', () => ({
+vi.mock('../../../server/services/oknesset', () => ({
   OknessetClient: vi.fn().mockImplementation(() => ({
     getBill: vi.fn().mockResolvedValue({ law_id: 1044632, title: 'הצעת חוק בדיקה', committee: 'ועדת הכנסת' }),
     getCommittee: vi.fn().mockResolvedValue({ name: 'ועדת הכנסת', chairperson: 'יו"ר הוועדה' }),
     getMk: vi.fn().mockResolvedValue({ name: 'חבר כנסת בדיקה', party: 'מפלגה א' }),
   })),
 }))
-vi.mock('../../server/services/url-parser', () => ({
+vi.mock('../../../server/services/url-parser', () => ({
   parseKnessetUrl: vi.fn((url: string) => {
     if (url.includes('/bill/')) return { type: 'bill', id: '12345' }
     if (url.includes('/committee/')) return { type: 'committee', id: '67890' }
@@ -28,13 +28,13 @@ vi.mock('../../server/services/url-parser', () => ({
   }),
   isKnessetSiteUrl: vi.fn(() => false),
 }))
-vi.mock('../../server/services/knesset-api', () => ({
+vi.mock('../../../server/services/knesset-api', () => ({
   getMkBySiteId: vi.fn().mockResolvedValue({ knsId: 999, name: 'מ"כ דוגמה', email: null, faction: 'מפלגה ב', positions: [] }),
 }))
-vi.mock('../../server/services/knesset-scraper', () => ({ fetchMkActivity: vi.fn().mockResolvedValue([]) }))
-vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: vi.fn().mockReturnValue(25) }))
+vi.mock('../../../server/services/knesset-scraper', () => ({ fetchMkActivity: vi.fn().mockResolvedValue([]) }))
+vi.mock('../../../server/services/knesset-config', () => ({ getCurrentKnesset: vi.fn().mockReturnValue(25) }))
 
-import trackingRouter from '../../server/routes/tracking'
+import trackingRouter from '../../../server/routes/tracking'
 
 const app = express()
 app.use(express.json())

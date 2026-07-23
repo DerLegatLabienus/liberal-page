@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { odataGet, odataGetAllPages } from '../../server/services/odata'
+import { odataGet, odataGetAllPages } from '../../../server/services/odata'
 
 const BASE = 'https://knesset.gov.il/Odata/ParliamentInfo.svc'
 

@@ -7,20 +7,20 @@ const { sendEmailMock, addInviteMock } = vi.hoisted(() => ({
   addInviteMock: vi.fn(),
 }))
 
-vi.mock('../../server/services/email', () => ({ sendEmail: sendEmailMock }))
+vi.mock('../../../server/services/email', () => ({ sendEmail: sendEmailMock }))
 
-vi.mock('../../server/repositories/auth-repository', () => ({
+vi.mock('../../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn().mockImplementation(() => ({
     addInvite: addInviteMock, listInvites: vi.fn(), removeInvite: vi.fn(),
     listUsers: vi.fn(), findUserById: vi.fn(), countAdmins: vi.fn(), setUserRole: vi.fn(),
   })),
 }))
 
-vi.mock('../../server/middleware/auth', () => ({
+vi.mock('../../../server/middleware/auth', () => ({
   requireAdmin: (req: express.Request, _res: express.Response, next: express.NextFunction) => { req.user = { id: 1, role: 'admin' }; next() },
 }))
 
-import adminRouter from '../../server/routes/admin'
+import adminRouter from '../../../server/routes/admin'
 
 function app() {
   const a = express(); a.use(express.json()); a.use('/api/admin', adminRouter); return a

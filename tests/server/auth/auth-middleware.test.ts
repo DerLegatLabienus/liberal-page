@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users } from '../../server/db/schema'
-import { requireAuth, requireAdmin, optionalAuth } from '../../server/middleware/auth'
-import { issueAccessToken } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users } from '../../../server/db/schema'
+import { requireAuth, requireAdmin, optionalAuth } from '../../../server/middleware/auth'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
 const app = express()
 app.get('/auth', requireAuth, (req, res) => res.json({ user: req.user }))

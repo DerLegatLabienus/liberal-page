@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letters, letterChannels } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import adminLettersRouter from '../../server/routes/admin-letters'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letters, letterChannels } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import adminLettersRouter from '../../../server/routes/admin-letters'
 
 const app = express()
 app.use(express.json())

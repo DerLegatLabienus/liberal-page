@@ -6,12 +6,12 @@ const { getResend, listPollable, setStatus } = vi.hoisted(() => ({
   setStatus: vi.fn(),
 }))
 
-vi.mock('../../server/services/email', () => ({ getResend }))
-vi.mock('../../server/repositories/sent-emails-repository', () => ({
+vi.mock('../../../server/services/email', () => ({ getResend }))
+vi.mock('../../../server/repositories/sent-emails-repository', () => ({
   SentEmailsRepository: vi.fn().mockImplementation(() => ({ listPollable, setStatus })),
 }))
 
-import { pollDeliveryStatus, TERMINAL_STATUSES } from '../../server/services/email-delivery-poll'
+import { pollDeliveryStatus, TERMINAL_STATUSES } from '../../../server/services/email-delivery-poll'
 
 function fakeResend(lastEventById: Record<string, string>) {
   return { emails: { get: vi.fn(async (id: string) => ({ data: { last_event: lastEventById[id] }, error: null })) } }

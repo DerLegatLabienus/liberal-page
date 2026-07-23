@@ -1,26 +1,26 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letters } from '../../server/db/schema'
-import { LettersRepository } from '../../server/repositories/letters-repository'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letters } from '../../../server/db/schema'
+import { LettersRepository } from '../../../server/repositories/letters-repository'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 const put = vi.fn()
 const del = vi.fn()
 const configured = vi.fn(() => true)
-vi.mock('../../server/services/r2-client', () => ({
+vi.mock('../../../server/services/r2-client', () => ({
   isConfigured: () => configured(),
   putObject: (...a: unknown[]) => put(...a),
   deleteObject: (...a: unknown[]) => del(...a),
 }))
 // The version constant is what the boot sync compares against, so it must be mocked too.
-vi.mock('../../server/services/share-renderer', () => ({
+vi.mock('../../../server/services/share-renderer', () => ({
   renderShareHtml: () => '<html>card</html>',
   renderShareImage: async () => Buffer.from('PNG'),
   SHARE_RENDERER_VERSION: 2,
 }))
 
-import { syncSharesIfRendererChanged } from '../../server/services/share-publisher'
+import { syncSharesIfRendererChanged } from '../../../server/services/share-publisher'
 
 const lettersRepo = new LettersRepository()
 const flags = new FeatureFlagsRepository()

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeStatusChanges, MIN_ACTIVE_COMMITTEES } from '../../server/services/committee-status'
+import { computeStatusChanges, MIN_ACTIVE_COMMITTEES } from '../../../server/services/committee-status'
 
 // A trustworthy active list well above the safety floor.
 function activeSet(extra: number[] = []): Set<number> {

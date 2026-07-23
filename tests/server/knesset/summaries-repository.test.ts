@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { summariesCache } from '../../server/db/schema'
-import { SummariesRepository } from '../../server/repositories/summaries-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { summariesCache } from '../../../server/db/schema'
+import { SummariesRepository } from '../../../server/repositories/summaries-repository'
 
 describe('SummariesRepository', () => {
   const repo = new SummariesRepository()

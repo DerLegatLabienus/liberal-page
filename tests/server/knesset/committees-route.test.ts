@@ -1,17 +1,17 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { trackedCommittees, committees, users } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { trackedCommittees, committees, users } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
-vi.mock('../../server/services/committee-session-enricher', () => ({
+vi.mock('../../../server/services/committee-session-enricher', () => ({
   enrichCommitteeSessions: vi.fn().mockResolvedValue([]),
 }))
 
 vi.stubGlobal('fetch', vi.fn())
-vi.mock('../../server/repositories/committee-list-repository', () => ({
+vi.mock('../../../server/repositories/committee-list-repository', () => ({
   CommitteeListRepository: vi.fn().mockImplementation(() => ({
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue(undefined),
@@ -19,7 +19,7 @@ vi.mock('../../server/repositories/committee-list-repository', () => ({
   })),
 }))
 
-import committeesRouter from '../../server/routes/committees'
+import committeesRouter from '../../../server/routes/committees'
 
 const app = express()
 app.use(express.json())

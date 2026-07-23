@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, allowedEmails, refreshTokens } from '../../server/db/schema'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, allowedEmails, refreshTokens } from '../../../server/db/schema'
 
 // Mock only the provider verifiers; keep real JWT/refresh/allowlist logic.
-vi.mock('../../server/services/auth-service', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../server/services/auth-service')>()
+vi.mock('../../../server/services/auth-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../server/services/auth-service')>()
   return { ...actual, verifyGoogleIdToken: vi.fn() }
 })
 
-import { verifyGoogleIdToken } from '../../server/services/auth-service'
-import authRouter from '../../server/routes/auth'
+import { verifyGoogleIdToken } from '../../../server/services/auth-service'
+import authRouter from '../../../server/routes/auth'
 
 const app = express()
 app.use(express.json())

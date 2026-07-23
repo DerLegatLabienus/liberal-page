@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeLetterHtml } from '../../server/services/html-sanitizer'
+import { sanitizeLetterHtml } from '../../../server/services/html-sanitizer'
 
 describe('sanitizeLetterHtml', () => {
   it('strips <script> entirely (tag and contents)', () => {

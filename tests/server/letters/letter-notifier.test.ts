@@ -3,15 +3,15 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 const { batchMock, listMembers, listUnnotified, markNotified } = vi.hoisted(() => ({
   batchMock: vi.fn(), listMembers: vi.fn(), listUnnotified: vi.fn(), markNotified: vi.fn(),
 }))
-vi.mock('../../server/services/email', () => ({ sendEmailsBatch: batchMock }))
-vi.mock('../../server/repositories/auth-repository', () => ({
+vi.mock('../../../server/services/email', () => ({ sendEmailsBatch: batchMock }))
+vi.mock('../../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn(() => ({ listMembersForAlerts: listMembers })),
 }))
-vi.mock('../../server/repositories/letters-repository', () => ({
+vi.mock('../../../server/repositories/letters-repository', () => ({
   LettersRepository: vi.fn(() => ({ listUnnotifiedPinned: listUnnotified, markPinNotified: markNotified })),
 }))
 
-import { notifyPinnedLetters } from '../../server/services/letter-notifier'
+import { notifyPinnedLetters } from '../../../server/services/letter-notifier'
 
 describe('notifyPinnedLetters', () => {
   beforeEach(() => { vi.clearAllMocks() })

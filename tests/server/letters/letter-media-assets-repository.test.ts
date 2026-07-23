@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letterMediaAssets } from '../../server/db/schema'
-import { LetterMediaAssetsRepository } from '../../server/repositories/letter-media-assets-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letterMediaAssets } from '../../../server/db/schema'
+import { LetterMediaAssetsRepository } from '../../../server/repositories/letter-media-assets-repository'
 
 const repo = new LetterMediaAssetsRepository()
 

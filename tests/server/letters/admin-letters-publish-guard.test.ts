@@ -2,17 +2,17 @@ import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 import { eq } from 'drizzle-orm'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letters, letterChannels } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letters, letterChannels } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
-vi.mock('../../server/services/share-publisher', () => ({
+vi.mock('../../../server/services/share-publisher', () => ({
   syncShareForLetter: vi.fn().mockResolvedValue(undefined),
   removeShareForLetter: vi.fn().mockResolvedValue(undefined),
 }))
 
-import adminLettersRouter from '../../server/routes/admin-letters'
+import adminLettersRouter from '../../../server/routes/admin-letters'
 
 const app = express()
 app.use(express.json())

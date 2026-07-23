@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { getBillStatusMap, _resetStatusMapCache } from '../../server/services/bill-status-map'
+import { getBillStatusMap, _resetStatusMapCache } from '../../../server/services/bill-status-map'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response

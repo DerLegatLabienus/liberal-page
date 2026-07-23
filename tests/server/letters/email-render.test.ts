@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { EmailTemplatesRepository } from '../../server/repositories/email-templates-repository'
-import { renderTemplate, renderFragment, escapeHtml } from '../../server/services/email-render'
+import { setupTestDb } from '../db-harness'
+import { EmailTemplatesRepository } from '../../../server/repositories/email-templates-repository'
+import { renderTemplate, renderFragment, escapeHtml } from '../../../server/services/email-render'
 
 const repo = new EmailTemplatesRepository()
 

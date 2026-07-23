@@ -1,4 +1,4 @@
-import { parseKnessetUrl, isKnessetSiteUrl } from '../../server/services/url-parser'
+import { parseKnessetUrl, isKnessetSiteUrl } from '../../../server/services/url-parser'
 
 describe('parseKnessetUrl', () => {
   it('parses oknesset bill URL', () => {

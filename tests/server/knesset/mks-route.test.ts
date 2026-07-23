@@ -2,30 +2,30 @@ import { vi, describe, it, expect } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 
-vi.mock('../../server/services/knesset-members', () => ({
+vi.mock('../../../server/services/knesset-members', () => ({
   fetchAllKnessetMembers: vi.fn().mockResolvedValue([
     { siteId: 1116, name: 'דן אילוז', party: 'הליכוד', photoUrl: null, isLiberal: false, isSupporter: false },
   ]),
 }))
-vi.mock('../../server/services/knesset-scraper', () => ({
+vi.mock('../../../server/services/knesset-scraper', () => ({
   fetchMkActivity: vi.fn().mockResolvedValue([
     { type: 'vote', date: '2026-05-13T11:42:00', title: 'הצבעה', detail: 'הצביע בעד' },
   ]),
 }))
-vi.mock('../../server/repositories/mk-list-repository', () => ({
+vi.mock('../../../server/repositories/mk-list-repository', () => ({
   MkListRepository: vi.fn().mockImplementation(() => ({
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue(undefined),
     getAgeMs: vi.fn().mockReturnValue(Infinity),
   })),
 }))
-vi.mock('../../server/repositories/mk-annotations-repository', () => ({
+vi.mock('../../../server/repositories/mk-annotations-repository', () => ({
   MkAnnotationsRepository: vi.fn().mockImplementation(() => ({
     getAll: vi.fn().mockResolvedValue({ '1116': { isLiberal: true, isSupporter: false } }),
   })),
 }))
 
-import mksRouter from '../../server/routes/mks'
+import mksRouter from '../../../server/routes/mks'
 
 const app = express()
 app.use(express.json())

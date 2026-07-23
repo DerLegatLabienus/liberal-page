@@ -7,18 +7,18 @@ const { findUserById, setEmailAlerts, setName } = vi.hoisted(() => ({
   setEmailAlerts: vi.fn(),
   setName: vi.fn(),
 }))
-vi.mock('../../server/repositories/auth-repository', () => ({
+vi.mock('../../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn().mockImplementation(() => ({ findUserById, setEmailAlerts, setName })),
 }))
-vi.mock('../../server/middleware/auth', () => ({
+vi.mock('../../../server/middleware/auth', () => ({
   requireAuth: (req: express.Request, _res: express.Response, next: express.NextFunction) => { req.user = { id: 7, role: 'member' }; next() },
 }))
-vi.mock('../../server/services/auth-service', () => ({
+vi.mock('../../../server/services/auth-service', () => ({
   verifyGoogleIdToken: vi.fn(), issueAccessToken: vi.fn(), issueRefreshToken: vi.fn(),
   rotateRefreshToken: vi.fn(), revokeRefreshToken: vi.fn(),
 }))
 
-import authRouter from '../../server/routes/auth'
+import authRouter from '../../../server/routes/auth'
 
 function app() { const a = express(); a.use(express.json()); a.use('/api/auth', authRouter); return a }
 

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, trackedBills, bills } from '../../server/db/schema'
-import { BillsRepository } from '../../server/repositories/bills-repository'
-import { UsersRepository } from '../../server/repositories/users-repository'
-import { TrackedBillsRepository } from '../../server/repositories/tracked-bills-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, trackedBills, bills } from '../../../server/db/schema'
+import { BillsRepository } from '../../../server/repositories/bills-repository'
+import { UsersRepository } from '../../../server/repositories/users-repository'
+import { TrackedBillsRepository } from '../../../server/repositories/tracked-bills-repository'
 
 const ENTITY = {
   oknessetId: '', number: '1044632', title: 'הצעת חוק', status: 'בוועדה',

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, allowedEmails, refreshTokens } from '../../server/db/schema'
-import { AuthRepository } from '../../server/repositories/auth-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, allowedEmails, refreshTokens } from '../../../server/db/schema'
+import { AuthRepository } from '../../../server/repositories/auth-repository'
 import {
   issueAccessToken, verifyAccessToken, issueRefreshToken, rotateRefreshToken, revokeRefreshToken,
-} from '../../server/services/auth-service'
+} from '../../../server/services/auth-service'
 
 const repo = new AuthRepository()
 

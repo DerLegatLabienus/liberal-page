@@ -6,13 +6,13 @@ const { findAlertRecipients, renderFragment, sendEmailsBatch } = vi.hoisted(() =
   sendEmailsBatch: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('../../server/repositories/tracked-bills-repository', () => ({
+vi.mock('../../../server/repositories/tracked-bills-repository', () => ({
   TrackedBillsRepository: vi.fn().mockImplementation(() => ({ findAlertRecipients })),
 }))
-vi.mock('../../server/services/email-render', () => ({ renderFragment }))
-vi.mock('../../server/services/email', () => ({ sendEmailsBatch }))
+vi.mock('../../../server/services/email-render', () => ({ renderFragment }))
+vi.mock('../../../server/services/email', () => ({ sendEmailsBatch }))
 
-import { sendBillAlerts } from '../../server/services/poller'
+import { sendBillAlerts } from '../../../server/services/poller'
 
 const CH = (billId: number) => ({ billId, title: `t${billId}`, oldStatus: 'a', newStatus: 'b', knessetUrl: 'u' })
 

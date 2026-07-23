@@ -3,23 +3,23 @@ import express from 'express'
 import request from 'supertest'
 
 const { setFlag } = vi.hoisted(() => ({ setFlag: vi.fn() }))
-vi.mock('../../server/repositories/feature-flags-repository', () => ({
+vi.mock('../../../server/repositories/feature-flags-repository', () => ({
   FeatureFlagsRepository: vi.fn().mockImplementation(() => ({ setFlag, getAll: vi.fn() })),
 }))
-vi.mock('../../server/repositories/auth-repository', () => ({
+vi.mock('../../../server/repositories/auth-repository', () => ({
   AuthRepository: vi.fn().mockImplementation(() => ({})),
 }))
-vi.mock('../../server/repositories/email-templates-repository', () => ({
+vi.mock('../../../server/repositories/email-templates-repository', () => ({
   EmailTemplatesRepository: vi.fn().mockImplementation(() => ({})),
 }))
-vi.mock('../../server/services/email', () => ({ sendEmail: vi.fn() }))
-vi.mock('../../server/middleware/auth', () => ({
+vi.mock('../../../server/services/email', () => ({ sendEmail: vi.fn() }))
+vi.mock('../../../server/middleware/auth', () => ({
   requireAdmin: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.user = { id: 1, role: 'admin' }; next()
   },
 }))
 
-import adminRouter from '../../server/routes/admin'
+import adminRouter from '../../../server/routes/admin'
 
 function app() { const a = express(); a.use(express.json()); a.use('/api/admin', adminRouter); return a }
 

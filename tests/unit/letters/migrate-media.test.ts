@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeFilename, shouldKeepUrl, resolveFilename, fullResUrl, mergeGalleryEntries } from '../../scripts/migrate-media'
+import { sanitizeFilename, shouldKeepUrl, resolveFilename, fullResUrl, mergeGalleryEntries } from '../../../scripts/migrate-media'
 import type { GalleryItem } from '@/types'
 
 describe('sanitizeFilename', () => {

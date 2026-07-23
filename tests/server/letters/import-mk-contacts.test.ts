@@ -1,12 +1,12 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letterContacts, knessetMembersCache, letters, letterChannels } from '../../server/db/schema'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letterContacts, knessetMembersCache, letters, letterChannels } from '../../../server/db/schema'
 
 // The importer resolves each MK's email over the network — mock it.
-vi.mock('../../server/services/knesset-scraper', () => ({ fetchMkEmail: vi.fn() }))
-import { fetchMkEmail } from '../../server/services/knesset-scraper'
-import { run } from '../../scripts/import-mk-contacts'
+vi.mock('../../../server/services/knesset-scraper', () => ({ fetchMkEmail: vi.fn() }))
+import { fetchMkEmail } from '../../../server/services/knesset-scraper'
+import { run } from '../../../scripts/import-mk-contacts'
 
 const emailFor = vi.mocked(fetchMkEmail)
 

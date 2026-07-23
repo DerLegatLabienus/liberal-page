@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { renderShareHtml, buildOgCardNode, type ShareLetterView } from '../../server/services/share-renderer'
-import { buildMailtoUrl, buildGmailComposeUrl } from '../../server/services/letter-utils'
-import { toVisualOrder } from '../../server/services/bidi'
+import { renderShareHtml, buildOgCardNode, type ShareLetterView } from '../../../server/services/share-renderer'
+import { buildMailtoUrl, buildGmailComposeUrl } from '../../../server/services/letter-utils'
+import { toVisualOrder } from '../../../server/services/bidi'
 
 const mk = { email: 'mk@knesset.gov.il', display_name: 'ח"כ ישראל ישראלי' }
 

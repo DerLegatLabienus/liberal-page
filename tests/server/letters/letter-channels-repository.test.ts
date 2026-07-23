@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { db } from '../../server/db/client'
-import { letters, letterChannels } from '../../server/db/schema'
-import { LetterChannelsRepository } from '../../server/repositories/letter-channels-repository'
+import { db } from '../../../server/db/client'
+import { letters, letterChannels } from '../../../server/db/schema'
+import { LetterChannelsRepository } from '../../../server/repositories/letter-channels-repository'
 
 const repo = new LetterChannelsRepository()
 

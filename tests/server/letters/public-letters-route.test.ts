@@ -2,16 +2,16 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import express from 'express'
 import cors from 'cors'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letters } from '../../server/db/schema'
-import { LettersRepository } from '../../server/repositories/letters-repository'
-import { LetterAnalyticsRepository } from '../../server/repositories/letter-analytics-repository'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
-import publicLettersRouter from '../../server/routes/public-letters'
-import { verifyTurnstile } from '../../server/services/turnstile'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letters } from '../../../server/db/schema'
+import { LettersRepository } from '../../../server/repositories/letters-repository'
+import { LetterAnalyticsRepository } from '../../../server/repositories/letter-analytics-repository'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
+import publicLettersRouter from '../../../server/routes/public-letters'
+import { verifyTurnstile } from '../../../server/services/turnstile'
 
-vi.mock('../../server/services/turnstile', () => ({ verifyTurnstile: vi.fn() }))
+vi.mock('../../../server/services/turnstile', () => ({ verifyTurnstile: vi.fn() }))
 const mockedVerify = vi.mocked(verifyTurnstile)
 
 const app = express()

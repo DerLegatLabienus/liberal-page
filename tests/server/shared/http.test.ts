@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { fetchWithTimeout } from '../../server/lib/http'
+import { fetchWithTimeout } from '../../../server/lib/http'
 
 const ok = () => ({ status: 200, ok: true } as Response)
 const fail = (status: number) => ({ status, ok: false } as Response)

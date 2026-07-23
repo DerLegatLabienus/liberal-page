@@ -3,15 +3,15 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 import { eq } from 'drizzle-orm'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, allowedEmails, refreshTokens, magicLinkTokens, emailTemplates } from '../../server/db/schema'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, allowedEmails, refreshTokens, magicLinkTokens, emailTemplates } from '../../../server/db/schema'
 
 const { sendEmailMock } = vi.hoisted(() => ({ sendEmailMock: vi.fn() }))
-vi.mock('../../server/services/email', () => ({ sendEmail: sendEmailMock }))
+vi.mock('../../../server/services/email', () => ({ sendEmail: sendEmailMock }))
 
-import authRouter, { _resetMagicLinkLimiter } from '../../server/routes/auth'
-import { verifyMagicLink } from '../../server/services/auth-providers/magic-link'
+import authRouter, { _resetMagicLinkLimiter } from '../../../server/routes/auth'
+import { verifyMagicLink } from '../../../server/services/auth-providers/magic-link'
 
 const app = express()
 app.use(express.json())

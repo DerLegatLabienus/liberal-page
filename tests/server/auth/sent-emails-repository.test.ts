@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { sentEmails } from '../../server/db/schema'
-import { SentEmailsRepository } from '../../server/repositories/sent-emails-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { sentEmails } from '../../../server/db/schema'
+import { SentEmailsRepository } from '../../../server/repositories/sent-emails-repository'
 
 const repo = new SentEmailsRepository()
 

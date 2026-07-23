@@ -5,15 +5,15 @@ const batchMock = vi.fn()
 vi.mock('resend', () => ({ Resend: vi.fn().mockImplementation(() => ({ emails: { send: sendMock }, batch: { send: batchMock } })) }))
 
 const recordMock = vi.fn()
-vi.mock('../../server/repositories/sent-emails-repository', () => ({
+vi.mock('../../../server/repositories/sent-emails-repository', () => ({
   SentEmailsRepository: vi.fn().mockImplementation(() => ({ record: recordMock })),
 }))
 
-vi.mock('../../server/services/email-render', () => ({
+vi.mock('../../../server/services/email-render', () => ({
   renderTemplate: vi.fn().mockResolvedValue({ subject: 'S', html: '<p>H</p>' }),
 }))
 
-import { sendEmail, sendEmailsThrottled, sendEmailsBatch, _resetResend } from '../../server/services/email'
+import { sendEmail, sendEmailsThrottled, sendEmailsBatch, _resetResend } from '../../../server/services/email'
 
 describe('sendEmail', () => {
   beforeEach(() => { vi.clearAllMocks(); _resetResend(); delete process.env.RESEND_API_KEY; process.env.EMAIL_FROM = 'F <f@x.com>' })

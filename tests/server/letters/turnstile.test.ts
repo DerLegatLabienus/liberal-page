@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { verifyTurnstile } from '../../server/services/turnstile'
+import { verifyTurnstile } from '../../../server/services/turnstile'
 
 describe('verifyTurnstile', () => {
   beforeEach(() => vi.restoreAllMocks())

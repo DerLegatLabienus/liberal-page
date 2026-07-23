@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letterContacts } from '../../server/db/schema'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letterContacts } from '../../../server/db/schema'
 import { eq } from 'drizzle-orm'
 
 // Verifies migration 0020_seed_letter_contacts.sql populates the address book on a

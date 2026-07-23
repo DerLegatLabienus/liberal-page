@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, allowedEmails, refreshTokens, userIdentities } from '../../server/db/schema'
-import { AuthRepository } from '../../server/repositories/auth-repository'
-import { loginWithIdentity, AuthError } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, allowedEmails, refreshTokens, userIdentities } from '../../../server/db/schema'
+import { AuthRepository } from '../../../server/repositories/auth-repository'
+import { loginWithIdentity, AuthError } from '../../../server/services/auth-service'
 
 const repo = new AuthRepository()
 

@@ -4,22 +4,22 @@ import express from 'express'
 
 const mockGetAll = vi.fn().mockResolvedValue({})
 
-vi.mock('../../server/services/knesset-bills', () => ({
+vi.mock('../../../server/services/knesset-bills', () => ({
   fetchRecentBills: vi.fn(),
   fetchPolicyAlignedBills: vi.fn(),
   fetchTrendingBills: vi.fn(),
 }))
 
-vi.mock('../../server/repositories/feature-flags-repository', () => ({
+vi.mock('../../../server/repositories/feature-flags-repository', () => ({
   FeatureFlagsRepository: vi.fn().mockImplementation(() => ({
     getAll: mockGetAll,
   })),
 }))
 
-import billsRouter from '../../server/routes/bills'
+import billsRouter from '../../../server/routes/bills'
 import {
   fetchRecentBills, fetchPolicyAlignedBills, fetchTrendingBills,
-} from '../../server/services/knesset-bills'
+} from '../../../server/services/knesset-bills'
 
 const app = express()
 app.use(express.json())

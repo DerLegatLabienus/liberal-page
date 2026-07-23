@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchBills } from '../../server/services/knesset-bills'
+import { searchBills } from '../../../server/services/knesset-bills'
 
 function mockJson(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as Response

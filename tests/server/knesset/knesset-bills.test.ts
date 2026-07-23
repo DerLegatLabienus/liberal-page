@@ -3,22 +3,22 @@ import { readFile } from 'fs/promises'
 
 vi.stubGlobal('fetch', vi.fn())
 vi.mock('fs/promises')
-vi.mock('../../server/services/bill-status-map', () => ({
+vi.mock('../../../server/services/bill-status-map', () => ({
   getBillStatusMap: vi.fn(async () => new Map([[101, 'הכנה לקריאה ראשונה']])),
 }))
-vi.mock('../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
+vi.mock('../../../server/services/knesset-config', () => ({ getCurrentKnesset: () => 25 }))
 
 const { mockCommitteeListGet } = vi.hoisted(() => ({
   mockCommitteeListGet: vi.fn(),
 }))
 
-vi.mock('../../server/repositories/committee-list-repository', () => ({
+vi.mock('../../../server/repositories/committee-list-repository', () => ({
   CommitteeListRepository: vi.fn().mockImplementation(() => ({
     get: mockCommitteeListGet,
   })),
 }))
 
-import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, _resetProgressCache, _resetTrendingCache, fetchPolicyAlignedBills, fetchTrendingBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../server/services/knesset-bills'
+import { fetchRecentBills, _resetBillsCache, _resetCommitteeMapCache, _resetProgressCache, _resetTrendingCache, fetchPolicyAlignedBills, fetchTrendingBills, LIBERAL_KEYWORDS, getTrendingBills } from '../../../server/services/knesset-bills'
 
 function mockOdata(value: unknown[]) {
   return { ok: true, json: async () => ({ value }) } as Response

@@ -5,7 +5,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(() => ({ messages: { create: createMock } })),
 }))
 
-import { beautifyLetterHtml } from '../../server/services/letter-beautifier'
+import { beautifyLetterHtml } from '../../../server/services/letter-beautifier'
 
 const ORIGINAL_KEY = process.env.ANTHROPIC_API_KEY
 

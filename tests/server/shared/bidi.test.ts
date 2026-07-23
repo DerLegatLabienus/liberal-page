@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toVisualOrder } from '../../server/services/bidi'
+import { toVisualOrder } from '../../../server/services/bidi'
 
 describe('toVisualOrder', () => {
   it('reverses pure Hebrew to visual order', () => {

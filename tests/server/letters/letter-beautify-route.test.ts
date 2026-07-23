@@ -1,18 +1,18 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 // Mock the AI service so the route test never calls Anthropic.
-vi.mock('../../server/services/letter-beautifier', () => ({
+vi.mock('../../../server/services/letter-beautifier', () => ({
   beautifyLetterHtml: vi.fn().mockResolvedValue('<p dir="rtl">נקי</p>'),
 }))
 
-import adminLettersRouter from '../../server/routes/admin-letters'
+import adminLettersRouter from '../../../server/routes/admin-letters'
 
 const app = express()
 app.use(express.json())

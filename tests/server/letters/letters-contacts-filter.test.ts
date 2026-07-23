@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letterContacts } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
-import lettersRouter from '../../server/routes/letters'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letterContacts } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
+import lettersRouter from '../../../server/routes/letters'
 
 const app = express()
 app.use(express.json())

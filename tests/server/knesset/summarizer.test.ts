@@ -18,7 +18,7 @@ const mockRepoGet = vi.fn()
 const mockRepoSet = vi.fn()
 const mockRepoGetByUrl = vi.fn()
 
-vi.mock('../../server/repositories/summaries-repository', () => ({
+vi.mock('../../../server/repositories/summaries-repository', () => ({
   SummariesRepository: vi.fn().mockImplementation(() => ({
     get: mockRepoGet,
     set: mockRepoSet,
@@ -27,13 +27,13 @@ vi.mock('../../server/repositories/summaries-repository', () => ({
 }))
 
 const fetchDocMock = vi.fn()
-vi.mock('../../server/services/url-guard', () => ({
+vi.mock('../../../server/services/url-guard', () => ({
   fetchAllowedDocument: (...a: unknown[]) => fetchDocMock(...a),
   UrlNotAllowedError: class UrlNotAllowedError extends Error {},
   DocumentFetchError: class DocumentFetchError extends Error {},
 }))
 
-import { Summarizer } from '../../server/services/summarizer'
+import { Summarizer } from '../../../server/services/summarizer'
 
 const relevant = (summary: string) => ({ content: [{ type: 'text', text: JSON.stringify({ relevant: true, summary }) }] })
 const irrelevant = () => ({ content: [{ type: 'text', text: JSON.stringify({ relevant: false, summary: '' }) }] })

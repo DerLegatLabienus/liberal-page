@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderShareHtml, type ShareLetterView } from '../../server/services/share-renderer'
+import { renderShareHtml, type ShareLetterView } from '../../../server/services/share-renderer'
 
 // Regression tripwire for task 17b: the mocked share-publisher.test.ts only asserts R2 keys,
 // so it can't catch a share page silently going blank. This test drives the REAL

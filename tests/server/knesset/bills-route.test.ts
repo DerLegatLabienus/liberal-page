@@ -1,17 +1,17 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { trackedBills, bills, users } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { trackedBills, bills, users } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
-vi.mock('../../server/services/knesset-config', () => ({
+vi.mock('../../../server/services/knesset-config', () => ({
   getCurrentKnesset: vi.fn().mockReturnValue(25),
 }))
 vi.stubGlobal('fetch', vi.fn())
 
-import billsRouter from '../../server/routes/bills'
+import billsRouter from '../../../server/routes/bills'
 
 const app = express()
 app.use(express.json())

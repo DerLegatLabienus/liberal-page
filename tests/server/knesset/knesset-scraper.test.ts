@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { fetchMkActivity, fetchMkImageUrl, fetchMkEmail } from '../../server/services/knesset-scraper'
+import { fetchMkActivity, fetchMkImageUrl, fetchMkEmail } from '../../../server/services/knesset-scraper'
 
 const ACTIVITY_RESPONSE = {
   PrivateBills: [

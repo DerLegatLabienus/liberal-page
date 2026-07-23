@@ -7,7 +7,7 @@ vi.mock('@aws-sdk/client-s3', () => ({
   DeleteObjectCommand: vi.fn((input) => ({ __type: 'Delete', input })),
 }))
 
-import * as r2 from '../../server/services/r2-client'
+import * as r2 from '../../../server/services/r2-client'
 
 const ENV = { ...process.env }
 beforeEach(() => {

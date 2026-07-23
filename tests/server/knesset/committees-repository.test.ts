@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { committees, committeeSessions } from '../../server/db/schema'
-import { CommitteesRepository } from '../../server/repositories/committees-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { committees, committeeSessions } from '../../../server/db/schema'
+import { CommitteesRepository } from '../../../server/repositories/committees-repository'
 
 const COMMITTEE = {
   oknesset_id: '', name: 'ועדת הכספים', chair: '',

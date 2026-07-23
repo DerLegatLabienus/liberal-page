@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
 import { eq } from 'drizzle-orm'
-import { users, allowedEmails, refreshTokens, joinAnalytics } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import adminRouter from '../../server/routes/admin'
+import { users, allowedEmails, refreshTokens, joinAnalytics } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import adminRouter from '../../../server/routes/admin'
 
 const app = express()
 app.use(express.json())

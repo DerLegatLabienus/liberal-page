@@ -19,11 +19,11 @@ vi.mock('jose', async (importOriginal) => {
 })
 
 import { SignJWT, generateKeyPair, exportJWK } from 'jose'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, allowedEmails, userIdentities, refreshTokens } from '../../server/db/schema'
-import { verifyMicrosoftIdToken } from '../../server/services/auth-providers/microsoft'
-import { AuthError, loginWithIdentity } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, allowedEmails, userIdentities, refreshTokens } from '../../../server/db/schema'
+import { verifyMicrosoftIdToken } from '../../../server/services/auth-providers/microsoft'
+import { AuthError, loginWithIdentity } from '../../../server/services/auth-service'
 
 async function signMsToken(claims: Record<string, unknown>, opts: { tid?: string; audience?: string } = {}) {
   const { tid = TENANT_ID, audience = CLIENT_ID } = opts

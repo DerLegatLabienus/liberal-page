@@ -2,14 +2,14 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 
-vi.mock('../../server/services/knesset-config', () => ({
+vi.mock('../../../server/services/knesset-config', () => ({
   getCurrentKnesset: vi.fn().mockReturnValue(25),
   detectKnessetTransition: vi.fn().mockResolvedValue(false),
   runTransition: vi.fn().mockResolvedValue(undefined),
 }))
 
-import knessetRouter from '../../server/routes/knesset'
-import { detectKnessetTransition, runTransition, getCurrentKnesset } from '../../server/services/knesset-config'
+import knessetRouter from '../../../server/routes/knesset'
+import { detectKnessetTransition, runTransition, getCurrentKnesset } from '../../../server/services/knesset-config'
 
 const app = express()
 app.use(express.json())

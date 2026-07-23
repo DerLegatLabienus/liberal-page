@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, trackedCommittees, committees, committeeSessions } from '../../server/db/schema'
-import { CommitteesRepository } from '../../server/repositories/committees-repository'
-import { UsersRepository } from '../../server/repositories/users-repository'
-import { TrackedCommitteesRepository } from '../../server/repositories/tracked-committees-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, trackedCommittees, committees, committeeSessions } from '../../../server/db/schema'
+import { CommitteesRepository } from '../../../server/repositories/committees-repository'
+import { UsersRepository } from '../../../server/repositories/users-repository'
+import { TrackedCommitteesRepository } from '../../../server/repositories/tracked-committees-repository'
 
 const C = {
   oknesset_id: '', name: 'ועדת הכספים', chair: '', lastSessionDate: null,

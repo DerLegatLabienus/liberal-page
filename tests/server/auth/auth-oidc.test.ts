@@ -20,7 +20,7 @@ vi.mock('jose', async (importOriginal) => {
 })
 
 import { SignJWT, generateKeyPair, exportJWK } from 'jose'
-import { verifyOidcIdToken } from '../../server/services/auth-providers/oidc'
+import { verifyOidcIdToken } from '../../../server/services/auth-providers/oidc'
 
 async function signToken(claims: Record<string, unknown>, opts: { issuer?: string; audience?: string; expSecondsFromNow?: number } = {}) {
   const { issuer = ISSUER, audience = AUDIENCE, expSecondsFromNow = 3600 } = opts

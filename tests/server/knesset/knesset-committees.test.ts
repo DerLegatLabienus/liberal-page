@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fetchCommitteeDetail } from '../../server/services/knesset-committees'
+import { fetchCommitteeDetail } from '../../../server/services/knesset-committees'
 
 function mockJson(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as Response

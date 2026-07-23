@@ -2,16 +2,16 @@ import { vi, describe, it, expect, beforeAll, afterEach, beforeEach } from 'vite
 
 vi.stubGlobal('fetch', vi.fn())
 
-vi.mock('../../server/services/knesset-api', () => ({
+vi.mock('../../../server/services/knesset-api', () => ({
   getMkBySiteId: vi.fn(async () => ({ faction: 'מפלגה', isCurrent: true, positions: [] })),
 }))
 
-import { getCurrentKnesset, loadConfig, detectKnessetTransition, runTransition } from '../../server/services/knesset-config'
-import { KnessetConfigRepository } from '../../server/repositories/knesset-config-repository'
-import { MksRepository } from '../../server/repositories/mks-repository'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { knessetConfig, knessetMembersCache, knessetCommitteesCache, mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../server/db/schema'
+import { getCurrentKnesset, loadConfig, detectKnessetTransition, runTransition } from '../../../server/services/knesset-config'
+import { KnessetConfigRepository } from '../../../server/repositories/knesset-config-repository'
+import { MksRepository } from '../../../server/repositories/mks-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { knessetConfig, knessetMembersCache, knessetCommitteesCache, mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../../server/db/schema'
 
 function mockOdata(knessetNum: number) {
   return { ok: true, json: async () => ({ value: [{ KnessetNum: knessetNum }] }) } as Response

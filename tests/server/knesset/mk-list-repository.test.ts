@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { knessetMembersCache } from '../../server/db/schema'
-import { MkListRepository } from '../../server/repositories/mk-list-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { knessetMembersCache } from '../../../server/db/schema'
+import { MkListRepository } from '../../../server/repositories/mk-list-repository'
 
 const MEMBER = { siteId: 1116, name: 'דן אילוז', party: 'הליכוד', photoUrl: null, isLiberal: true, isSupporter: false }
 

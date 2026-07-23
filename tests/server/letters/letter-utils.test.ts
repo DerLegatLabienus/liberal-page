@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letterTemplates } from '../../server/db/schema'
-import { LetterTemplatesRepository } from '../../server/repositories/letter-templates-repository'
-import { stripHtml, renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../../server/services/letter-utils'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letterTemplates } from '../../../server/db/schema'
+import { LetterTemplatesRepository } from '../../../server/repositories/letter-templates-repository'
+import { stripHtml, renderLetterHtml, buildMailtoUrl, buildGmailComposeUrl } from '../../../server/services/letter-utils'
 
 describe('stripHtml', () => {
   it('strips tags and decodes common entities', () => {

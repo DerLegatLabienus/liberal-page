@@ -2,12 +2,12 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letterMediaAssets } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letterMediaAssets } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
-vi.mock('../../server/services/r2-client', () => ({
+vi.mock('../../../server/services/r2-client', () => ({
   isConfigured: vi.fn(() => true),
   publicUrl: (key: string) => `https://pub-x.r2.dev/${key}`,
   putObject: vi.fn().mockResolvedValue(undefined),
@@ -15,8 +15,8 @@ vi.mock('../../server/services/r2-client', () => ({
   R2NotConfiguredError: class extends Error {},
 }))
 
-import * as r2 from '../../server/services/r2-client'
-import adminLetterAssetsRouter from '../../server/routes/admin-letter-assets'
+import * as r2 from '../../../server/services/r2-client'
+import adminLetterAssetsRouter from '../../../server/routes/admin-letter-assets'
 
 const app = express()
 app.use(express.json())

@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
 import {
   bills, committees, committeeSessions, mks, mkActivity,
   users, trackedBills, trackedCommittees, trackedMks,
   summariesCache, knessetMembersCache, featureFlags, sentEmails,
-} from '../../server/db/schema'
-import { relieveStoragePressureIfNeeded, STORAGE_FLAG } from '../../server/services/storage-manager'
-import { SentEmailsRepository } from '../../server/repositories/sent-emails-repository'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+} from '../../../server/db/schema'
+import { relieveStoragePressureIfNeeded, STORAGE_FLAG } from '../../../server/services/storage-manager'
+import { SentEmailsRepository } from '../../../server/repositories/sent-emails-repository'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 const flagsRepo = new FeatureFlagsRepository()
 const OVER = async () => 100 * 1024 * 1024   // 100 MB

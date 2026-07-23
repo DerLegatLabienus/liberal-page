@@ -2,15 +2,15 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letterContacts, letterChannels, letters, knessetMembersCache } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import adminLetterAssetsRouter from '../../server/routes/admin-letter-assets'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letterContacts, letterChannels, letters, knessetMembersCache } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import adminLetterAssetsRouter from '../../../server/routes/admin-letter-assets'
 
 // The live MK-photo lookup is a network call — mock it so contact resolution is deterministic.
-vi.mock('../../server/services/knesset-scraper', () => ({ fetchMkImageUrl: vi.fn() }))
-import { fetchMkImageUrl } from '../../server/services/knesset-scraper'
+vi.mock('../../../server/services/knesset-scraper', () => ({ fetchMkImageUrl: vi.fn() }))
+import { fetchMkImageUrl } from '../../../server/services/knesset-scraper'
 const mockFetchMkImageUrl = vi.mocked(fetchMkImageUrl)
 
 const LIVE_MK_PHOTO = 'https://fs.knesset.gov.il/globaldocs/MK/1116/1_1116_3_19861.jpeg'

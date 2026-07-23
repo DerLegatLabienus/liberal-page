@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, bills, trackedBills } from '../../server/db/schema'
-import { TrackedBillsRepository } from '../../server/repositories/tracked-bills-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, bills, trackedBills } from '../../../server/db/schema'
+import { TrackedBillsRepository } from '../../../server/repositories/tracked-bills-repository'
 
 const repo = new TrackedBillsRepository()
 

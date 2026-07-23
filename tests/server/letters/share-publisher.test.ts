@@ -1,22 +1,22 @@
 import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letters, letterIssueTags } from '../../server/db/schema'
-import { LettersRepository } from '../../server/repositories/letters-repository'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letters, letterIssueTags } from '../../../server/db/schema'
+import { LettersRepository } from '../../../server/repositories/letters-repository'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 const put = vi.fn(); const del = vi.fn()
-vi.mock('../../server/services/r2-client', () => ({
+vi.mock('../../../server/services/r2-client', () => ({
   isConfigured: () => true,
   putObject: (...a: unknown[]) => put(...a),
   deleteObject: (...a: unknown[]) => del(...a),
 }))
-vi.mock('../../server/services/share-renderer', () => ({
+vi.mock('../../../server/services/share-renderer', () => ({
   renderShareHtml: () => '<html>card</html>',
   renderShareImage: async () => Buffer.from('PNG'),
 }))
 
-import { syncShareForLetter, removeShareForLetter } from '../../server/services/share-publisher'
+import { syncShareForLetter, removeShareForLetter } from '../../../server/services/share-publisher'
 
 const lettersRepo = new LettersRepository()
 const flags = new FeatureFlagsRepository()

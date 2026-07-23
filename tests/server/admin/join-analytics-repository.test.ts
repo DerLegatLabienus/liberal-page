@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { joinAnalytics } from '../../server/db/schema'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { joinAnalytics } from '../../../server/db/schema'
 import { eq } from 'drizzle-orm'
-import { JoinAnalyticsRepository } from '../../server/repositories/join-analytics-repository'
+import { JoinAnalyticsRepository } from '../../../server/repositories/join-analytics-repository'
 
 async function row(bucket: string) {
   const rows = await db.select().from(joinAnalytics).where(eq(joinAnalytics.bucket, bucket))

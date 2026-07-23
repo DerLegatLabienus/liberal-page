@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, trackedMks, mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../server/db/schema'
-import { MksRepository } from '../../server/repositories/mks-repository'
-import { UsersRepository } from '../../server/repositories/users-repository'
-import { TrackedMksRepository } from '../../server/repositories/tracked-mks-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, trackedMks, mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../../server/db/schema'
+import { MksRepository } from '../../../server/repositories/mks-repository'
+import { UsersRepository } from '../../../server/repositories/users-repository'
+import { TrackedMksRepository } from '../../../server/repositories/tracked-mks-repository'
 
 const MK = {
   oknesset_id: '4395', knesset_site_id: '771', name: 'אבי דיכטר', email: null,

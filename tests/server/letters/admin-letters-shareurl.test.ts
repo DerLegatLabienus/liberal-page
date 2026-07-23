@@ -1,20 +1,20 @@
 import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users, refreshTokens, letters } from '../../server/db/schema'
-import { issueAccessToken } from '../../server/services/auth-service'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users, refreshTokens, letters } from '../../../server/db/schema'
+import { issueAccessToken } from '../../../server/services/auth-service'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 const sync = vi.fn().mockResolvedValue(undefined)
 const remove = vi.fn().mockResolvedValue(undefined)
-vi.mock('../../server/services/share-publisher', () => ({
+vi.mock('../../../server/services/share-publisher', () => ({
   syncShareForLetter: (...a: unknown[]) => sync(...a),
   removeShareForLetter: (...a: unknown[]) => remove(...a),
 }))
 
-import adminLettersRouter from '../../server/routes/admin-letters'
+import adminLettersRouter from '../../../server/routes/admin-letters'
 
 const app = express()
 app.use(express.json())

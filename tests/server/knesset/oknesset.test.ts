@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { OknessetClient } from '../../server/services/oknesset'
+import { OknessetClient } from '../../../server/services/oknesset'
 
 const client = new OknessetClient()
 

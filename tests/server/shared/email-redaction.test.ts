@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { redactEmail } from '../../server/services/email-redaction'
+import { redactEmail } from '../../../server/services/email-redaction'
 
 describe('redactEmail', () => {
   it('keeps the local part and drops the domain', () => {

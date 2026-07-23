@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { users } from '../../server/db/schema'
-import { UsersRepository } from '../../server/repositories/users-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { users } from '../../../server/db/schema'
+import { UsersRepository } from '../../../server/repositories/users-repository'
 
 describe('UsersRepository', () => {
   beforeAll(async () => { await setupTestDb() })

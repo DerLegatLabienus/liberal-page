@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { db } from '../../server/db/client'
-import { letters, letterChannels, letterContacts } from '../../server/db/schema'
-import { backfillChannels } from '../../scripts/backfill-channels'
+import { db } from '../../../server/db/client'
+import { letters, letterChannels, letterContacts } from '../../../server/db/schema'
+import { backfillChannels } from '../../../scripts/backfill-channels'
 
 describe('backfillChannels', () => {
   beforeEach(async () => {

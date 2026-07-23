@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { fetchAllKnessetMembers } from '../../server/services/knesset-members'
+import { fetchAllKnessetMembers } from '../../../server/services/knesset-members'
 
 const PERSONS = [
   { PersonID: 30839, FirstName: 'דן', LastName: 'אילוז' },

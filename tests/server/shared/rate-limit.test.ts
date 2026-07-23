@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { SlidingWindowLimiter } from '../../server/services/rate-limit'
+import { SlidingWindowLimiter } from '../../../server/services/rate-limit'
 
 describe('SlidingWindowLimiter', () => {
   beforeEach(() => vi.useFakeTimers())

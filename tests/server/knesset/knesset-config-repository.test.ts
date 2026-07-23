@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { knessetConfig } from '../../server/db/schema'
-import { KnessetConfigRepository } from '../../server/repositories/knesset-config-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { knessetConfig } from '../../../server/db/schema'
+import { KnessetConfigRepository } from '../../../server/repositories/knesset-config-repository'
 
 describe('KnessetConfigRepository', () => {
   const repo = new KnessetConfigRepository()

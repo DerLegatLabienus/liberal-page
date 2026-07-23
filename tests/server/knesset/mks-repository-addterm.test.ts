@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../server/db/schema'
-import { MksRepository } from '../../server/repositories/mks-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { mks, mkKnessetTerms, mkRoles, mkActivity, mkVotes } from '../../../server/db/schema'
+import { MksRepository } from '../../../server/repositories/mks-repository'
 
 const MK = {
   oknesset_id: '4395', knesset_site_id: '771', name: 'אבי דיכטר', email: null,

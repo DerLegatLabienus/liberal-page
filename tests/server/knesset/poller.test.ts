@@ -7,45 +7,45 @@ const { mockFetchBillStatus, mockEnrichCommitteeSessions } = vi.hoisted(() => ({
 }))
 
 // Bill status comes from Knesset OData (not oknesset.org).
-vi.mock('../../server/services/knesset-bills', () => ({
+vi.mock('../../../server/services/knesset-bills', () => ({
   fetchBillStatusById: mockFetchBillStatus,
   knessetBillUrl: (billId: number) => `https://mock-knesset.gov.il/bill/${billId}`,
 }))
 
 // Committee sessions are polled via the Knesset-OData enricher (not oknesset.org).
-vi.mock('../../server/services/committee-session-enricher', () => ({
+vi.mock('../../../server/services/committee-session-enricher', () => ({
   enrichCommitteeSessions: mockEnrichCommitteeSessions,
 }))
 
-vi.mock('../../server/services/knesset-scraper', () => ({
+vi.mock('../../../server/services/knesset-scraper', () => ({
   fetchMkActivity: vi.fn().mockRejectedValue(new Error('network error')),
 }))
 
-vi.mock('../../server/services/summarizer', () => ({
+vi.mock('../../../server/services/summarizer', () => ({
   Summarizer: vi.fn().mockImplementation(() => ({
     summarizeUrl: vi.fn().mockRejectedValue(new Error('network error')),
   })),
 }))
 
-vi.mock('../../server/repositories/tracked-bills-repository', () => ({
+vi.mock('../../../server/repositories/tracked-bills-repository', () => ({
   TrackedBillsRepository: vi.fn().mockImplementation(() => ({
     findAlertRecipients: vi.fn().mockResolvedValue([]),
   })),
 }))
 
-vi.mock('../../server/services/email-render', () => ({
+vi.mock('../../../server/services/email-render', () => ({
   renderFragment: vi.fn().mockResolvedValue('<li>item</li>'),
 }))
 
-vi.mock('../../server/services/email', () => ({
+vi.mock('../../../server/services/email', () => ({
   sendEmailsThrottled: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('../../server/services/email-delivery-poll', () => ({
+vi.mock('../../../server/services/email-delivery-poll', () => ({
   pollDeliveryStatus: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('../../server/services/knesset-config', () => ({
+vi.mock('../../../server/services/knesset-config', () => ({
   getCurrentKnesset: vi.fn().mockReturnValue(25),
   detectKnessetTransition: vi.fn().mockResolvedValue(false),
   loadConfig: vi.fn().mockResolvedValue(undefined),
@@ -53,14 +53,14 @@ vi.mock('../../server/services/knesset-config', () => ({
 }))
 
 // Import AFTER mocks are set up
-import { runPollCycle } from '../../server/services/poller'
-import { fetchMkActivity } from '../../server/services/knesset-scraper'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { bills, committees, mks, mkKnessetTerms } from '../../server/db/schema'
-import { BillsRepository } from '../../server/repositories/bills-repository'
-import { CommitteesRepository } from '../../server/repositories/committees-repository'
-import { MksRepository } from '../../server/repositories/mks-repository'
+import { runPollCycle } from '../../../server/services/poller'
+import { fetchMkActivity } from '../../../server/services/knesset-scraper'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { bills, committees, mks, mkKnessetTerms } from '../../../server/db/schema'
+import { BillsRepository } from '../../../server/repositories/bills-repository'
+import { CommitteesRepository } from '../../../server/repositories/committees-repository'
+import { MksRepository } from '../../../server/repositories/mks-repository'
 
 const billsRepo = new BillsRepository()
 const committeesRepo = new CommitteesRepository()

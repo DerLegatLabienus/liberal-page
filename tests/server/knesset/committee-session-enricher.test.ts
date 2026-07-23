@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { enrichCommitteeSessions } from '../../server/services/committee-session-enricher'
+import { enrichCommitteeSessions } from '../../../server/services/committee-session-enricher'
 
 const ODATA_COMMITTEE = [{ CommitteeID: 4186, Name: 'ועדת הכספים' }]
 const ODATA_SESSIONS = [

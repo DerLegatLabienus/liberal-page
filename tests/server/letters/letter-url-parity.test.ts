@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import * as client from '../../src/lib/letter-urls'
-import { buildMailtoUrl, buildGmailComposeUrl } from '../../server/services/letter-utils'
+import * as client from '../../../src/lib/letter-urls'
+import { buildMailtoUrl, buildGmailComposeUrl } from '../../../server/services/letter-utils'
 
 const to = [{ email: 'mk@knesset.gov.il', display_name: 'ח"כ' }]
 const cc = [{ email: 'cc@gov.il', display_name: 'דובר' }]

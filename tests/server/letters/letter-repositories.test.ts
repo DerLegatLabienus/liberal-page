@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { letterIssueTags, letterContacts, letterTemplates, letters, letterAnalytics } from '../../server/db/schema'
-import { LetterIssueTagsRepository } from '../../server/repositories/letter-issue-tags-repository'
-import { LetterContactsRepository } from '../../server/repositories/letter-contacts-repository'
-import { LetterTemplatesRepository } from '../../server/repositories/letter-templates-repository'
-import { LettersRepository } from '../../server/repositories/letters-repository'
-import { LetterAnalyticsRepository } from '../../server/repositories/letter-analytics-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { letterIssueTags, letterContacts, letterTemplates, letters, letterAnalytics } from '../../../server/db/schema'
+import { LetterIssueTagsRepository } from '../../../server/repositories/letter-issue-tags-repository'
+import { LetterContactsRepository } from '../../../server/repositories/letter-contacts-repository'
+import { LetterTemplatesRepository } from '../../../server/repositories/letter-templates-repository'
+import { LettersRepository } from '../../../server/repositories/letters-repository'
+import { LetterAnalyticsRepository } from '../../../server/repositories/letter-analytics-repository'
 
 const tagsRepo = new LetterIssueTagsRepository()
 const contactsRepo = new LetterContactsRepository()

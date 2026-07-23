@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { setupTestDb } from './db-harness'
-import { db } from '../../server/db/client'
-import { featureFlags } from '../../server/db/schema'
-import { FeatureFlagsRepository } from '../../server/repositories/feature-flags-repository'
+import { setupTestDb } from '../db-harness'
+import { db } from '../../../server/db/client'
+import { featureFlags } from '../../../server/db/schema'
+import { FeatureFlagsRepository } from '../../../server/repositories/feature-flags-repository'
 
 describe('FeatureFlagsRepository', () => {
   const repo = new FeatureFlagsRepository()

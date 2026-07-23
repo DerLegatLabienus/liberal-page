@@ -5,17 +5,17 @@ import request from 'supertest'
 // Control the SSRF guard and the summarizer from the test; keep the real error class.
 // vi.hoisted so these exist when the hoisted vi.mock factories run.
 const { assertMock, summarizeUrlMock } = vi.hoisted(() => ({ assertMock: vi.fn(), summarizeUrlMock: vi.fn() }))
-vi.mock('../../server/services/url-guard', async (orig) => {
-  const actual = await orig<typeof import('../../server/services/url-guard')>()
+vi.mock('../../../server/services/url-guard', async (orig) => {
+  const actual = await orig<typeof import('../../../server/services/url-guard')>()
   return { ...actual, assertAllowedDocumentUrl: (...a: unknown[]) => assertMock(...a) }
 })
-vi.mock('../../server/services/summarizer', () => ({
+vi.mock('../../../server/services/summarizer', () => ({
   Summarizer: vi.fn().mockImplementation(() => ({ summarizeUrl: summarizeUrlMock })),
 }))
 
-import summarizeRouter, { _resetSummarizeLimiter } from '../../server/routes/summarize'
-import { UrlNotAllowedError } from '../../server/services/url-guard'
-import { issueAccessToken } from '../../server/services/auth-service'
+import summarizeRouter, { _resetSummarizeLimiter } from '../../../server/routes/summarize'
+import { UrlNotAllowedError } from '../../../server/services/url-guard'
+import { issueAccessToken } from '../../../server/services/auth-service'
 
 const app = express()
 app.use(express.json())
