@@ -74,7 +74,11 @@ closed or no-ops on a missing var rather than crashing the server, so it's safe 
 run without any of this configured — you just won't exercise the real behavior:
 
 - **Real locally:** Postgres — Docker (`db:up`) for `npm run dev`, in-memory pglite
-  (zero setup) for `npm test`.
+  (zero setup) for `npm test`. Sign-in — `ALLOW_DEV_LOGIN=true` (unset by default)
+  adds "Dev Sign In (admin)"/"(member)" buttons that run the real session pipeline
+  (allowlist, JWT, refresh tokens) without needing a real Google account; see
+  `server/services/auth-providers/dev.ts` for the three-condition gate that keeps
+  this out of production regardless.
 - **Intentionally faked/no-op, not worth a local stand-in:** Resend email (`sendEmail()`
   logs + returns `{status:'skipped'}` without `RESEND_API_KEY` — this is deliberate,
   not a gap); Cloudflare Turnstile (fails open — verification skipped without
