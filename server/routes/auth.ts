@@ -6,6 +6,7 @@ import {
   type ProviderIdentity,
 } from '../services/auth-service'
 import { requestMagicLink, verifyMagicLink } from '../services/auth-providers/magic-link'
+import { isDevLoginAllowed, verifyDevIdentity } from '../services/auth-providers/dev'
 import { SlidingWindowLimiter } from '../services/rate-limit'
 
 const router = Router()
@@ -136,6 +137,13 @@ const verifiers: Record<string, (idToken: string) => Promise<ProviderIdentity>> 
       throw new AuthError('invalid_token')
     }
   },
+}
+
+// Local-dev-only sign-in bypass — never registered unless isDevLoginAllowed() passes all
+// of its checks (see server/services/auth-providers/dev.ts). Absent any of those, POST
+// /api/auth/dev falls through to the "Unknown provider" 400 below, same as /auth/microsoft.
+if (isDevLoginAllowed()) {
+  verifiers.dev = (idToken) => verifyDevIdentity(idToken)
 }
 
 // Exchange a verified provider ID token for our session tokens. Gated by the invite

@@ -36,9 +36,9 @@ export default function AuthControl() {
 
   const openLogin = () => { setLoginError(null); setMagicSent(false); setLoginOpen(true) }
 
-  const handleSignIn = (idToken: string) => {
+  const handleSignIn = (idToken: string, provider?: string) => {
     setLoginError(null)
-    signIn(idToken)
+    signIn(idToken, provider)
       .then(() => { setLoginOpen(false); toastCtx?.toast(t('auth.signed_in'), 'success') })
       .catch((err: unknown) => {
         // 403 = email not on the invite allowlist; anything else = generic failure. Shown
@@ -154,6 +154,30 @@ export default function AuthControl() {
                     {t('auth.magic_link_button')}
                   </button>
                 </form>
+              )}
+
+              {/* Local-dev-only bypass. import.meta.env.DEV is statically false and dead-code
+                  eliminated in a production build (npm run build), so this block — and the
+                  requests it makes — never exist outside `vite dev`. The backend independently
+                  gates whether POST /api/auth/dev actually does anything; see
+                  server/services/auth-providers/dev.ts. */}
+              {import.meta.env.DEV && (
+                <div className="flex items-center gap-2 border-t border-dashed border-slate-200 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => handleSignIn('dev-admin', 'dev')}
+                    className="h-9 flex-1 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Dev Sign In (admin)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSignIn('dev-member', 'dev')}
+                    className="h-9 flex-1 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Dev Sign In (member)
+                  </button>
+                </div>
               )}
             </div>
           </div>
