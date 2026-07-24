@@ -1,5 +1,62 @@
 # Backlog
 
+### ✅ Test suite reorganized by feature module + local sanity/integration tier — 2026-07-23
+
+`tests/{server,components,unit}` split by test type only, with no feature grouping — a single
+feature's tests (e.g. letters, ~28 files) were scattered across all three. Nested feature
+subfolders (`letters/knesset/auth/admin/shared`) inside each existing type directory instead,
+so `vitest.config.ts`'s `environmentMatchGlobs` and CI's `--shard` file-discovery kept working
+with zero config changes (both match at any depth). Folded the stray `tests/hooks/` (1 file)
+into `tests/unit/`. Added `tests/support/test-app.ts` (shared `createTestApp()` factory — 23
+route tests migrated off hand-rolled Express bootstrap) and `tests/support/fixtures.ts`. Of
+the 4 files flagged as split candidates by line count, only `letter-repositories.test.ts`
+(5 unrelated repository classes, no shared mocks) was a real split, landing as 5 files; the
+other 3 turned out to each test one cohesive module from several angles with shared mock
+setup — splitting those would have duplicated boilerplate, so they were left alone. Full
+suite unchanged in test count throughout (851 → 858 after the new dev-auth tests below), zero
+regressions.
+
+Added a real sanity/integration tier: `scripts/smoke.ts` (`npm run smoke`) boots the actual
+server process against a real DB and checks health/feature-flags/parliament routes
+(shape-only assertions, safe against CI's unseeded Postgres) — replaces `ci.yml`'s inline
+health-only curl so local and CI share one source of truth. `scripts/smoke-browser.ts`
+(`npm run smoke:browser`, opt-in, not in CI) drives a real Chromium page through the one
+golden path component tests can't reach: default Hebrew/RTL, the Knesset section's
+language-gated rendering, the language toggle.
+
+Local-env audit: documented `COMMITTEE_AI` and `R2_ACCOUNT_ID` in `.env.example` (both were
+read in code but undocumented), added a "Local full-stack dev" section to `CLAUDE.md`
+(what's real locally vs. intentionally faked vs. mocked-only-in-tests), and added an opt-in
+local MinIO service (`docker compose --profile minio`) as an R2 stand-in — verified
+end-to-end against the app's actual `r2-client.ts` code (unmodified), which surfaced a real
+gap: MinIO only recognizes the AWS SDK's default bucket-as-subdomain addressing when
+`MINIO_DOMAIN` is set, found by testing rather than assumed.
+
+### ✅ Local-dev sign-in bypass (dev identity provider) — 2026-07-24
+
+`ALLOW_DEV_LOGIN=true` (unset by default) registers a `dev` provider in the existing
+`verifiers` registry in `server/routes/auth.ts` — the same choke point Google and magic-link
+already funnel through (`loginWithIdentity` → allowlist upsert → JWT issuance → refresh
+token), so local sign-in exercises the real session pipeline instead of a middleware-level
+bypass. Frontend adds "Dev Sign In (admin)"/"(member)" buttons in `AuthControl.tsx`, gated on
+`import.meta.env.DEV` (confirmed absent from the production `dist/` bundle). Three
+independent backend gates — explicit flag, `NODE_ENV !== 'production'`, and no `RENDER` env
+var (Render auto-sets this) — so no single misconfiguration exposes it; confirmed off after
+the real Render deploy. Verified end-to-end against a running server: real JWT sessions for
+both roles, `requireAdmin` correctly 403s the member session on an admin-only route.
+`server/services/auth-providers/dev.ts`, `tests/server/auth/auth-dev.test.ts`.
+
+### ✅ `leftover-work-review` skill — 2026-07-24
+
+`.claude/skills/leftover-work-review/` scans worktrees, local branches, unpushed commits,
+stashes, and prunable worktree metadata, and reconciles two signals per branch (commit-wise
+ancestry + content-wise via a synthetic `commit-tree`/`git cherry` check — the same technique
+`git-delete-squashed` uses) so squash- and rebase-merged branches are correctly reported as
+safe to clean rather than flagged as unmerged work, which a plain ancestry check alone would
+misreport. Report-only — never runs `branch -D`/`worktree remove`/etc. itself. Verified
+against fixture repos covering all four verdict paths (clean / squash-merged / rebase-merged
+/ genuinely-unmerged) before writing the `SKILL.md`.
+
 ### 🧹 Multi-channel letters — follow-ups (deferred from the 2026-07-15 channels feature)
 
 Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
@@ -760,8 +817,11 @@ nothing). Snapshot `0021_snapshot.json` generated via `drizzle-kit/api`'s `gener
 so future `db:generate` diffs correctly. Repositories unchanged (Drizzle auto-qualifies).
 **Verified locally:** full suite 565 pass under pglite, `db:generate` reports "no changes",
 lint/tsc/build green. Spec: `docs/superpowers/specs/2026-06-18-domain-schemas-design.md`.
-**Not yet deployed** — mutates the prod Neon schema on boot (`runMigrations`), so it awaits a
-Neon-branch dry-run + explicit go-ahead before the master push. Branch: `worktree-schema-domains`.
+**Deployed** — confirmed 2026-07-24 via a direct query against prod Neon
+(`information_schema.schemata`): all 6 schemas (`parliament`, `auth`, `email`, `letters`,
+`analytics`, `config`) exist alongside `public`, so migration `0021` has already run in
+production. (This entry previously said "not yet deployed, awaiting a Neon-branch dry-run" —
+stale; it shipped in a subsequent master push without the note being updated.)
 
 All 28 tables currently live in one Postgres `public` schema on Neon. They already cluster by
 domain at the Drizzle file level (`server/db/schema/*.ts`), but that grouping isn't expressed
