@@ -89,10 +89,11 @@ directory entries (no channel) — migration `0029` relaxed the reachability che
 contact identified by `mk_site_id`. Prod result: 133 `mk` rows / 132 distinct Site IDs / 120 email /
 132 photo / 12 photo-only ministers.
 
-**Residual (manual cleanup, 1 row):** אופיר כץ has two contacts — #15 (email-only, `okatz@`) and #24
-(phone `+972…238` + photo + Site ID 976). The importer left both because **both are referenced by
-existing letters** and it never deletes a referenced row. To merge: repoint the letter(s) using #15
-onto #24, add #24's email, then delete #15. Ministers' personal phones can also be added over time
+**Residual — ✅ resolved 2026-07-24:** אופיר כץ had two contacts — #15 (email-only, `okatz@`) and #24
+(phone `+972…238` + photo + Site ID 976), both referenced by letter #8 (email channel → #15,
+WhatsApp channel → #24). Repointed the email channel onto #24, added #24's email, deleted #15 —
+verified against prod: one contact row now carries email + phone + WhatsApp + photo + Site ID, and
+both of letter #8's channels point at it. Ministers' personal phones can also be added over time
 (as on 23/24) to make them sendable via SMS/WhatsApp.
 
 ### ✅ FIXED — MK photos broke site-wide (`mk_{siteId}.jpg` 404) — fixed 2026-07-20
