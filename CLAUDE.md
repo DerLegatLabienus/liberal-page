@@ -39,11 +39,22 @@ npm run db:reset         # wipe volume and start fresh (ephemeral)
 
 ### Local database
 
-The server connects to whatever `DATABASE_URL` points at — a local Docker
-Postgres (default) or Neon. One driver (`node-postgres`) serves both; switching
-is a one-line `.env` edit. Tests use in-memory pglite and need no database.
+The server connects to whatever `DATABASE_URL` points at. **Never the Neon `production`
+branch** — that's the live site's real database, with real user emails and live session
+tokens; there is no code-level guard against pointing local dev at it, so this is enforced by
+convention only (see the incident note in
+`docs/superpowers/specs/2026-07-24-local-database-environment-design.md` if you want the full
+story of why this line exists). Two safe local targets, switching is a one-line `.env` edit
+either way. Tests use in-memory pglite and need no database at all.
 
-Setup: copy `.env.example` → `.env`.
+**Default — Neon `dev` branch.** A schema-only branch (Beta) forked from `production`: zero
+real rows copied, ever, at the storage level. Its schema was then rebuilt from scratch by
+actually running every migration file (`runMigrations()`, same code path as a fresh local
+Postgres) rather than trusting the clone's structure — Drizzle's migrator tracks which
+migrations have run in its own journal table, and a structural clone alone would desync from
+that. Ask in the Neon console for this branch's connection string; put it in `.env`.
+
+**Alternative — local Docker Postgres**, fully offline, zero Neon dependency:
 
 - `npm run db:up`     start local Postgres (Docker)
 - `npm run db:down`   stop it
@@ -53,8 +64,7 @@ Setup: copy `.env.example` → `.env`.
 Ephemeral run:  `npm run db:reset` -> `npm run dev`  (empty DB, schema applied on boot).
 Preloaded run:  `npm run db:up` -> `npm run dev` -> `npm run db:seed`  (test data, persists until reset).
 
-To use Neon instead, set `DATABASE_URL` to the Neon pooled connection string
-(`...-pooler.neon.tech/...?sslmode=require`) in `.env`.
+Setup either way: copy `.env.example` → `.env`, then set `DATABASE_URL` to whichever target.
 
 Run a single test file:
 ```bash
