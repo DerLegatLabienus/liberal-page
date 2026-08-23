@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repo has a prebuilt knowledge graph at `graphify-out/graph.json` (gitignored, local only).
 **Before grepping or fanning out reads to answer a question about how the code fits together**
 ("what calls X", "how does the letters send flow work", "where does auth live", "trace the poller"),
-query the graph — it answers from ~3,200 extracted symbols and their edges instead of loading files
+query the graph — it answers from ~3,400 extracted symbols and their edges instead of loading files
 into context:
 
 ```bash
@@ -26,9 +26,15 @@ Only fall back to Grep/Read when the graph does not cover it (it holds structure
 relationships, not line-level implementation) or when you are about to edit a file — edits still
 need the real bytes.
 
-**Keeping it fresh:** `graphify update` re-extracts only changed files (AST re-extraction is
-deterministic and needs no LLM). Re-run it after a batch of structural changes; a stale graph is
-worse than none. Rebuild from scratch with `/graphify .`.
+**Keeping it fresh — mostly automatic.** A `post-commit` / `post-checkout` git hook
+(`graphify hook install`) rebuilds the **code** layer after every commit: detached, AST-only,
+no LLM, zero tokens. You do not need to run it, and neither do I.
+
+The hook deliberately skips **docs**, because doc extraction needs an LLM. Instead it appends
+changed `.md`/`.txt` paths to `graphify-out/.needs_update`. **At the start of a session, if that
+file exists, tell the user the doc layer is stale, list what changed, and offer to run
+`/graphify --update`** — do not run it unprompted, it spends their tokens. A full `/graphify .`
+clears the marker.
 
 Outputs: `graphify-out/graph.html` (interactive, open in a browser), `graphify-out/GRAPH_REPORT.md`
 (god nodes, community map, audit trail), `graphify-out/graph.json` (raw).
