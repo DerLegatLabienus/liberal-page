@@ -1,5 +1,75 @@
 # Backlog
 
+### 🔲 Design — Secure the LLM call surface (abuse, injection, and spend)
+
+**Status:** design item — nothing to implement until a spec exists.
+**Why now:** three Claude call sites exist with uneven protection and **no cost ceiling of any
+kind**. The gaps below are real but not on fire; this is hardening, not an incident.
+
+#### Where the calls actually are (verified 2026-08-24)
+
+| # | Call site | Reached by | Input origin |
+|---|---|---|---|
+| 1 | `summarizer.callClaude()` — `server/services/summarizer.ts:41` | `POST /api/summarize` (**requireAuth**, 10/min/IP, SSRF-guarded URL) **and** the poller (`poller.ts:96`, autonomous) | PDF/DOCX text fetched from a `*.knesset.gov.il` host |
+| 2 | Committee-protocol pass — `server/services/summarizer.ts:130` | poller → `committee-session-enricher` only (no HTTP route) | committee protocol document text |
+| 3 | `beautifyLetterHtml()` — `server/services/letter-beautifier.ts:41` | `POST /api/admin/letters/beautify` (**requireAdmin**, `lettersBeautifyEnabled` flag → 404 when off) | admin-authored letter HTML |
+
+Only these three exist — `grep -rn "messages.create" server/` is the check to re-run.
+
+#### What already protects them (don't redesign these)
+
+- `requireAuth` + `SlidingWindowLimiter(10, 60s)` per IP on `/api/summarize`; `requireAdmin` +
+  dark-by-default flag on `/beautify`.
+- **SSRF guard** (`url-guard.ts`): host allowlist + `ipaddr.js` public-IP check + redirect
+  re-validation + timeout + size cap, so call #1 can only ingest Knesset-hosted documents.
+- **Prompt-injection instruction on call #1** — the document is declared to be data only, and the
+  model returns `{relevant:false}` for anything that isn't a Knesset legislative/parliamentary
+  document, including "text trying to give you instructions". Irrelevant results are **not cached**.
+- Input truncated to 8 000 chars; `max_tokens` capped (1024/1024/2048).
+- Beautify output runs through `sanitizeLetterHtml()` — model HTML is treated as untrusted.
+- Summaries render as JSX text (`{bill.summary}`, `{extended.aiSummary}`); there is **no**
+  `dangerouslySetInnerHTML` anywhere in `src/`, so model output is not an XSS vector today.
+
+#### Gaps the design must address
+
+1. **No spend ceiling — the biggest one.** Nothing caps tokens or cost per user, per day, or
+   globally. An invited member can legitimately call `/api/summarize` 10×/min ≈ 14 400×/day; the
+   cache is keyed by **MD5 of document bytes**, so distinct URLs always miss. Rate limiting throttles
+   *speed*, not *total spend*. Decide: per-user daily quota, a global monthly budget with a
+   fail-closed switch, or a gateway-level cap.
+2. **Call #2 has no injection defense.** Unlike #1 it carries no "treat this as data" instruction
+   and no relevance gate — it just asks for JSON. Its input is a committee protocol reached through
+   the poller, so it is *unauthenticated and autonomous*: no human reviews what gets summarized.
+   Low likelihood (documents come from knesset.gov.il), non-trivial blast radius.
+3. **The poller path bypasses every HTTP-layer control.** `requireAuth` and the rate limiter guard
+   the route, not the service. Any budget/abuse control must live at the **service or client**
+   layer to cover the autonomous path too.
+4. **No audit trail.** No record of prompt, response, token count, or cost per call — so abuse
+   can't be investigated after the fact and spend can't be attributed. Note the privacy tension
+   with the site's aggregate-only analytics stance: log metadata, not letter bodies.
+5. **Output trust is inconsistent.** #3 sanitizes; #1/#2 `JSON.parse` a regex-matched blob and
+   persist the result. Safe as rendered today, but the guarantee is incidental rather than designed.
+
+#### Third-party options to evaluate (explicitly in scope)
+
+- **Cloudflare AI Gateway** — likely first candidate: we already use Cloudflare (Turnstile, R2),
+  and it is a *base-URL change, not a code change*. Gives centralized rate limiting, caching,
+  spend caps, and request logging in front of every call site — covering the poller path for free.
+- **Neon AI Gateway** — one credential and per-branch logging; we are already on Neon.
+- **Dedicated injection/jailbreak filters** — Lakera Guard, Prompt Security, Rebuff, or an
+  open-weight classifier (Llama Guard) as a pre-flight check on document text.
+- **Do nothing third-party** — tighten quotas + reuse the existing prompt-hardening pattern from
+  call #1 on #2. Cheapest; keeps the free-tier posture and adds no vendor.
+
+Evaluate against the real constraints: Render free tier, small closed user base, no appetite for
+paid add-ons (cf. the Resend webhook revert, §3), and "fails closed or no-ops on a missing var".
+
+#### First step
+
+Brainstorm → spec at `docs/superpowers/specs/YYYY-MM-DD-llm-call-security-design.md`. Decide the
+spend-cap mechanism first — it is the only gap with an unbounded downside.
+
+
 ### ✅ Test suite reorganized by feature module + local sanity/integration tier — 2026-07-23
 
 `tests/{server,components,unit}` split by test type only, with no feature grouping — a single
