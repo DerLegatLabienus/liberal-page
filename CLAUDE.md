@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repo has a prebuilt knowledge graph at `graphify-out/graph.json` (gitignored, local only).
 **Before grepping or fanning out reads to answer a question about how the code fits together**
 ("what calls X", "how does the letters send flow work", "where does auth live", "trace the poller"),
-query the graph — it answers from ~3,400 extracted symbols and their edges instead of loading files
+query the graph — it answers from ~3,700 extracted symbols and design decisions and their edges instead of loading files
 into context:
 
 ```bash
