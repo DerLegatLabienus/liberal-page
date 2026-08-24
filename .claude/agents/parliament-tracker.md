@@ -12,7 +12,7 @@ You are working on the **parliament tracker** feature of the liberal-page projec
 
 **Frontend** (React 18 + Vite):
 - `src/components/parliament/` — BillCard, CommitteeCard, MkCard, MkActivityCard, AddTrackingInput, BillSearchCombobox, CommitteeCombobox, MkCombobox
-- `src/hooks/useParliament.ts` — seeds from static JSON, refreshes from API on mount
+- `src/hooks/useParliament.ts` — starts empty, fetches from the API on mount; takes a `scope` (`'group'` default | `'personal'`)
 - `src/hooks/useMkList.ts`, `useCommitteeList.ts`, `useMkActivity.ts` — combobox data hooks
 - `src/lib/api-client.ts` — ALL frontend fetch calls go through here; no raw fetch in components
 - `src/types.ts` — single source of truth for TypeScript types (shared with server)
@@ -28,7 +28,8 @@ You are working on the **parliament tracker** feature of the liberal-page projec
 ## Key invariants
 
 - `TrackingType = 'bill' | 'committee' | 'mk'` — always use this union, never raw strings
-- `useParliament` initialises from `src/data/{bills,committees,mks}.json` static imports, then immediately calls all three `/api/parliament/:type` endpoints on mount
+- `useParliament` initialises with **empty state** (no static JSON imports — tracked data lives in Postgres), then immediately calls all three `/api/parliament/:type` endpoints on mount
+- **Tracking scopes:** reads default to the public **group** list; `?scope=personal` returns the caller's. Writes default to personal; `?scope=group` edits the public list and requires admin
 - The drawer only renders when `i18n.language === 'he'`; parliament strip and comboboxes are Hebrew-only
 - `api-client.ts` sets `VITE_API_URL` base (for Render) or falls back to `/api` (proxied by Vite)
 
@@ -41,7 +42,7 @@ You are working on the **parliament tracker** feature of the liberal-page projec
 
 ## Tests (happy-dom environment)
 
-- Test files: `tests/components/` and `tests/unit/`
+- Test files: `tests/components/` and `tests/unit/`, nested one level deeper by feature (`knesset/`, `letters/`, `auth/`)
 - `react-i18next` is globally aliased to `src/__mocks__/react-i18next.ts` — **never re-mock it per test**
 - Use Testing Library render patterns; assert on visible text/roles, not implementation details
-- Run a single file: `npx vitest run tests/components/MkCard.test.tsx`
+- Run a single file: `npx vitest run tests/components/knesset/MkCard.test.tsx`

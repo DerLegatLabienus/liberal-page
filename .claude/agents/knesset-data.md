@@ -17,8 +17,8 @@ You are working on the **external Knesset data layer** of the liberal-page proje
 - `server/services/knesset-config.ts` — detects Knesset transitions; marks MKs inactive
 - `server/repositories/mk-list-repository.ts` — cache for KnessetMember list (6 h TTL)
 - `server/repositories/committee-list-repository.ts` — cache for committee list
-- `server/repositories/mk-annotations-repository.ts` — `mk-annotations.json` (isLiberal/isSupporter flags)
-- `src/data/knesset-config.json` — current Knesset number and active SiteIds
+- `server/repositories/mk-annotations-repository.ts` — `mk_annotations` table (isLiberal/isSupporter flags)
+- `server/repositories/knesset-config-repository.ts` — `knesset_config` table (current Knesset number)
 
 ## The three APIs
 
@@ -40,13 +40,14 @@ You are working on the **external Knesset data layer** of the liberal-page proje
 
 - Main `knesset.gov.il` is bot-protected — only `GetParlamentayActivity` is scraped; do not attempt to scrape other pages
 - Always read through repositories (not direct file reads) — they handle TTL and cache refresh
-- `mk-annotations.json` holds `isLiberal`/`isSupporter` — these are editorial flags, NOT from any API
-- `knesset-config.json` lists active SiteIds for the current Knesset; `knesset-config.ts` uses it to mark MKs inactive on transition
+- `mk_annotations` holds `isLiberal`/`isSupporter` — these are editorial flags, NOT from any API
+- `knesset_config` holds the current Knesset number; `knesset-config.ts` reads it via `KnessetConfigRepository` to detect transitions and mark MKs inactive
+- **All state is Postgres** — the `src/data/*.json` caches this brief once referenced no longer exist
 
 ## Tests (node environment)
 
-- Test files: `tests/server/knesset-*.test.ts`, `tests/server/oknesset.test.ts`, `tests/server/knesset-scraper.test.ts`
+- Test files live under `tests/server/knesset/`: `knesset-*.test.ts`, `oknesset.test.ts`, `knesset-scraper.test.ts`
 - Environment is `node` — no DOM APIs available
 - Mock `fetch` with `vi.spyOn(global, 'fetch')` or `vi.fn()`
-- Mock repository file reads via `vi.mock('fs/promises')`
-- Run a single file: `npx vitest run tests/server/knesset-members.test.ts`
+- **Repositories are not mocked** — tests use a real in-memory pglite Postgres via `setupTestDb()` (`tests/server/db-harness.ts`)
+- Run a single file: `npx vitest run tests/server/knesset/knesset-members.test.ts`
