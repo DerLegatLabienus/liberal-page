@@ -1,5 +1,50 @@
 # Backlog
 
+### 🔲 Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
+
+**Status:** open. Related to but **separate from** the LLM-call-security design item below: that one
+validates output *shape*, this one validates output *provenance* using domain knowledge.
+
+**Problem.** The poller fetches `bill.documentUrl` / a committee session document and summarizes
+whatever comes back. Nothing checks that the returned document actually belongs to the entity we
+were enriching. The only gate today is `summarizeUrl`'s relevance check — "is this a Knesset
+parliamentary document *at all*" — which passes a perfectly genuine protocol from the **wrong
+committee** or the **wrong date**.
+
+**Proposal — assert expected-vs-extracted signals before trusting a summary:**
+
+- **Committee identity** — the committee named in a protocol matches the committee whose session
+  we are enriching (compare against `committees.name` / the `CommitteeListRepository` cache).
+- **Session date** — the date in the document falls within a plausible window of the session's
+  `StartDate` from OData.
+- **Bill identity** — for bill documents, the bill number/name in the text matches the tracked bill.
+- **Knesset number** — matches `knesset_config`'s current value.
+- **Attendees are real MKs** — cross-check extracted names against `knesset_members_cache` /
+  `mks`; a protocol whose "attendees" are unknown to the Knesset is a strong anomaly signal.
+
+**On mismatch:** do not cache, do not overwrite an existing good summary, log loudly with the
+expected-vs-found pair. Mirror the existing `{relevant:false}` path, which already refuses to
+persist a bogus doc.
+
+**Why it's worth doing.** Three distinct failures share this one detector:
+1. **Injection / document swap** — a hostile or substituted document is far more likely to fail a
+   provenance cross-check than a topic classifier, because it must match *specific* facts we
+   already independently know, not merely look parliamentary.
+2. **Upstream URL-mapping bugs** — a wrong `documentUrl` silently attaches someone else's summary
+   to a bill; today nothing would ever surface that.
+3. **Data-quality drift** — the same class of problem as the `LastUpdatedDate` incident (§18),
+   where trusted-looking upstream data was quietly wrong.
+
+**Design principle to reuse:** the closed-committees spec's *"a flag changes only from positive
+confirmation, never from absence of evidence"* — a missing date or unparsed committee name is
+**not** a mismatch, it is "unknown", and unknown must not delete or overwrite a good summary.
+Only a *positive contradiction* (found committee ≠ expected committee) is a mismatch.
+
+**First step:** measure before enforcing. Log expected-vs-extracted for one poll cycle and see how
+often genuine documents fail each check, so thresholds are set against real Knesset formatting
+rather than guesses. Enforcement without that measurement risks the same false-positive trap the
+`leftover-work-review` skill warns about — a detector that cries wolf gets ignored.
+
 ### 🔲 Design — Secure the LLM call surface (abuse, injection, and spend)
 
 **Status:** design item — nothing to implement until a spec exists.
