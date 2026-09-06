@@ -1,5 +1,47 @@
 # Backlog
 
+### 🔲 Storage reclaimer — audit and extend for post-2026-06 features
+
+**Status:** open. `server/services/storage-manager.ts` was last touched **2026-06-10**; letters,
+channels, share pages, media library, multi-provider login and MK-contact import all landed after
+it. Nobody has revisited what it covers since.
+
+**Measured 2026-09-06 (prod Neon):** database is **10.4 MB — 2.3 % of the 450 MB budget**. So the
+pipeline has almost certainly **never fired in production**. There is no urgency here; the risk is
+that a never-exercised code path does the wrong thing the first time it matters.
+
+**Covered today:** `sent_emails` (Reclaimer 1) · orphan `bills`/`committees`/`mks` + children
+(Reclaimer 2) · `refresh_tokens` (poller calls `AuthRepository.deleteExpired`) · `join_analytics`
+and `letter_analytics` (self-prune on write).
+
+**Gaps, worst first:**
+
+1. **`magic_link_tokens` leaks — the only live unbounded leak.** Rows are deleted only on *verify*
+   (`magic-link.ts:58`). A link that is requested and never clicked stays **forever**, and
+   `POST /api/auth/magic-link/request` is a **public** endpoint (rate-limited per IP+email, but
+   public). Nothing sweeps expired-unused tokens. Fix is small: an `deleteExpired(now)` alongside
+   the existing `refresh_tokens` sweep in the poller.
+2. **`summaries_cache` still unbounded** — open since review pass 5 (§21). Cleaned only
+   incidentally when an orphan *committee* is purged (`deleteBySourceUrl`); **bill** summaries are
+   never cleaned. Keyed by document MD5, so it only grows.
+3. **`committee_sessions` unbounded for *tracked* committees** — rows die only when the whole
+   committee is deleted (`deleteCascade`). The committees you actively track are precisely the ones
+   that accumulate sessions indefinitely.
+4. **R2 object storage is invisible to the mechanism.** `pg_database_size` cannot see it, so letter
+   media and share pages never contribute to pressure. Not a leak — `removeShareForLetter` deletes
+   both objects on letter delete — but a blind spot: R2 could grow large while Postgres looks fine.
+
+**Also required: prove the pipeline actually fires.** Seed a test database past `limitMb - slackMb`
+and assert reclaimers run cheapest-first, re-measure between reclaimers, and stop once under
+budget. Unit tests today stub `usedBytes`; nothing exercises the real over-budget path end to end.
+
+**Do NOT fold this into the LLM-call-security spec.** That spec registers its own `llm_call_log`
+reclaimer and stops there; this item is a second subsystem and belongs in its own plan.
+
+**Related design principle:** *shed the minimum, hold extracted info as long as possible*
+(2026-06-02 storage-pressure spec) — any new reclaimer must slot into the cheapest-first ordering
+rather than being appended arbitrarily.
+
 ### 🔲 Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
 
 **Status:** open. Related to but **separate from** the LLM-call-security design item below: that one
