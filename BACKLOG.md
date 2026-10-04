@@ -1,5 +1,15 @@
 # Backlog
 
+### 🔲 Solo developer workflow — two lanes, tiered verification, weekly PR loop
+
+**Status:** open, designed 2026-10-04. Spec:
+`docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Risky tier (deploy + CI config).
+
+Rollout order: (1) Render deploys only after CI checks pass + health check path — **dashboard
+change, developer does it**; (2) written rules + hygiene; (3) prune this file, add Now/Next/Later;
+(4) named reviewer agents (`code`, `security`, `architecture`) in the two PR review workflows;
+(5) `GLOSSARY.md`, then `domain-reviewer`; (6) weekly scheduled loop, one `[loop-safe]` PR at a time.
+
 ### 🔲 Storage reclaimer — audit and extend for post-2026-06 features
 
 **Status:** open. `server/services/storage-manager.ts` was last touched **2026-06-10**; letters,
