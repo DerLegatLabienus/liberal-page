@@ -45,11 +45,11 @@ keeps the record), not archived here.
 `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Risky tier (deploy + CI config).
 
 - [ ] 1. Render: deploy only after CI checks pass, health check path `/api/health`, PR previews
-      kept off prod data — **dashboard changes, developer does them**
+      off — **dashboard changes, developer does them**
 - [x] 2. Written rules + hygiene (2026-10-04)
 - [x] 3. Prune this file, IDs, Now / Next / Later (2026-10-04)
-- [ ] 4. Named reviewer agents (`code`, `security`, `architecture`) in the two PR review workflows
-- [ ] 5. `GLOSSARY.md`, then `domain-reviewer`
+- [ ] 4. Wire the four reviewer briefs into the two PR review workflows (briefs written 2026-10-04)
+- [x] 5. `GLOSSARY.md` and the `domain-reviewer` brief (2026-10-04)
 - [ ] 6. Weekly scheduled loop, one `[loop-safe]` PR at a time
 
 ## LibPage-002 — Design — Secure the LLM call surface (abuse, injection, and spend)

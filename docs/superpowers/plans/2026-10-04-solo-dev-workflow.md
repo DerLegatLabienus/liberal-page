@@ -14,7 +14,7 @@ The three reviewer briefs for step 4 are committed; wiring them into CI is cover
 |---|---|---|---|
 | Render auto-deploy trigger | on commit | after CI checks pass | developer, dashboard |
 | Render health check path | empty | `/api/health` | developer, dashboard |
-| Render PR previews | automatic, copy prod env | on, against the dev database | see A |
+| Render PR previews | automatic, copy prod env | off | developer, dashboard |
 | `ANTHROPIC_API_KEY` repo secret | not set | see decision D1 | developer |
 | `CLAUDE_CODE_OAUTH_TOKEN` repo secret | set | unchanged | — |
 
@@ -29,25 +29,12 @@ preview boots against the prod database, runs the PR's migrations there, and sta
   needs `ANTHROPIC_API_KEY`, which is not set, so it currently skips. Either the developer adds
   the secret (API-billed), or the custom workflow is rewritten to use the official action with the
   existing OAuth token and the Python script is removed.
-- **D2 — confirm mechanism A** for pointing previews at the dev database.
 
-## A. Previews use the dev database (do first)
+## A. PR previews off (developer, dashboard)
 
-1. Database client: when `IS_PULL_REQUEST` is `true`, connect with `PREVIEW_DATABASE_URL` and
-   ignore `DATABASE_URL`. If `PREVIEW_DATABASE_URL` is unset in a preview, **refuse to start**
-   with a clear error. Outside a preview nothing changes.
-2. Extract the choice into a pure function (environment in, connection string or error out) and
-   unit test it: not a preview → `DATABASE_URL`; preview with the variable → the preview URL;
-   preview without it → throws; `IS_PULL_REQUEST=false` → `DATABASE_URL`.
-3. Developer: add `PREVIEW_DATABASE_URL` (the Neon `dev` branch connection string) to the Render
-   service, and set PR previews to **Manual** until this change is live on `master`.
-4. Document the variable in `.env.example`, `render.yaml` and the project `CLAUDE.md`.
-5. Known side effect, accepted: a preview also copies the email, Calendly and LLM keys. The dev
-   database has no real users, so alert digests have no recipients; a preview can still spend LLM
-   budget if someone calls its summarize route.
-
-**Verify:** gate; then, after the developer's dashboard changes, read the service settings back.
-The first trial PR's preview log must show the dev database host.
+Decided 2026-10-04: turn Render PR previews **off**. Pointing them at the dev database would need
+an app-level switch, which the developer chose not to build. Loop PRs are reviewed from the diff,
+CI and the reviewer comments only. No code change.
 
 ## B. Render gating (developer, dashboard)
 
@@ -55,10 +42,10 @@ The first trial PR's preview log must show the dev database host.
 2. Health check path: `/api/health`.
 3. Agent reads the settings back (`autoDeployTrigger`, `healthCheckPath`) and updates the "As of
    2026-10-04" warning in the project `CLAUDE.md` and the backend row of the infrastructure table.
-4. `render.yaml`: rename the service to match the live one (`liberal-page`) and add
-   `PREVIEW_DATABASE_URL`. The file is a record only; the live service is not Blueprint-managed.
+4. `render.yaml`: rename the service to match the live one (`liberal-page`). The file is a record only; the live service is not Blueprint-managed.
 
-**No trial PR is opened until A and B are both verified by reading the settings.**
+**No trial PR is opened until A and B are both verified by reading the settings** (previews off,
+trigger after checks, health check path set).
 
 ## C. Reviewers in CI (step 4)
 
@@ -99,8 +86,8 @@ skips the item after the PR is closed unmerged).
 
 ## Order and stop points
 
-1. A (code + tests) → **confirm** → push.
-2. Developer: dashboard changes for A and B → agent reads them back.
+1. Developer: dashboard changes for A and B → agent reads them back.
+2. `render.yaml` and `CLAUDE.md` updated to match → **confirm** → push.
 3. C → **confirm** → push → trial PR.
 4. D (auto-push, docs).
 5. E → **confirm** → push → supervised runs → **confirm** → schedule.
