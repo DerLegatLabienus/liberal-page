@@ -152,11 +152,49 @@ When in doubt: `pkill -f "vite|tsx server" && npm run dev`
 
 ## Git & Deploy Workflow
 
-Solo developer, single branch. Work **directly on `master`** — no feature branches, PRs, or merge/finish menus.
+Solo developer. Two lanes; full design in
+`docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. **This section is the only git
+rule for this repo** — there is no worktree or merge-at-session-end rule.
 
-**Auto-push after implementing.** This is an early-stage product, not a mature one. Once a change is implemented and the gate passes (`npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`), **push to `master` without asking** — don't treat push as a separate step to confirm. The only exception is a **completely breaking change** (e.g. a migration/deploy-ordering hazard, or something that takes the live site down): pause and confirm first.
+**Trunk lane — any session the developer is driving.** Work **directly on `master`**: no feature
+branches, no PRs, no worktrees. Never run `superpowers:using-git-worktrees` or
+`superpowers:finishing-a-development-branch` here, even when another skill hands off to them.
 
-Pushing `master` **deploys**: GitHub Pages (frontend) via CI, and the Render backend redeploys on commit. So "done" means committed, gated, and pushed.
+**PR lane — unattended work only** (the weekly loop; not built yet). It only ever opens a pull
+request and never pushes to `master` or merges. The developer merges by hand.
+
+**Classify every change before starting, and say which tier it is:**
+
+| Tier | Covers | Paperwork | Before push |
+|---|---|---|---|
+| Trivial / fix | Small changes, bug fixes | None | Gate |
+| Feature | New behaviour | One spec, **no plan file** | Gate + independent review + real-app check |
+| Risky | DB migrations · auth and access control · prod data scripts (seed/backfill/one-off against prod) · deploy and CI config (`.github/`, `render.yaml`, env vars) | Spec **and** plan | As feature, then **stop and confirm with the developer before pushing** |
+
+A change that touches a risky area is risky whatever its size. For the feature tier, skip the
+plan file even when `superpowers:brainstorming` hands off to `superpowers:writing-plans` — plan
+in the session instead.
+
+**Gate (every push):** `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.
+
+**Independent review (feature and risky):** one general reviewer, run as a fresh agent that sees
+the diff and the spec but not the authoring conversation (`superpowers:requesting-code-review`).
+**Fix every finding before the push** — nothing is deferred to the backlog. This is not the four
+named PR reviewers; those belong to the PR lane.
+
+**Real-app check:** a change to a user-visible flow is driven in a browser against `npm run dev`
+before it counts as done; a backend-only change gets a `curl` of the affected route on the running
+server. Report what was actually observed. If the check could not be run, say so and why — never
+report a skipped check as passed.
+
+**Auto-push.** Trivial/fix and feature changes: once the steps above pass, **push to `master`
+without asking**. Risky changes: confirm first.
+
+Pushing `master` **deploys**: GitHub Pages (frontend) via the CI-gated `deploy.yml`, and the Render
+backend. So "done" means committed, verified, and pushed. **As of 2026-10-04 Render still deploys
+on every commit, not after CI passes, and has no health check path** — switching both is a pending
+dashboard change (step 1 of the spec's rollout). Until it is done, a commit that fails CI still
+reaches the backend and runs its migrations on prod.
 
 ## Infrastructure & Tooling Map
 
@@ -362,6 +400,6 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 | Frontend/UX rules — tokens, components, RTL, feedback, a11y | `docs/design-system.md` |
 | UI components — props, responsibilities | `docs/components.md` |
 | Data shapes, JSON schema | `docs/data-schema.md` |
-| Feature design / requirements | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
-| Implementation plan steps | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
+| Feature design / requirements — feature and risky tiers | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
+| Implementation plan steps — **risky tier only** | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
 | Backlog items | `BACKLOG.md` — commit immediately after adding |
