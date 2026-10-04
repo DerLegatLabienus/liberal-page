@@ -121,6 +121,12 @@ A written workflow with two lanes and verification that scales with risk.
     the queue stays true after a merge.
 35. As the developer, I want the loop to run as a scheduled cloud agent, so that it works when my
     machine is off.
+35a. As the developer, I want the loop to skip an item whose earlier loop PR I closed without
+    merging, so that a rejected attempt is not repeated every week.
+35b. As the developer, I want to make a rejected item eligible again by giving it a new ID, so
+    that retrying is a deliberate act of mine.
+35c. As the developer, I want each loop PR's branch and title to carry the backlog item's ID, so
+    that a PR can always be traced to its item.
 
 ### PR review by named agents
 
@@ -248,8 +254,17 @@ A written workflow with two lanes and verification that scales with risk.
   from the backlog, and states what was verified.
 - Loop PRs carry a fixed label or branch prefix so "is a loop PR open" has an exact answer.
 - Item selection is a small deterministic step, not left to the agent's reading of the file: the
-  first item in priority order that carries the loop-safe tag and does not match a risky-tier
-  marker.
+  first item in priority order that carries the loop-safe tag, does not match a risky-tier
+  marker, and whose ID is not in the set of previously rejected IDs.
+- **No item is taken twice.** Three cases:
+  - PR still open: the loop stops at its first step.
+  - PR merged: the PR deleted the item from the backlog, so it no longer exists.
+  - PR closed without merging: the item is still in the backlog and still tagged. Before
+    selecting, the loop lists closed, unmerged loop PRs and collects the item IDs they carry;
+    those IDs are passed to item selection as the rejected set and are skipped.
+- To retry a rejected item, the developer gives it a new ID. The old ID stays rejected.
+- The loop's branch name and PR title both carry the item ID, which is how a closed PR is matched
+  back to its item.
 - The loop never pushes to `master` and never merges.
 
 ### Backlog
@@ -257,6 +272,9 @@ A written workflow with two lanes and verification that scales with risk.
 - Shipped items and the "Completed" section are deleted.
 - A Now / Next / Later section at the top lists item titles in order; item bodies stay below.
 - Loop eligibility is a `[loop-safe]` tag in the item heading.
+- Every item gets a short, stable ID in its heading, assigned during the prune. IDs are never
+  reused and do not change when an item is reordered or retitled. The existing inconsistent
+  numbering is replaced by these IDs.
 
 ### Glossary
 
@@ -297,10 +315,13 @@ comment a reviewer would post — and not how a prompt is worded or how a workfl
 Most of this feature is configuration and written rules, which are verified by acceptance checks
 rather than unit tests. Two pieces are real logic and get tests.
 
-**Seam 1: loop item selection (new, unit tested).** A pure function from backlog text to "the next
-eligible item, or none". Cases: picks the first tagged item in priority order; skips untagged
-items; refuses a tagged item in the risky tier; returns none for an empty or untagged backlog;
-ignores items in a removed or completed state. Prior art: the pure-logic tests under the unit test
+**Seam 1: loop item selection (new, unit tested).** A pure function from backlog text and a set of
+rejected item IDs to "the next eligible item, or none". Cases: picks the first tagged item in
+priority order; skips untagged items; refuses a tagged item in the risky tier; skips a tagged item
+whose ID is in the rejected set and moves on to the next; picks a previously rejected item once it
+carries a new ID; returns none for an empty or untagged backlog, or when every tagged item is
+rejected; ignores an item with no ID. Gathering the rejected set from closed PRs is outside the
+function and is covered by the supervised acceptance run. Prior art: the pure-logic tests under the unit test
 directory, such as those for the letter compose-URL builders.
 
 **Seam 2: review request assembly in the custom review script (existing seam, unit tested).**
@@ -318,8 +339,9 @@ for real.
   `master`.
 - Reviewers: open one trial PR and confirm four separately signed comments appear, from four
   separate jobs.
-- Loop: one supervised run that produces a PR for a tagged item, then a second run that does
-  nothing because that PR is still open.
+- Loop: one supervised run that produces a PR for a tagged item; a second run that does nothing
+  because that PR is still open; then, after closing that PR unmerged, a third run that skips the
+  item and takes the next tagged one (or reports that none is left).
 
 ## Out of Scope
 
