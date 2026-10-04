@@ -272,7 +272,8 @@ A written workflow with two lanes and verification that scales with risk.
 - Shipped items and the "Completed" section are deleted.
 - A Now / Next / Later section at the top lists item titles in order; item bodies stay below.
 - Loop eligibility is a `[loop-safe]` tag in the item heading.
-- Every item gets a short, stable ID in its heading, assigned during the prune. IDs are never
+- Every item gets a short, stable ID in its heading, of the form `LibPage-001`. The backlog header
+  records the next free ID, since deleting a shipped item removes its ID from the file. IDs are never
   reused and do not change when an item is reordered or retitled. The existing inconsistent
   numbering is replaced by these IDs.
 
