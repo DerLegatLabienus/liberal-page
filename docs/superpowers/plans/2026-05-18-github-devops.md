@@ -1,5 +1,9 @@
 # GitHub & DevOps Setup Implementation Plan
 
+> **Superseded in part (2026-10-05):** the Python PR-review script and its `ANTHROPIC_API_KEY`
+> secret described below were removed. PR review now runs four named reviewers through the official
+> action; see `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Create a private GitHub repo, a CI pipeline (lint → tsc → test → build → smoke test) that runs on every push, and a Claude-powered AI PR review bot.

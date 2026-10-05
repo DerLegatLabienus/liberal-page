@@ -1,5 +1,9 @@
 # GitHub & DevOps Setup — Design
 
+> **Superseded in part (2026-10-05):** the Python PR-review script and its `ANTHROPIC_API_KEY`
+> secret described below were removed. PR review now runs four named reviewers through the official
+> action; see `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`.
+
 **Date:** 2026-05-18
 **Status:** Approved
 
