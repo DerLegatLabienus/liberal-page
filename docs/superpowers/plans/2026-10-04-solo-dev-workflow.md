@@ -84,6 +84,11 @@ conflicting terms with the developer, then write the `domain-reviewer` brief and
    label `loop`. A PR is recognised by the branch shape or the label.
 4. The loop's instructions as a checked-in prompt (`scripts/loop/PROMPT.md`): pick; branch;
    implement; list overlaps with open loop PRs; gate; remove the item; open the PR. **Built.**
+4a. Review-fix pass (decided 2026-10-05): `loop:next` first looks for an open loop PR with
+   reviewer findings marked `Needs: agent` for its current head commit and no review pass yet. If
+   there is one it prints `{"action":"fix",…}` with the comments to read; the run fixes those
+   findings on that branch, commits with a `Loop-Review-Pass: true` trailer, comments what was
+   fixed or left, and stops. Otherwise it prints `{"action":"new",…}`. One pass per PR. **Built.**
 5. A run that cannot finish its item opens a docs-only PR that writes a detailed explanation
    into the backlog item and removes its `[loop-safe]` tag (adding `[risky]` when that is why).
 6. **Before the first supervised run:** create the `loop` label on GitHub, and find out which
@@ -98,6 +103,20 @@ conflicting terms with the developer, then write the `domain-reviewer` brief and
 
 **Verify:** the three supervised runs in the spec (opens a PR; with that PR open, opens a second
 for the next item; does not retry an item whose PR was closed unmerged).
+
+## F. Findings say who should act (added 2026-10-05)
+
+1. Reviewer briefs: fixed comment structure (verdict with the agent/developer split; per finding
+   Where, Problem, Fix, Needs) and the rules for choosing `developer`. **Built.**
+2. Review workflows: pass the repository owner as `DEVELOPER` for the mention, and allow exactly
+   one extra command, adding the `needs-developer` label to the PR under review. **Built.**
+3. Loop parser and prompt: count `agent` and `developer` findings; target a PR only when it has
+   `agent` findings; never touch `developer` ones. **Built**, unit tested.
+4. `needs-developer` label created on GitHub.
+
+**Verify:** a trial PR with one mechanical problem and one that needs a decision: both marked
+correctly, the label added, one notification, and `npm run loop:next` proposing a fix pass that
+counts one agent finding and one developer finding.
 
 ## Order and stop points
 

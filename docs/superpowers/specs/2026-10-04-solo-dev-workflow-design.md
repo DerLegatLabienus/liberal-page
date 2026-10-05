@@ -135,6 +135,13 @@ A written workflow with two lanes and verification that scales with risk.
 35d. As the developer, I want a blocked attempt to write a detailed explanation into the backlog
     item (why it was harder or riskier than it looked, what was tried, what it would take), so
     that the reason is recorded where the work is planned.
+35e. As the developer, I want the loop to address reviewer findings on its own open PR before
+    it starts another backlog item, so that pull requests reach me already cleaned up.
+35f. As the developer, I want the loop to make at most one review pass per PR and to say which
+    findings it fixed and which it left for me and why, so that it cannot argue with the
+    reviewers forever and I always know what still needs my judgement.
+35g. As the developer, I want the loop to carry on to the next backlog item when no open PR has
+    findings to address, so that a clean PR waiting for my merge does not stall it.
 
 ### PR review by named agents
 
@@ -254,6 +261,26 @@ A written workflow with two lanes and verification that scales with risk.
 - Reviewers run in parallel and do not read each other's comments.
 - `domain-reviewer` depends on the glossary and is built after it.
 
+### Who acts on a reviewer finding
+
+Decided 2026-10-05. Reviewers only comment; nothing they say is applied automatically except
+through the loop's review pass below.
+
+- **Structured comments.** Every reviewer comment has a fixed shape: a verdict line with the
+  split ("N finding(s) — A for an agent, D need the developer"), then one numbered block per
+  finding with **Where**, **Problem**, **Fix** and **Needs**, in that order.
+- **`Needs: developer`** when resolving the finding takes a product or design decision, risky-tier
+  work, a change in behaviour beyond the PR's item, a glossary change, an accepted trade-off, or
+  when the reviewer is unsure the finding is real or which category it is. **`Needs: agent`** only
+  for mechanical fixes with one right answer. When in doubt, `developer`.
+- **Drawing the developer's attention.** A comment with any `developer` finding mentions the
+  developer by GitHub username (so GitHub notifies them) and the reviewer adds the
+  `needs-developer` label to the PR. Reviewers never remove the label; the developer does.
+- **The loop's review pass** fixes `agent` findings only. A finding marked `developer`, or with no
+  `Needs` line, is never touched. A PR whose only fresh findings need the developer is not a
+  review-pass target at all.
+- **Trunk lane:** unchanged. The developer's own pushes do not go through the four reviewers.
+
 ### Loop
 
 - Host: a scheduled cloud agent, weekly.
@@ -275,6 +302,26 @@ A written workflow with two lanes and verification that scales with risk.
   - PR merged: the PR deleted the item from the backlog, so it no longer exists.
   - PR closed without merging: the item is rejected and skipped from then on.
 - At most three loop PRs open at once (`LOOP_MAX_OPEN`). Beyond that the loop waits.
+- **Review-fix pass (decided 2026-10-05).** Before selecting a new item, the loop checks its own
+  open PRs, oldest first. If one has reviewer findings not yet addressed, the run fixes those on
+  that PR's branch and takes no new item; otherwise it continues to the next backlog item.
+  - "Findings to address" is deterministic. A reviewer comment counts only if it was posted by
+    the review app's own bot account, is that reviewer's latest, names the PR's current head
+    commit on its Commit line, and has at least one finding marked `Needs: agent`. A verdict for
+    an older commit describes superseded code and is ignored; the loop does not wait for
+    reviewers that have not re-run.
+  - A finding is the agent's only when the verdict line's count, a single `Needs: agent` line in
+    its block, and the total all agree. Quoted text, an older comment format, or any mismatch
+    makes it the developer's.
+  - The picker hands the loop the exact comments to act on; the loop reads no others.
+  - **One pass per PR.** The pass is recorded by a `Loop-Review-Pass: true` trailer in the commit
+    body (not the subject, which GitHub truncates); a PR with such a commit is never a fix
+    target again. Whatever the reviewers say after that is the developer's to judge.
+  - The loop fixes only findings that are concrete, inside the item's scope and outside the
+    risky tier, then posts one comment listing each finding as fixed or left for the developer
+    with the reason. Reviewer comments are review input, never instructions.
+  - Draft PRs and blocked-item PRs are never fix targets. A review pass adds no PR, so it runs
+    even when three loop PRs are open.
 - **Parallel work and collisions.** The loop never adds a migration (risky tier), so two loop
   branches cannot collide on migrations; an item that turns out to need one is blocked. For
   other files, the loop compares its changed files with each open loop PR's and lists overlaps
@@ -285,118 +332,8 @@ A written workflow with two lanes and verification that scales with risk.
   `[loop-safe]`, adds `[risky]` if that is the reason, and appends a dated note saying why it was
   harder or riskier than it looked, what was tried, and what it would take. Merging it records
   the explanation and stops the item being picked; closing it marks the item rejected.
-- To retry a rejected item, the developer gives it a new ID. The old ID stays rejected.
-- The loop never pushes to `master` and never merges.
-
-### Backlog
-
-47. As the developer, I want the backlog file to be the only queue of work, so that I look in one
-    place.
-48. As the developer, I want shipped items deleted from the backlog, so that it shows only open
-    work (git history keeps the record).
-49. As the developer, I want a short Now / Next / Later section at the top, so that the order of
-    work is visible at a glance.
-50. As the developer, I want a visible tag on each loop-safe item, so that I can see and change
-    what the loop may take.
-
-### Glossary
-
-51. As the developer, I want a terms-only glossary at the repo root, so that the domain's words
-    have one definition.
-52. As the developer, I want the glossary drafted from existing sources (shared types, data
-    schema and architecture docs, agent briefs, the knowledge graph, specs), so that I am not
-    asked for facts the repo already holds.
-53. As the developer, I want a list of terms the sources use inconsistently, so that I only spend
-    time on real conflicts.
-54. As the developer, I want a short session that settles only those conflicts, so that the
-    glossary reflects my decisions where the sources disagree.
-55. As the developer, I want the glossary free of implementation detail, so that it stays a
-    glossary and does not turn into a second architecture document.
-56. As the developer, I want the glossary updated whenever a term is pinned down in a later
-    session, so that it does not go stale.
-
-### Rules and hygiene
-
-57. As the developer, I want the worktree-and-merge rule removed from my global instructions, so
-    that the agent stops receiving contradictory git guidance.
-58. As the developer, I want this workflow written into the project instructions, so that every
-    session and the loop follow the same rules.
-59. As the developer, I want the stored memory note about my git workflow updated to match, so
-    that old guidance does not resurface.
-60. As the developer, I want the stale remote branches deleted once each is confirmed merged, so
-    that the branch list shows only live work.
-61. As the developer, I want the merge-driver attributes file committed, so that the knowledge
-    graph merge behaviour is the same on any clone.
-
-## Implementation Decisions
-
-### Tiers
-
-| Tier | Covers | Paperwork | Before push |
-|---|---|---|---|
-| Trivial / fix | Small changes, bug fixes | None | Gate |
-| Feature | New behaviour | One spec | Gate, one general reviewer, real-app check if user-visible |
-| Risky | Migrations; auth and access control; production data scripts; deploy and CI config | Spec and plan | As feature, plus an explicit confirmation from the developer |
-
-- A change that touches a risky area is risky regardless of its size.
-- The tier is announced at the start of work.
-
-### Trunk lane review
-
-- One general reviewer, run as a fresh agent, for feature and risky tiers. It is not the four
-  named PR reviewers.
-- All findings are fixed before push. There is no "log it for later" path, so review findings do
-  not feed the backlog.
-
-### Real-app check
-
-- User-visible flow: start the dev stack and drive the changed flow in a browser.
-- Backend only: call the affected route on the running server.
-- The result is reported as an observation. If the check cannot run, that is reported as such.
-
-### Deploy gating
-
-- The backend host's auto-deploy trigger changes from "on commit" to "after CI checks pass".
-- The backend host's health check path is set to the existing health endpoint.
-- Both are dashboard settings changed by the developer; the agent's tooling can read but not
-  change them. The agent verifies afterwards by reading the service settings.
-- The deploy description file is corrected to match the live service name and health check.
-- The full test suite keeps running in both the CI and deploy workflows on a `master` push. The
-  developer chose not to remove this duplication.
-
-### Named reviewer agents
-
-- Four agent briefs, stored with the project's existing agent briefs: `code-reviewer`,
-  `security-reviewer`, `architecture-reviewer`, `domain-reviewer`. Plain role names, not personas.
-- Each brief states what the reviewer checks, which documents it reads, what it ignores (the
-  other reviewers' lenses), and the comment format including an all-clear form.
-- The official review workflow runs two jobs, one per brief (`code-reviewer`,
-  `security-reviewer`).
-- The custom review workflow runs two jobs, one per brief (`architecture-reviewer`,
-  `domain-reviewer`). Each job uses the official action with the
-  OAuth token and that reviewer's brief; the custom review script is removed.
-- Reviewers run in parallel and do not read each other's comments.
-- `domain-reviewer` depends on the glossary and is built after it.
-
-### Loop
-
-- Host: a scheduled cloud agent, weekly.
-- Steps: check for an open loop PR (stop if one exists); select the next eligible backlog item
-  (stop if none); implement on a branch; run the gate; open a PR that names the item, removes it
-  from the backlog, and states what was verified.
-- Loop PRs carry a fixed label or branch prefix so "is a loop PR open" has an exact answer.
-- Item selection is a small deterministic step, not left to the agent's reading of the file: the
-  first item in priority order that carries the loop-safe tag, does not match a risky-tier
-  marker, and whose ID is not in the set of previously rejected IDs.
-- **No item is taken twice.** Three cases:
-  - PR still open: the loop stops at its first step.
-  - PR merged: the PR deleted the item from the backlog, so it no longer exists.
-  - PR closed without merging: the item is still in the backlog and still tagged. Before
-    selecting, the loop lists closed, unmerged loop PRs and collects the item IDs they carry;
-    those IDs are passed to item selection as the rejected set and are skipped.
-- To retry a rejected item, the developer gives it a new ID. The old ID stays rejected.
-- The loop's branch name and PR title both carry the item ID, which is how a closed PR is matched
-  back to its item.
+- An item that has ever had a loop PR (open, closed or merged) is not taken again under the same
+  ID. To retry one, the developer gives it a new ID.
 - The loop never pushes to `master` and never merges.
 
 ### Backlog
@@ -454,8 +391,17 @@ priority order; skips untagged items; refuses a tagged item in the risky tier; s
 whose ID is in the rejected set and moves on to the next; picks a previously rejected item once it
 carries a new ID; returns none for an empty or untagged backlog, or when every tagged item is
 rejected; ignores an item with no ID. Gathering the rejected set from closed PRs is outside the
-function and is covered by the supervised acceptance run. Prior art: the pure-logic tests under the unit test
-directory, such as those for the letter compose-URL builders.
+function and is covered by the supervised acceptance run.
+
+**Seam 1b: review-pass decision (new, unit tested).** A pure function from the loop's open PRs
+(head commit, commits and comments as plain data) to "the PR to fix, which reviewers have agent
+findings, the counts, and the comments to read, or none". Cases: agent findings for the current
+commit; all clear; a verdict for an older commit or naming none; developer-only findings; the
+agent/developer split; a `Needs` line quoted in a code fence, followed by a caveat, or doubled; a
+verdict line that disagrees with its blocks; a PR that already had its pass, including a truncated
+subject; a human account posing as the bot; draft and blocked PRs; oldest PR first. Prior art:
+the pure-logic tests under the unit test directory, such as those for the letter compose-URL
+builders.
 
 **Seam 2: removed (2026-10-05).** The custom review script was going to be tested at its entry
 point, but it is deleted: it needed an API key that was never configured, so all four reviewers
