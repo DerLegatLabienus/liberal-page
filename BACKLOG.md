@@ -443,7 +443,7 @@ a 24h-TTL background refresh, but the first request after expiry eats the latenc
 the rebuild into the poller (background), or a bulk image source (e.g.
 `Faction/GetFactionDetails` returns MKs with `ImagePath` in far fewer calls).
 
-## LibPage-009 — `AuthControl` still hardcodes `blue-600` instead of the `primary` token
+## LibPage-009 — `AuthControl` still hardcodes `blue-600` instead of the `primary` token [loop-safe]
 
 Follow-up from the 2026-07-19 theme-token fix. `src/components/layout/AuthControl.tsx` hardcodes
 `bg-blue-600` / `hover:bg-blue-700` as a workaround from when the tokens rendered transparent.
