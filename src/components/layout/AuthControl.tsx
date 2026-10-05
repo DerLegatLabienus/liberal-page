@@ -144,12 +144,10 @@ export default function AuthControl() {
                     aria-label={t('auth.email_placeholder')}
                     className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                   />
-                  {/* Explicit blue-600 (== the brand --primary oklch) because the project's
-                      bg-primary token resolves transparent under hsl(var(--primary)). */}
                   <button
                     type="submit"
                     disabled={!magicEmail.trim() || magicSending}
-                    className="h-11 rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-40"
+                    className="h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:opacity-40"
                   >
                     {t('auth.magic_link_button')}
                   </button>

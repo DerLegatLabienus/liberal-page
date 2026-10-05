@@ -48,6 +48,16 @@ describe('AuthControl sign-in toasts', () => {
     return screen.findByText('google-signin')
   }
 
+  // Design system: primary actions use the brand token, never a hardcoded palette colour.
+  it('styles the email-link submit button with the primary token', async () => {
+    renderControl()
+    await openLoginModal()
+    const submit = screen.getByRole('button', { name: /magic_link_button|קישור|email link/i })
+    expect(submit.className).toMatch(/\bbg-primary\b/)
+    expect(submit.className).toMatch(/\btext-primary-foreground\b/)
+    expect(submit.className).not.toMatch(/blue-\d/)
+  })
+
   it('shows an error toast when sign-in is rejected (uninvited 403)', async () => {
     vi.mocked(api.auth.google).mockRejectedValue(Object.assign(new Error('not invited'), { status: 403 }))
     renderControl()

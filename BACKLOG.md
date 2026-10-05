@@ -33,7 +33,6 @@ keeps the record), not archived here.
 
 - **LibPage-007** — Code review findings — rolling
 - **LibPage-008** — MK list refresh blocks the first request after cache expiry
-- **LibPage-009** — `AuthControl` still hardcodes `blue-600` instead of the `primary` token
 - **LibPage-010** — Split the `admin` role into granular capabilities
 - **LibPage-011** — User Accounts & Alerts
 - **LibPage-012** — Live Parliamentary Content Translation
@@ -442,13 +441,6 @@ header fetch per MK (~132)**, so a stale `GET /api/mks/list` blocks ~85s while i
 a 24h-TTL background refresh, but the first request after expiry eats the latency. Consider moving
 the rebuild into the poller (background), or a bulk image source (e.g.
 `Faction/GetFactionDetails` returns MKs with `ImagePath` in far fewer calls).
-
-## LibPage-009 — `AuthControl` still hardcodes `blue-600` instead of the `primary` token [loop-safe]
-
-Follow-up from the 2026-07-19 theme-token fix. `src/components/layout/AuthControl.tsx` hardcodes
-`bg-blue-600` / `hover:bg-blue-700` as a workaround from when the tokens rendered transparent.
-The tokens work now, so it can go back to `bg-primary` per `docs/design-system.md`. Still present
-as of 2026-10-04.
 
 ## LibPage-010 — Split the `admin` role into granular capabilities
 
