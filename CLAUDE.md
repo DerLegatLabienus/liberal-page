@@ -55,7 +55,7 @@ npm run dev              # both servers concurrently (Vite + tsx watch)
 npm run dev:frontend     # Vite only on :5173
 npm run dev:server       # Express only on :3001
 npm run lint             # ESLint 9
-npx tsc --noEmit         # type check (both app and server tsconfigs)
+npx tsc --noEmit         # NOTE: checks nothing today — root tsconfig lists no files (LibPage-018); `npm run build` type-checks src/ only
 npm test                 # Vitest run (no servers needed)
 npm run smoke            # boots the real server against DATABASE_URL, checks a few routes
 npm run smoke:browser    # Playwright golden-path check — needs `npm run dev` already running
