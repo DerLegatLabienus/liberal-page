@@ -31,3 +31,5 @@ src/data/knesset-committees-cache.json
 # graphify knowledge graph output
 graphify-out/
 review-comment.md
+pr-body.md
+comment.md
