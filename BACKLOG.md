@@ -4,12 +4,17 @@ The only queue of work for this repo. Open items only — a shipped item is **de
 keeps the record), not archived here.
 
 - **IDs** (`LibPage-NNN`) are permanent: never reused, and unchanged when an item is retitled or
-  reordered. **Next free ID: LibPage-018** — bump this line whenever an item is added, because
+  reordered. **Next free ID: LibPage-020** — bump this line whenever an item is added, because
   deleting a shipped item removes its ID from the file.
 - **Order is priority:** items appear below in the same order as the lists here.
 - **`[loop-safe]`** in a heading marks an item the weekly loop may take. The loop takes the first
-  tagged item in this order, and never one in the risky tier (migrations, auth and access control,
-  prod data scripts, deploy and CI config). Nothing is tagged yet.
+  tagged item in this order that has no open or rejected loop PR, and never one in the risky tier
+  (migrations, auth and access control, prod data scripts, deploy and CI config).
+- **`[risky]`** in a heading or body marks an item in the risky tier. Tag risky items explicitly:
+  the loop refuses only items tagged `[risky]` or whose text says "risky tier" — it does not guess
+  risk from the wording.
+- **"Loop attempt … blocked"** notes inside an item were written by the loop when it could not
+  finish: they say why the item was harder or riskier than it looked.
 
 ## Now
 
@@ -18,6 +23,7 @@ keeps the record), not archived here.
 ## Next
 
 - **LibPage-002** — Design — Secure the LLM call surface (abuse, injection, and spend)
+- **LibPage-018** — The gate does not type-check `server/` or `scripts/`
 - **LibPage-003** — Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
 - **LibPage-004** — Storage reclaimer — audit and extend for post-2026-06 features
 - **LibPage-005** — Knesset Bills Overview — Phase 2 (Recent v2 + extra trending algorithms)
@@ -36,6 +42,7 @@ keeps the record), not archived here.
 - **LibPage-015** — Entity Dedup on Tracking Add
 - **LibPage-016** — Alliance Guilds & Granular User Access
 - **LibPage-017** — Site-Wide Product Analytics
+- **LibPage-019** — Move the frontend to a host with per-PR previews
 
 ---
 
@@ -44,8 +51,8 @@ keeps the record), not archived here.
 **Status:** in progress, designed 2026-10-04. Spec:
 `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Risky tier (deploy + CI config).
 
-- [ ] 1. Render: deploy only after CI checks pass, health check path `/api/health`, PR previews
-      off — **dashboard changes, developer does them**
+- [ ] 1. Render: deploy only after CI checks pass (done 2026-10-05), PR previews off (done
+      2026-10-05), health check path `/api/health` (**still to do, developer, dashboard**)
 - [x] 2. Written rules + hygiene (2026-10-04)
 - [x] 3. Prune this file, IDs, Now / Next / Later (2026-10-04)
 - [ ] 4. Wire the four reviewer briefs into the two PR review workflows (briefs written 2026-10-04)
@@ -120,6 +127,25 @@ paid add-ons (cf. the Resend webhook revert, §3), and "fails closed or no-ops o
 
 Brainstorm → spec at `docs/superpowers/specs/YYYY-MM-DD-llm-call-security-design.md`. Decide the
 spend-cap mechanism first — it is the only gap with an unbounded downside.
+
+## LibPage-018 — The gate does not type-check `server/` or `scripts/` [risky]
+
+Found 2026-10-05 while reviewing the loop scripts. `npx tsc --noEmit` at the repo root reads
+`tsconfig.json`, which has `"files": []` and only *references* the app and node configs, so
+without `-b` it checks nothing and always exits 0. `npm run build` runs `tsc -b`, which covers
+`src/` and `vite.config.ts` only. `tsconfig.server.json` is in neither path, so **server code is
+never type-checked** by the local gate or by CI (`test.yml` runs the same command), and `scripts/`
+is in no config at all. `CLAUDE.md` says the command checks "both app and server tsconfigs"; it
+does not.
+
+Running `npx tsc --noEmit -p tsconfig.server.json` today reports real errors in `server/`
+(for example `import.meta` under `module: commonjs` in the DB client, a nullable `status` passed
+to a non-null column in the bills repository, a missing declaration for `bidi-js`).
+
+**Fix:** make the server config pass (module setting, the genuine type errors), add `scripts/`
+to it, and change the gate and `test.yml` to check all configs (`tsc -b` with the server config
+referenced, or an explicit second `-p`). Then correct the `CLAUDE.md` wording. Risky tier: it
+changes CI config, and the fixes touch the database client.
 
 ## LibPage-003 — Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
 
@@ -564,3 +590,28 @@ genuinely needs per-feature engagement data. Considerations to brainstorm at tha
 
 **Notes:** Treat as a someday/maybe until there's a concrete need to measure specific
 features. Not a near-term item.
+
+## LibPage-019 — Move the frontend to a host with per-PR previews [risky]
+
+Added 2026-10-05. Today the frontend is one GitHub Pages site built from `master`, so a pull
+request (in particular one from the weekly loop) can only be judged from its diff. A static host
+that builds a preview per pull request (Cloudflare Pages, Netlify, Vercel, Render static sites)
+would give each PR a URL to look at. Static files carry no secrets, so this is the safe half of
+"an environment per PR". Cloudflare Pages is the natural candidate since R2 and Turnstile already
+live there; free-tier terms were not checked.
+
+**Limits to design around:**
+- A preview frontend still calls the live backend (backend previews are off, see
+  `docs/research/2026-10-05-render-pr-previews-with-neon-branches.md`). The backend's allowed
+  origin would have to accept preview URLs.
+- Google sign-in only works from registered origins, so signed-in flows cannot be tried on a
+  preview.
+- Previews show live data.
+
+**Migration cost:** the site address changes and the `/liberal-page/` base path goes away; the
+backend's `CORS_ORIGIN` and `PUBLIC_SITE_URL`, the Google OAuth origins, and `deploy.yml` all
+change; existing share pages and sent emails link to the old address, so it must keep working or
+redirect.
+
+**When:** after the weekly loop has produced a few PRs and seeing them rendered is actually
+missed. Risky tier (deploy config): spec, plan, confirmed push.

@@ -12,10 +12,10 @@ The three reviewer briefs for step 4 are committed; wiring them into CI is cover
 
 | Setting | Now | Target | Who |
 |---|---|---|---|
-| Render auto-deploy trigger | on commit | after CI checks pass | developer, dashboard |
+| Render auto-deploy trigger | after CI checks pass (done 2026-10-05) | after CI checks pass | done |
 | Render health check path | empty | `/api/health` | developer, dashboard |
-| Render PR previews | automatic, copy prod env | off | developer, dashboard |
-| `ANTHROPIC_API_KEY` repo secret | not set | see decision D1 | developer |
+| Render PR previews | off (done 2026-10-05) | off | done |
+| `ANTHROPIC_API_KEY` repo secret | not set | not needed (D1) | — |
 | `CLAUDE_CODE_OAUTH_TOKEN` repo secret | set | unchanged | — |
 
 Render copies **all** of the base service's environment variables into a preview when it is
@@ -23,12 +23,12 @@ created (Render docs, "Working with PR previews"), and sets `IS_PULL_REQUEST=tru
 no per-preview override before first boot for a service not managed by a Blueprint. So today a
 preview boots against the prod database, runs the PR's migrations there, and starts a second poller.
 
-## Open decisions
+## Decisions
 
-- **D1 — how `architecture-reviewer` and `domain-reviewer` run.** The custom review workflow
-  needs `ANTHROPIC_API_KEY`, which is not set, so it currently skips. Either the developer adds
-  the secret (API-billed), or the custom workflow is rewritten to use the official action with the
-  existing OAuth token and the Python script is removed.
+- **D1 — how `architecture-reviewer` and `domain-reviewer` run: decided 2026-10-05, OAuth.** The
+  custom review workflow needed `ANTHROPIC_API_KEY`, which was never set, so it skipped every PR.
+  It now uses the official action with the existing `CLAUDE_CODE_OAUTH_TOKEN`, like the other two
+  reviewers. The Python review script is deleted; no new secret is needed.
 
 ## A. PR previews off (developer, dashboard)
 
@@ -49,19 +49,23 @@ trigger after checks, health check path set).
 
 ## C. Reviewers in CI (step 4)
 
-1. Official review workflow: two jobs, `code-reviewer` and `security-reviewer`. Each passes its
-   brief from `.claude/agents/` as the prompt and posts one comment signed with its name.
-2. Custom review workflow: two jobs, `architecture-reviewer` and, once the glossary exists,
-   `domain-reviewer`. Shape depends on D1:
-   - **API key:** the script takes a reviewer name, loads that brief and the documents it lists,
-     signs the comment. Unit tested with the model call mocked (spec, Seam 2): each reviewer loads
-     its own brief; unknown name fails loudly; empty diff posts an all-clear without a model call.
-   - **OAuth:** the script is deleted and the jobs use the official action with the brief as the
-     prompt. Seam 2 disappears; the trial PR is the only check.
-3. Jobs are independent (no `needs` between them) and none reads another's comment.
-4. Every reviewer job stays advisory: it never fails the PR check.
+1. Official review workflow (`claude-code-review.yml`): two jobs, `code-reviewer` and
+   `security-reviewer`.
+2. Custom review workflow (`pr-review.yml`): two jobs, `architecture-reviewer` and
+   `domain-reviewer`.
+3. Every job runs the official action with the OAuth token. Its prompt points the reviewer at its
+   brief in `.claude/agents/`, has it review the PR's diff against `origin/master`, and has it post
+   exactly one signed comment with `gh pr comment`, including an all-clear when it finds nothing.
+4. Tools are limited to reading the repo and the PR and posting a comment. Job permissions:
+   `contents: read`, `pull-requests: write`, `id-token: write`.
+5. Jobs are independent (no `needs` between them) and none reads another's comment.
+6. Every reviewer job stays advisory (`continue-on-error`): it never fails the PR check. A PR from
+   a fork receives no secrets, so the jobs skip.
+7. Known behaviour, accepted: each push to an open PR re-runs all four reviewers, so a PR that is
+   updated gets a fresh set of four comments per push.
 
-**Verify:** one trial PR shows three signed comments from three separate jobs (four after step 5).
+**Verify:** one trial PR shows four signed comments from four separate jobs. There is no unit
+test: with the script gone, the trial PR is the only check.
 
 ## D. Glossary and `domain-reviewer` (step 5)
 
@@ -71,18 +75,29 @@ conflicting terms with the developer, then write the `domain-reviewer` brief and
 ## E. The loop (step 6)
 
 1. Item selection as a pure, unit-tested function (spec, Seam 1): backlog text and a set of
-   rejected IDs in; the first `[loop-safe]`, non-risky, non-rejected item out, or none.
-2. A small command wrapping it that also asks GitHub for an open loop PR (stop if any) and for
-   closed, unmerged loop PRs (their IDs form the rejected set).
-3. Loop PR convention: branch `loop/LibPage-NNN-short-slug`, title starting `[LibPage-NNN]`,
-   label `loop`.
-4. The loop's instructions as a checked-in prompt: run the command; stop if it returns nothing;
-   implement; run the gate; open the PR, deleting the item from the backlog in the same PR.
-5. Scheduled cloud agent, weekly. Created only after the developer confirms the schedule and
+   excluded IDs in; the first `[loop-safe]`, non-risky, non-excluded item out, or none. **Built.**
+2. A small command wrapping it (`npm run loop:next`) that asks GitHub for open loop PRs (their
+   items are in flight; stop only when three are open) and for closed, unmerged ones (rejected).
+   **Built.**
+3. Loop PR convention, ordinary trunk-based naming: branch `<type>/LibPage-NNN-short-slug` with a
+   conventional-commit type, PR title a conventional commit subject ending `(LibPage-NNN)`,
+   label `loop`. A PR is recognised by the branch shape or the label.
+4. The loop's instructions as a checked-in prompt (`scripts/loop/PROMPT.md`): pick; branch;
+   implement; list overlaps with open loop PRs; gate; remove the item; open the PR. **Built.**
+5. A run that cannot finish its item opens a docs-only PR that writes a detailed explanation
+   into the backlog item and removes its `[loop-safe]` tag (adding `[risky]` when that is why).
+6. **Before the first supervised run:** create the `loop` label on GitHub, and find out which
+   GitHub identity the cloud agent pushes and opens PRs as. The review action refuses workflows
+   started by a non-human actor unless that login is listed in its `allowed_bots` input; because
+   the reviewer steps are advisory, that refusal would show as a green check with no comments. If
+   the loop acts as a bot or app, add `allowed_bots: <login>` to all four reviewer jobs. Also
+   confirm that PRs opened by that identity trigger workflows at all (events made with the
+   repository `GITHUB_TOKEN` do not). A human-opened trial PR reveals neither.
+7. Scheduled cloud agent, weekly. Created only after the developer confirms the schedule and
    that at least one item is tagged `[loop-safe]`.
 
-**Verify:** the three supervised runs in the spec (opens a PR; does nothing while it is open;
-skips the item after the PR is closed unmerged).
+**Verify:** the three supervised runs in the spec (opens a PR; with that PR open, opens a second
+for the next item; does not retry an item whose PR was closed unmerged).
 
 ## Order and stop points
 

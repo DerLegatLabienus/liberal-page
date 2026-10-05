@@ -101,10 +101,14 @@ A written workflow with two lanes and verification that scales with risk.
 24. As the developer, I want unattended work to only ever open pull requests, so that no agent I
     am not watching can push to a branch that deploys.
 25. As the developer, I want the loop to run weekly, so that I build trust in it slowly.
-26. As the developer, I want at most one loop PR open at a time, so that my review queue never
-    exceeds one and loop PRs never conflict with each other.
-27. As the developer, I want the loop to do nothing when its previous PR is still open, so that
-    work does not pile up while I am away.
+26. As the developer, I want the loop to move on to the next tagged item when an earlier loop PR
+    is still open, each on its own branch, so that one unreviewed PR does not stall it.
+27. As the developer, I want the loop to stop opening new PRs once three are open, so that a
+    long absence cannot leave a pile of pull requests that conflict with each other.
+27a. As the developer, I want each loop PR to list the files it shares with other open loop PRs,
+    so that I can choose a merge order.
+27b. As the developer, I want the loop never to add a database migration, and to treat an item
+    that needs one as blocked, so that two branches can never each add a migration.
 28. As the developer, I want the loop to pick the highest-priority backlog item tagged
     loop-safe, so that I control what it works on by tagging.
 29. As the developer, I want the loop to refuse any item that falls in the risky tier even if it
@@ -125,8 +129,12 @@ A written workflow with two lanes and verification that scales with risk.
     merging, so that a rejected attempt is not repeated every week.
 35b. As the developer, I want to make a rejected item eligible again by giving it a new ID, so
     that retrying is a deliberate act of mine.
-35c. As the developer, I want each loop PR's branch and title to carry the backlog item's ID, so
-    that a PR can always be traced to its item.
+35c. As the developer, I want loop branches and PR titles to follow ordinary trunk-based and
+    conventional-commit naming and carry the backlog item's ID, so that the loop's work looks
+    like any other change and a PR can always be traced to its item.
+35d. As the developer, I want a blocked attempt to write a detailed explanation into the backlog
+    item (why it was harder or riskier than it looked, what was tried, what it would take), so
+    that the reason is recorded where the work is planned.
 
 ### PR review by named agents
 
@@ -241,8 +249,132 @@ A written workflow with two lanes and verification that scales with risk.
 - The official review workflow runs two jobs, one per brief (`code-reviewer`,
   `security-reviewer`).
 - The custom review workflow runs two jobs, one per brief (`architecture-reviewer`,
-  `domain-reviewer`). The custom review script is changed to take a reviewer name, load that
-  brief plus the documents it lists, and sign its comment with the reviewer's name.
+  `domain-reviewer`). Each job uses the official action with the
+  OAuth token and that reviewer's brief; the custom review script is removed.
+- Reviewers run in parallel and do not read each other's comments.
+- `domain-reviewer` depends on the glossary and is built after it.
+
+### Loop
+
+- Host: a scheduled cloud agent, weekly.
+- Steps: select the next eligible backlog item (stop if none, or if three loop PRs are already
+  open); implement on a branch; check for overlap with open loop PRs; run the gate; open a PR
+  that names the item, removes it from the backlog, and states what was verified.
+- **Naming is ordinary trunk-based development**, not a special "loop" namespace: a short-lived
+  branch off `master` named `<type>/LibPage-NNN-short-slug`, where `<type>` is the
+  conventional-commit type (`feat`, `fix`, `docs`, …), and a PR title that is a conventional
+  commit subject ending with the ID, e.g. `fix(auth): use the primary token (LibPage-009)`.
+- A loop PR is recognised by that branch shape (developer sessions never open PRs) or by the
+  `loop` label. Both the branch name and the title carry the item ID.
+- Item selection is a small deterministic step, not left to the agent's reading of the file: the
+  first item in priority order that carries the loop-safe tag, does not match a risky-tier
+  marker, and whose ID is not excluded.
+- **Excluded IDs, so no item is taken twice:**
+  - PR still open: the item is in flight. The loop skips it and takes the next one on a separate
+    branch (decided 2026-10-05; originally the loop stopped while any PR was open).
+  - PR merged: the PR deleted the item from the backlog, so it no longer exists.
+  - PR closed without merging: the item is rejected and skipped from then on.
+- At most three loop PRs open at once (`LOOP_MAX_OPEN`). Beyond that the loop waits.
+- **Parallel work and collisions.** The loop never adds a migration (risky tier), so two loop
+  branches cannot collide on migrations; an item that turns out to need one is blocked. For
+  other files, the loop compares its changed files with each open loop PR's and lists overlaps
+  in its PR body. Conflicts that remain are resolved by the developer at merge time. Every loop
+  PR edits `BACKLOG.md`, so small conflicts there are expected.
+- **Blocked attempts are explained in the backlog.** When an item needs risky-tier work or the
+  gate cannot be made green, the loop opens a docs-only PR that edits only that item: removes
+  `[loop-safe]`, adds `[risky]` if that is the reason, and appends a dated note saying why it was
+  harder or riskier than it looked, what was tried, and what it would take. Merging it records
+  the explanation and stops the item being picked; closing it marks the item rejected.
+- To retry a rejected item, the developer gives it a new ID. The old ID stays rejected.
+- The loop never pushes to `master` and never merges.
+
+### Backlog
+
+47. As the developer, I want the backlog file to be the only queue of work, so that I look in one
+    place.
+48. As the developer, I want shipped items deleted from the backlog, so that it shows only open
+    work (git history keeps the record).
+49. As the developer, I want a short Now / Next / Later section at the top, so that the order of
+    work is visible at a glance.
+50. As the developer, I want a visible tag on each loop-safe item, so that I can see and change
+    what the loop may take.
+
+### Glossary
+
+51. As the developer, I want a terms-only glossary at the repo root, so that the domain's words
+    have one definition.
+52. As the developer, I want the glossary drafted from existing sources (shared types, data
+    schema and architecture docs, agent briefs, the knowledge graph, specs), so that I am not
+    asked for facts the repo already holds.
+53. As the developer, I want a list of terms the sources use inconsistently, so that I only spend
+    time on real conflicts.
+54. As the developer, I want a short session that settles only those conflicts, so that the
+    glossary reflects my decisions where the sources disagree.
+55. As the developer, I want the glossary free of implementation detail, so that it stays a
+    glossary and does not turn into a second architecture document.
+56. As the developer, I want the glossary updated whenever a term is pinned down in a later
+    session, so that it does not go stale.
+
+### Rules and hygiene
+
+57. As the developer, I want the worktree-and-merge rule removed from my global instructions, so
+    that the agent stops receiving contradictory git guidance.
+58. As the developer, I want this workflow written into the project instructions, so that every
+    session and the loop follow the same rules.
+59. As the developer, I want the stored memory note about my git workflow updated to match, so
+    that old guidance does not resurface.
+60. As the developer, I want the stale remote branches deleted once each is confirmed merged, so
+    that the branch list shows only live work.
+61. As the developer, I want the merge-driver attributes file committed, so that the knowledge
+    graph merge behaviour is the same on any clone.
+
+## Implementation Decisions
+
+### Tiers
+
+| Tier | Covers | Paperwork | Before push |
+|---|---|---|---|
+| Trivial / fix | Small changes, bug fixes | None | Gate |
+| Feature | New behaviour | One spec | Gate, one general reviewer, real-app check if user-visible |
+| Risky | Migrations; auth and access control; production data scripts; deploy and CI config | Spec and plan | As feature, plus an explicit confirmation from the developer |
+
+- A change that touches a risky area is risky regardless of its size.
+- The tier is announced at the start of work.
+
+### Trunk lane review
+
+- One general reviewer, run as a fresh agent, for feature and risky tiers. It is not the four
+  named PR reviewers.
+- All findings are fixed before push. There is no "log it for later" path, so review findings do
+  not feed the backlog.
+
+### Real-app check
+
+- User-visible flow: start the dev stack and drive the changed flow in a browser.
+- Backend only: call the affected route on the running server.
+- The result is reported as an observation. If the check cannot run, that is reported as such.
+
+### Deploy gating
+
+- The backend host's auto-deploy trigger changes from "on commit" to "after CI checks pass".
+- The backend host's health check path is set to the existing health endpoint.
+- Both are dashboard settings changed by the developer; the agent's tooling can read but not
+  change them. The agent verifies afterwards by reading the service settings.
+- The deploy description file is corrected to match the live service name and health check.
+- The full test suite keeps running in both the CI and deploy workflows on a `master` push. The
+  developer chose not to remove this duplication.
+
+### Named reviewer agents
+
+- Four agent briefs, stored with the project's existing agent briefs: `code-reviewer`,
+  `security-reviewer`, `architecture-reviewer`, `domain-reviewer`. Plain role names, not personas.
+- Each brief states what the reviewer checks, which documents it reads, what it ignores (the
+  other reviewers' lenses), and the comment format including an all-clear form.
+- The official review workflow runs two jobs, one per brief (`code-reviewer`,
+  `security-reviewer`).
+- The custom review workflow runs two jobs, one per brief (`architecture-reviewer`,
+  `domain-reviewer`). Each job uses the official action with the
+  OAuth token and that reviewer's brief; the custom review script is removed.
 - Reviewers run in parallel and do not read each other's comments.
 - `domain-reviewer` depends on the glossary and is built after it.
 
@@ -314,10 +446,10 @@ A good test here checks behaviour a person would notice — which item the loop 
 comment a reviewer would post — and not how a prompt is worded or how a workflow file is laid out.
 
 Most of this feature is configuration and written rules, which are verified by acceptance checks
-rather than unit tests. Two pieces are real logic and get tests.
+rather than unit tests. One piece is real logic and gets tests.
 
 **Seam 1: loop item selection (new, unit tested).** A pure function from backlog text and a set of
-rejected item IDs to "the next eligible item, or none". Cases: picks the first tagged item in
+excluded item IDs (rejected or in flight) to "the next eligible item, or none". Cases: picks the first tagged item in
 priority order; skips untagged items; refuses a tagged item in the risky tier; skips a tagged item
 whose ID is in the rejected set and moves on to the next; picks a previously rejected item once it
 carries a new ID; returns none for an empty or untagged backlog, or when every tagged item is
@@ -325,13 +457,10 @@ rejected; ignores an item with no ID. Gathering the rejected set from closed PRs
 function and is covered by the supervised acceptance run. Prior art: the pure-logic tests under the unit test
 directory, such as those for the letter compose-URL builders.
 
-**Seam 2: review request assembly in the custom review script (existing seam, unit tested).**
-Given a reviewer name and a diff, the script produces a request containing that reviewer's brief
-and listed documents, and a comment signed with that reviewer's name. Cases: each of the two
-reviewers loads its own brief; an unknown reviewer name fails loudly; an empty diff yields an
-all-clear without calling the model. The model call is the only thing mocked. Prior art: the
-server tests that mock only external I/O (fetch, email, Turnstile) and exercise everything else
-for real.
+**Seam 2: removed (2026-10-05).** The custom review script was going to be tested at its entry
+point, but it is deleted: it needed an API key that was never configured, so all four reviewers
+now run through the official action with the OAuth token. There is no project code left to unit
+test on the review path; the reviewers are verified by the trial PR in the acceptance checks.
 
 **Acceptance checks (manual, once, at rollout):**
 
@@ -340,15 +469,16 @@ for real.
   `master`.
 - Reviewers: open one trial PR and confirm four separately signed comments appear, from four
   separate jobs.
-- Loop: one supervised run that produces a PR for a tagged item; a second run that does nothing
-  because that PR is still open; then, after closing that PR unmerged, a third run that skips the
-  item and takes the next tagged one (or reports that none is left).
+- Loop: one supervised run that produces a PR for a tagged item; a second run that skips that
+  item (its PR is open) and opens a PR for the next tagged one on its own branch; then, after
+  closing the first PR unmerged, a third run that does not retry it.
 
 ## Out of Scope
 
 - Auto-merging any PR, including docs-only or test-only ones.
 - The loop proposing its own work or taking untagged items.
-- More than one loop PR at a time, or a cadence faster than weekly.
+- More than three loop PRs open at a time, or a cadence faster than weekly.
+- The loop adding database migrations, or resolving conflicts between its own PRs.
 - Using the four named reviewers in the trunk lane.
 - Removing the duplicated test run on `master` pushes.
 - Ignoring or deleting the untracked debug log and its symlink.

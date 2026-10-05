@@ -191,10 +191,11 @@ report a skipped check as passed.
 without asking**. Risky changes: confirm first.
 
 Pushing `master` **deploys**: GitHub Pages (frontend) via the CI-gated `deploy.yml`, and the Render
-backend. So "done" means committed, verified, and pushed. **As of 2026-10-04 Render still deploys
-on every commit, not after CI passes, and has no health check path** — switching both is a pending
-dashboard change (step 1 of the spec's rollout). Until it is done, a commit that fails CI still
-reaches the backend and runs its migrations on prod.
+backend. So "done" means committed, verified, and pushed. Render deploys **only after the
+commit's CI checks pass** (set 2026-10-05), so a commit that fails CI does not reach the backend or
+run its migrations. **PR previews are off on Render and must stay off** (set 2026-10-05): a preview
+copies every production secret and the production database connection. Still pending in the
+dashboard: the health check path (`/api/health`, currently empty).
 
 ## Infrastructure & Tooling Map
 
@@ -203,7 +204,7 @@ Don't rediscover this — it's fixed. Prod values (no secrets here; pull credent
 | Piece | Where | How to reach it |
 |---|---|---|
 | **Frontend (prod)** | GitHub Pages, repo `DerLegatLabienus/liberal-page`, base path `/liberal-page/` | Live: `https://derlegatlabienus.github.io/liberal-page/`. Deploys via GH Actions on push (`gh run list`/`gh run watch` to check CI). |
-| **Backend (prod)** | Render web service | Live: `https://liberal-page.onrender.com` (health: `/api/health`). Redeploys on push to `master`; **migrations auto-apply on boot**. |
+| **Backend (prod)** | Render web service | Live: `https://liberal-page.onrender.com` (health: `/api/health`). Redeploys on push to `master` once CI checks pass; **migrations auto-apply on boot**. |
 | **Database (prod)** | **Neon** (NOT Render Postgres — Render's PG list is empty) | Neon project **`Liberal-page`** = `empty-hill-56029538`, db `neondb`, org `Aviv` (`org-mute-cherry-43196213`), region `eu-central-1`, pg18. |
 
 **MCP servers wired in:**
