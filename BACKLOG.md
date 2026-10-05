@@ -22,7 +22,6 @@ keeps the record), not archived here.
 
 ## Next
 
-- **LibPage-020** — Reject an unknown channel kind when an admin saves a letter
 - **LibPage-021** — Sign-in dialog: replace the remaining hardcoded colours with tokens
 - **LibPage-002** — Design — Secure the LLM call surface (abuse, injection, and spend)
 - **LibPage-018** — The gate does not type-check `server/` or `scripts/`
@@ -61,22 +60,6 @@ keeps the record), not archived here.
 - [x] 5. `GLOSSARY.md` and the `domain-reviewer` brief (2026-10-04)
 - [ ] 6. Weekly scheduled loop: picker, review pass and instructions built and run supervised
       (PR #4 merged, PR #5 trial) on 2026-10-05; the weekly schedule itself is not created yet
-
-## LibPage-020 — Reject an unknown channel kind when an admin saves a letter [loop-safe]
-
-Split out of LibPage-006 on 2026-10-05 as a small, self-contained task.
-
-The admin letters create and update routes accept each channel's `kind` as a free string
-(`server/routes/admin-letters.ts`). A value other than `email`, `sms` or `whatsapp` is not
-rejected and falls through to the SMS/WhatsApp branch. The routes are admin-only, so this is
-harmless today, but a typo or a bad client stores a channel nothing can send.
-
-**Do:** validate `kind` against the three `ChannelKind` values at the API boundary of both
-routes and answer 400 with a clear message for anything else, the way `GET /api/letters/contacts`
-already does for its `channel` query parameter. Add route tests for create and update (valid
-kinds accepted, an unknown kind rejected, nothing written on rejection).
-
-**Out of scope:** no schema change, no change to who may call the routes.
 
 ## LibPage-021 — Sign-in dialog: replace the remaining hardcoded colours with tokens [loop-safe]
 

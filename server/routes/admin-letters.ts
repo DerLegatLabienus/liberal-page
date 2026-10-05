@@ -7,7 +7,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter, regenerateAllShares } from '../services/share-publisher'
 import { makeShareUrlResolver } from '../services/share-url'
-import type { LetterChannelInput } from '../../src/types'
+import type { ChannelKind, LetterChannelInput } from '../../src/types'
 
 const router = Router()
 const lettersRepo = new LettersRepository()
@@ -37,6 +37,21 @@ function findZeroRecipientChannel(channels: ChannelGuardInput[]): string | null 
 function publishGuard(status: string | undefined, channels: LetterChannelInput[] | undefined): string | null {
   if (status !== 'published' || !channels) return null
   return findZeroRecipientChannel(channels)
+}
+
+const VALID_CHANNEL_KINDS: readonly ChannelKind[] = ['email', 'sms', 'whatsapp']
+
+/** Every supplied channel must have a known `kind` — anything else would be stored and then fall
+ *  through to the SMS/WhatsApp branch, where nothing can send it. Returns an error string or null. */
+function findInvalidChannelKind(channels: LetterChannelInput[] | undefined): string | null {
+  if (!channels) return null
+  for (const ch of channels) {
+    const kind = (ch as { kind?: unknown } | null)?.kind
+    if (!VALID_CHANNEL_KINDS.includes(kind as ChannelKind)) {
+      return `Invalid channel kind "${String(kind)}": must be one of ${VALID_CHANNEL_KINDS.join(', ')}`
+    }
+  }
+  return null
 }
 
 router.use(requireAdmin)
@@ -72,6 +87,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'title is required' })
     }
     const { title, status, priority, issueTagIds, channels } = body
+    const kindError = findInvalidChannelKind(channels)
+    if (kindError) return res.status(400).json({ error: kindError })
     // publishGuard only validates recipients WITHIN a supplied channels array — it short-
     // circuits (no error) when `channels` is omitted entirely, which would otherwise let
     // `{status:'published'}` with no channels key create a published letter with zero
@@ -100,6 +117,8 @@ router.put('/:id', async (req, res) => {
       channels: LetterChannelInput[]
     }>
     const { channels, ...core } = body
+    const kindError = findInvalidChannelKind(channels)
+    if (kindError) return res.status(400).json({ error: kindError })
     let guardError = publishGuard(core.status, channels)
     // publishGuard short-circuits when `channels` is omitted — it only validates what's in
     // this request body. A PUT that sets status: 'published' without a channels key must
