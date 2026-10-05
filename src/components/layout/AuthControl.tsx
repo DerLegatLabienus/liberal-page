@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { XIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
@@ -144,13 +145,14 @@ export default function AuthControl() {
                     aria-label={t('auth.email_placeholder')}
                     className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                   />
-                  <button
+                  <Button
                     type="submit"
+                    size="lg"
                     disabled={!magicEmail.trim() || magicSending}
-                    className="h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:opacity-40"
+                    className="h-11"
                   >
                     {t('auth.magic_link_button')}
-                  </button>
+                  </Button>
                 </form>
               )}
 

@@ -48,13 +48,15 @@ describe('AuthControl sign-in toasts', () => {
     return screen.findByText('google-signin')
   }
 
-  // Design system: primary actions use the brand token, never a hardcoded palette colour.
-  it('styles the email-link submit button with the primary token', async () => {
+  // Design system: the shared Button is the only button, and a primary action takes its
+  // colour from the brand token, never a hardcoded palette colour.
+  it('renders the email-link submit as the shared primary Button', async () => {
     renderControl()
     await openLoginModal()
     const submit = screen.getByRole('button', { name: /magic_link_button|קישור|email link/i })
+    expect(submit).toHaveAttribute('data-slot', 'button')
+    expect(submit).toHaveAttribute('type', 'submit')
     expect(submit.className).toMatch(/\bbg-primary\b/)
-    expect(submit.className).toMatch(/\btext-primary-foreground\b/)
     expect(submit.className).not.toMatch(/blue-\d/)
   })
 
