@@ -160,8 +160,11 @@ rule for this repo** — there is no worktree or merge-at-session-end rule.
 branches, no PRs, no worktrees. Never run `superpowers:using-git-worktrees` or
 `superpowers:finishing-a-development-branch` here, even when another skill hands off to them.
 
-**PR lane — unattended work only** (the weekly loop; not built yet). It only ever opens a pull
-request and never pushes to `master` or merges. The developer merges by hand.
+**PR lane — unattended work only** (the weekly loop: `npm run loop:next` picks the work,
+`scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
+own PR branch, and never pushes to `master` or merges. The developer merges by hand. Four named
+reviewers (`.claude/agents/*-reviewer.md`) comment on every PR and mark each finding
+`Needs: agent` or `Needs: developer`.
 
 **Classify every change before starting, and say which tier it is:**
 
@@ -194,8 +197,8 @@ Pushing `master` **deploys**: GitHub Pages (frontend) via the CI-gated `deploy.y
 backend. So "done" means committed, verified, and pushed. Render deploys **only after the
 commit's CI checks pass** (set 2026-10-05), so a commit that fails CI does not reach the backend or
 run its migrations. **PR previews are off on Render and must stay off** (set 2026-10-05): a preview
-copies every production secret and the production database connection. Still pending in the
-dashboard: the health check path (`/api/health`, currently empty).
+copies every production secret and the production database connection. The health check path is
+`/api/health` (set 2026-10-05), so a build that does not answer never replaces the running one.
 
 ## Infrastructure & Tooling Map
 

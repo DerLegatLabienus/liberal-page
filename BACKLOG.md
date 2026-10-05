@@ -4,7 +4,7 @@ The only queue of work for this repo. Open items only — a shipped item is **de
 keeps the record), not archived here.
 
 - **IDs** (`LibPage-NNN`) are permanent: never reused, and unchanged when an item is retitled or
-  reordered. **Next free ID: LibPage-020** — bump this line whenever an item is added, because
+  reordered. **Next free ID: LibPage-022** — bump this line whenever an item is added, because
   deleting a shipped item removes its ID from the file.
 - **Order is priority:** items appear below in the same order as the lists here.
 - **`[loop-safe]`** in a heading marks an item the weekly loop may take. The loop takes the first
@@ -22,6 +22,8 @@ keeps the record), not archived here.
 
 ## Next
 
+- **LibPage-020** — Reject an unknown channel kind when an admin saves a letter
+- **LibPage-021** — Sign-in dialog: replace the remaining hardcoded colours with tokens
 - **LibPage-002** — Design — Secure the LLM call surface (abuse, injection, and spend)
 - **LibPage-018** — The gate does not type-check `server/` or `scripts/`
 - **LibPage-003** — Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
@@ -50,13 +52,47 @@ keeps the record), not archived here.
 **Status:** in progress, designed 2026-10-04. Spec:
 `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Risky tier (deploy + CI config).
 
-- [ ] 1. Render: deploy only after CI checks pass (done 2026-10-05), PR previews off (done
-      2026-10-05), health check path `/api/health` (**still to do, developer, dashboard**)
+- [x] 1. Render: deploy only after CI checks pass, PR previews off, health check path
+      `/api/health` (all confirmed 2026-10-05)
 - [x] 2. Written rules + hygiene (2026-10-04)
 - [x] 3. Prune this file, IDs, Now / Next / Later (2026-10-04)
-- [ ] 4. Wire the four reviewer briefs into the two PR review workflows (briefs written 2026-10-04)
+- [x] 4. Four named reviewers in the two PR review workflows, structured findings that say
+      who should act (2026-10-05)
 - [x] 5. `GLOSSARY.md` and the `domain-reviewer` brief (2026-10-04)
-- [ ] 6. Weekly scheduled loop, one `[loop-safe]` PR at a time
+- [ ] 6. Weekly scheduled loop: picker, review pass and instructions built and run supervised
+      (PR #4 merged, PR #5 trial) on 2026-10-05; the weekly schedule itself is not created yet
+
+## LibPage-020 — Reject an unknown channel kind when an admin saves a letter [loop-safe]
+
+Split out of LibPage-006 on 2026-10-05 as a small, self-contained task.
+
+The admin letters create and update routes accept each channel's `kind` as a free string
+(`server/routes/admin-letters.ts`). A value other than `email`, `sms` or `whatsapp` is not
+rejected and falls through to the SMS/WhatsApp branch. The routes are admin-only, so this is
+harmless today, but a typo or a bad client stores a channel nothing can send.
+
+**Do:** validate `kind` against the three `ChannelKind` values at the API boundary of both
+routes and answer 400 with a clear message for anything else, the way `GET /api/letters/contacts`
+already does for its `channel` query parameter. Add route tests for create and update (valid
+kinds accepted, an unknown kind rejected, nothing written on rejection).
+
+**Out of scope:** no schema change, no change to who may call the routes.
+
+## LibPage-021 — Sign-in dialog: replace the remaining hardcoded colours with tokens [loop-safe]
+
+Found while doing LibPage-009 (2026-10-05). The sign-in dialog in
+`src/components/layout/AuthControl.tsx` still uses about ten hardcoded palette classes
+(`bg-white`, `text-slate-*`, `border-slate-*`, `bg-slate-*`, `border-red-200` / `bg-red-50` /
+`text-red-700` on the error message, `focus:border-blue-500` / `ring-blue-500` on the email
+input). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md` (surface,
+foreground, muted, border, destructive, ring), and use the shared `ui/` input if the doc says
+the email field should be one. Keep the layout, sizes and behaviour as they are. Extend
+`tests/components/auth/AuthControl.test.tsx` so no palette class (`slate-`, `red-`, `blue-`,
+`bg-white`) remains on the dialog.
+
+**Out of scope:** the sign-in logic, the Google button, any copy change.
 
 ## LibPage-002 — Design — Secure the LLM call surface (abuse, injection, and spend)
 
@@ -253,7 +289,7 @@ Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
 - **i18n for the letters UI.** The letters admin composer + member detail page use hardcoded Hebrew (zero `t()` calls, consistent with the pre-existing letters UI). If English support is ever needed for these screens, wire them to `react-i18next` and add `letters.*` keys to `he.json`/`en.json`.
 - **Member SMS/WhatsApp sends route through the public endpoint** (`api.letters.publicSend`). Coherent for lifetime totals, but when the `publicSendTurnstile` flag is on, `publicSend` posts an empty token → the authenticated member's send is silently not counted. Consider a member-authed send path for sms/whatsapp, or exempt authed callers from Turnstile.
 - **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
-- **Validate `channel.kind`** against an allowlist at the admin letters create/update API boundary (currently admin-gated and harmless, but a garbage kind falls through to the sms/whatsapp branch).
+- ~~Validate `channel.kind` at the admin API boundary~~ — moved to its own item, LibPage-020.
 
 ## LibPage-007 — Code review findings — rolling (Priority: Low–Medium)
 
