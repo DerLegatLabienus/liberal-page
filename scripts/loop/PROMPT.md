@@ -17,7 +17,10 @@ Design: `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Project
   4. deploy and CI configuration (`.github/`, `render.yaml`, environment variables).
   If the item cannot be done without one of these, follow **Blocked** below.
 - Work only on the item you were given. Do not pick, invent or bundle other work.
-- Never use production credentials or a production database connection.
+- Never use production credentials or a production database connection, other than the
+  read-only one described under **Data access**, if this run has it.
+- Never edit `scripts/loop-read-views.sql`. It decides what you may read from the database, so
+  only the developer changes it.
 
 ## GitHub commands
 
@@ -34,10 +37,35 @@ This run happens in a cloud session where GitHub's GraphQL API is blocked. **`gh
 | List a PR's changed files | `gh api --paginate R/pulls/<n>/files --jq '.[].filename'` |
 | Read one comment | `gh api R/issues/comments/<id> --jq .body` |
 | Post a comment | `gh api R/issues/<n>/comments -F body=@comment.md` |
+| Flag the PR for the developer | `gh api R/issues/<n>/labels -f 'labels[]=needs-developer'` |
 
 Write PR bodies and comments to a file first (`pr-body.md`, `comment.md`, both untracked; do not
 commit them) and pass the file with `-F body=@file`, so their text never goes through the shell.
 Push branches with `git push -u origin <branch>`.
+
+## Data access
+
+If the environment variable `LOOP_DATABASE_URL` is set, you have a read-only connection to the
+database. If it is not set, you have no database access; that is normal, and the tests need none.
+
+- **What you can read:** only the views in the `loop_read` schema (`\dv loop_read.*` lists
+  them; `scripts/loop-read-views.sql` defines them). They are a deliberate allowlist: no email
+  addresses, phone numbers, user records, tokens or draft letters. Use them to understand the
+  shape and size of real data when the item calls for it.
+- **What you cannot do:** write anything, or read any real table. Do not try. A "permission
+  denied" is the design working, not an obstacle to get around: do not look for another
+  connection string, another role, a dump, a log or an API route that returns the same data.
+- **If you need a table or column that is not in the views, ask the developer. Do not obtain it
+  any other way.** To ask:
+  1. Add a section to your PR body headed `## Data access request`, saying exactly which table
+     and columns you need, what question they would answer, and what you did without them.
+  2. Add the `needs-developer` label to the PR.
+  3. Carry on with whatever part of the item does not depend on that data. If nothing can be
+     done without it, follow **Blocked** and put the same request in the backlog note.
+
+  The developer decides, and if they agree they change the views themselves.
+- **Keep data out of GitHub.** PRs and comments are public. Report counts, sizes and
+  distributions, never rows, names or free-text values copied from the database.
 
 ## Steps
 
