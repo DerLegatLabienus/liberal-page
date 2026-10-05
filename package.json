@@ -26,6 +26,7 @@
     "db:backfill-channels": "tsx scripts/backfill-channels.ts",
     "db:import-mks": "tsx scripts/import-mk-contacts.ts",
     "letters:regen": "tsx --env-file=.env scripts/regen-share-pages.ts",
+    "loop:next": "tsx scripts/loop/next-item.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d db"
