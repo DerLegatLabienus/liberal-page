@@ -200,6 +200,25 @@ run its migrations. **PR previews are off on Render and must stay off** (set 202
 copies every production secret and the production database connection. The health check path is
 `/api/health` (set 2026-10-05), so a build that does not answer never replaces the running one.
 
+### The loop's read-only database window (`loop_read`)
+
+Production has a schema `loop_read` of 25 views and a role `loop_reader` that can read those
+views and nothing else (created 2026-10-06). It exists so the unattended loop can look at the
+shape and size of real data without seeing personal data: the views name their columns one by
+one and leave out every email address, phone number, user record, token, draft letter and
+free-text body. Definitions: `scripts/loop-read-views.sql` (risky tier; only the developer edits
+or runs it). The role was made with plain SQL on purpose: a role created in the Neon console
+joins `neon_superuser` and could read everything.
+
+- **New tables and columns are invisible to the loop** until added to a view in that file. If the
+  loop needs one, it asks in its PR (`needs-developer` label); it never changes the views.
+- **Migration hazard:** Postgres refuses to drop or retype a column, or drop a table, that a view
+  uses. A migration that does so must start with `DROP SCHEMA loop_read CASCADE;`, and the SQL
+  file must be updated and re-run afterwards. Migrations apply on boot, so forgetting this fails
+  the deploy (the health check keeps the previous version serving).
+- The connection string lives only in the routine's environment as `LOOP_DATABASE_URL`, never in
+  the repo.
+
 ## Infrastructure & Tooling Map
 
 Don't rediscover this — it's fixed. Prod values (no secrets here; pull credentials/connection strings on demand via the MCPs below).

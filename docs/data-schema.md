@@ -517,3 +517,12 @@ Unique constraint on `(user_id, committee_id)`.
 | `created_at` | timestamptz | |
 
 Unique constraint on `(user_id, mk_id)`.
+
+## `loop_read` — read-only views for the unattended loop
+
+Not part of the Drizzle schema and not created by migrations. `scripts/loop-read-views.sql`
+defines 25 views over `parliament`, `letters`, `analytics` and `config`, each listing its columns
+by name, with personal data and free text left out (text fields appear as lengths or booleans;
+letters and channels are limited to published letters). The `loop_reader` role can select from
+these views only. See "The loop's read-only database window" in `CLAUDE.md` for the rules and
+the migration hazard.
