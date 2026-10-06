@@ -3,6 +3,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { XIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAuthOptional } from '@/contexts/AuthContext'
 import { useToastOptional } from '@/contexts/ToastContext'
@@ -85,25 +86,25 @@ export default function AuthControl() {
         onOpenChange={(open) => { setLoginOpen(open); if (!open) { setMagicSent(false); setMagicEmail(''); setLoginError(null) } }}
       >
         {/* Opaque inner card (not bg on the positioning Popup, which renders see-through).
-            Light card regardless of theme; the site is light-first. */}
+            Uses the card surface token; the site is light-first. */}
         <DialogContent className="max-w-[25rem]">
-          <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl" dir="rtl">
+          <div className="relative rounded-2xl bg-card p-7 text-card-foreground shadow-2xl" dir="rtl">
             <DialogClose
               aria-label={t('auth.close')}
-              className="absolute end-4 top-4 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              className="absolute end-4 top-4 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <XIcon className="h-5 w-5" />
             </DialogClose>
 
             <div className="text-center">
-              <DialogTitle className="text-xl font-bold text-slate-900">{t('auth.sign_in')}</DialogTitle>
-              <DialogDescription className="mx-auto mt-2 max-w-[19rem] text-sm leading-relaxed text-slate-500">
+              <DialogTitle className="text-xl font-bold text-card-foreground">{t('auth.sign_in')}</DialogTitle>
+              <DialogDescription className="mx-auto mt-2 max-w-[19rem] text-sm leading-relaxed text-muted-foreground">
                 {t('auth.sign_in_hint')}
               </DialogDescription>
             </div>
 
             {loginError && (
-              <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+              <p role="alert" className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
                 {loginError}
               </p>
             )}
@@ -122,9 +123,9 @@ export default function AuthControl() {
               </div>
 
               <div className="flex items-center gap-3" aria-hidden>
-                <span className="h-px flex-1 bg-slate-200" />
-                <span className="text-xs font-medium text-slate-400">{t('auth.or')}</span>
-                <span className="h-px flex-1 bg-slate-200" />
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted-foreground">{t('auth.or')}</span>
+                <span className="h-px flex-1 bg-border" />
               </div>
 
               {magicSent ? (
@@ -137,13 +138,13 @@ export default function AuthControl() {
                 </div>
               ) : (
                 <form onSubmit={(e) => { e.preventDefault(); void handleMagicLinkRequest() }} className="flex flex-col gap-2.5">
-                  <input
+                  <Input
                     type="email"
                     value={magicEmail}
                     onChange={(e) => setMagicEmail(e.target.value)}
                     placeholder={t('auth.email_placeholder')}
                     aria-label={t('auth.email_placeholder')}
-                    className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                    className="h-11 rounded-xl bg-card px-4 text-sm text-card-foreground focus-visible:ring-4 focus-visible:ring-ring/20"
                   />
                   <Button
                     type="submit"
@@ -162,7 +163,7 @@ export default function AuthControl() {
                   gates whether POST /api/auth/dev actually does anything; see
                   server/services/auth-providers/dev.ts. */}
               {import.meta.env.DEV && (
-                <div className="flex items-center gap-2 border-t border-dashed border-slate-200 pt-4">
+                <div className="flex items-center gap-2 border-t border-dashed border-border pt-4">
                   <button
                     type="button"
                     onClick={() => handleSignIn('dev-admin', 'dev')}
