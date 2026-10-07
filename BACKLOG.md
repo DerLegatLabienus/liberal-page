@@ -4,7 +4,7 @@ The only queue of work for this repo. Open items only — a shipped item is **de
 keeps the record), not archived here.
 
 - **IDs** (`LibPage-NNN`) are permanent: never reused, and unchanged when an item is retitled or
-  reordered. **Next free ID: LibPage-022** — bump this line whenever an item is added, because
+  reordered. **Next free ID: LibPage-023** — bump this line whenever an item is added, because
   deleting a shipped item removes its ID from the file.
 - **Order is priority:** items appear below in the same order as the lists here.
 - **`[loop-safe]`** in a heading marks an item the weekly loop may take. The loop takes the first
@@ -44,6 +44,7 @@ keeps the record), not archived here.
 - **LibPage-016** — Alliance Guilds & Granular User Access
 - **LibPage-017** — Site-Wide Product Analytics
 - **LibPage-019** — Move the frontend to a host with per-PR previews
+- **LibPage-022** — Give the loop its read-only database access through a stored credential
 
 ---
 
@@ -643,3 +644,29 @@ redirect.
 
 **When:** after the weekly loop has produced a few PRs and seeing them rendered is actually
 missed. Risky tier (deploy config): spec, plan, confirmed push.
+
+## LibPage-022 — Give the loop its read-only database access through a stored credential [risky]
+
+Added 2026-10-07. Parked until the loop itself has run cleanly for a while.
+
+**State today:** the `loop_reader` role and the 25 `loop_read` views exist on production and are
+verified (see `CLAUDE.md`). The loop cannot use them yet: its cloud environment cannot open a
+normal Postgres connection (the outbound proxy carries web traffic only; tested 2026-10-05).
+
+**What works instead:** Neon answers SQL over HTTPS at `https://api.<region host>/sql`, with the
+connection string in a `Neon-Connection-String` request header. Tested from a developer machine
+with the read-only role on 2026-10-07: a view answered, `auth.users` and a write were refused.
+
+**Do:**
+1. Developer: in the `liberal-page-loop` cloud environment, add an **API credential** for host
+   `api.c-3.eu-central-1.aws.neon.tech` with custom header `Neon-Connection-String` (no prefix)
+   holding the read-only connection string. The session then never sees the password, and
+   credential hosts are documented as exempt from the allowed-domains list (unconfirmed here).
+2. Developer: delete the `LOOP_DATABASE_URL` environment variable from that environment. It was
+   added on 2026-10-06 and is readable by any command the loop runs.
+3. Add a `loop:sql` command that posts a query to that endpoint with no credential of its own,
+   and point the "Data access" section of `scripts/loop/PROMPT.md` at it.
+4. Verify from a cloud run: a view answers; `auth.users` and a write are refused.
+5. Rotate the `loop_reader` password afterwards, because it sat in a readable variable.
+
+Risky tier: production credentials.
