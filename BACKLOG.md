@@ -22,7 +22,6 @@ keeps the record), not archived here.
 
 ## Next
 
-- **LibPage-023** — Per-letter daily analytics wrongly include the public SMS and WhatsApp buckets
 - **LibPage-024** — Rate-limit the letter beautify route
 - **LibPage-025** — BillCard: replace hardcoded colours with tokens
 - **LibPage-026** — MkCard: replace hardcoded colours with tokens
@@ -69,22 +68,6 @@ keeps the record), not archived here.
 - [ ] 6. Weekly scheduled loop: picker, review pass and instructions built and run supervised
       (PR #4 merged, PR #5 trial) on 2026-10-05; the weekly schedule itself is not created yet
 
-## LibPage-023 — Per-letter daily analytics wrongly include the public SMS and WhatsApp buckets [loop-safe]
-
-Split out of LibPage-006 on 2026-10-07.
-
-`LetterAnalyticsRepository.getForLetter()` returns `{ lifetime, daily }`, where `daily` is meant
-to hold one row per day. It is built as "every row that is not the lifetime row", so the fixed
-named buckets written by `recordNamed` (`public_sms`, `public_whatsapp` and any other non-date
-bucket) are returned among the daily rows. Nothing reads `daily` today, so this is latent, but
-the first per-letter daily view built on it would show two bogus "days".
-
-**Do:** make `daily` contain only rows whose bucket is a calendar day (the `YYYY-MM-DD` form
-`record` writes), newest first. Do not change what is stored. Add repository tests: a letter
-with a lifetime row, two day rows and a `public_sms` row returns exactly the two day rows in
-order; a letter with only named buckets returns an empty `daily`.
-
-**Out of scope:** no schema change, no new route, no change to `recordNamed`.
 
 ## LibPage-024 — Rate-limit the letter beautify route [loop-safe]
 
