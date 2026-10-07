@@ -48,6 +48,14 @@ describe('admin-letters channel kind validation', () => {
       expect(res.status).toBe(400)
       expect(await db.select().from(letters)).toHaveLength(0)
     })
+
+    it.each([{}, 5, 'email'])('rejects a non-array channels value (%j) with 400 and writes nothing', async (channels) => {
+      const res = await request(app).post('/api/admin/letters').set('Authorization', `Bearer ${token}`)
+        .send({ title: 'X', status: 'draft', channels })
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/channels must be an array/)
+      expect(await db.select().from(letters)).toHaveLength(0)
+    })
   })
 
   describe('PUT', () => {
@@ -71,6 +79,18 @@ describe('admin-letters channel kind validation', () => {
         .send({ title: 'Renamed', channels: [{ kind: 'Email', recipientIds: [1], bodyText: 'hi' }] })
       expect(res.status).toBe(400)
       expect(res.body.error).toMatch(/Email/)
+      const [stored] = await db.select().from(letters)
+      expect(stored.title).toBe('Original')
+      const storedChannels = await db.select().from(letterChannels)
+      expect(storedChannels.map((c) => c.kind)).toEqual(['sms'])
+    })
+
+    it.each([{}, 5, 'email'])('rejects a non-array channels value (%j) with 400 and leaves the letter untouched', async (channels) => {
+      const id = await createDraft()
+      const res = await request(app).put(`/api/admin/letters/${id}`).set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Renamed', channels })
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/channels must be an array/)
       const [stored] = await db.select().from(letters)
       expect(stored.title).toBe('Original')
       const storedChannels = await db.select().from(letterChannels)

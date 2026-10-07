@@ -41,10 +41,11 @@ function publishGuard(status: string | undefined, channels: LetterChannelInput[]
 
 const VALID_CHANNEL_KINDS: readonly ChannelKind[] = ['email', 'sms', 'whatsapp']
 
-/** Every supplied channel must have a known `kind` — anything else would be stored and then fall
+/** `channels`, when supplied, must be an array, and every channel in it must have a known `kind` — anything else would be stored and then fall
  *  through to the SMS/WhatsApp branch, where nothing can send it. Returns an error string or null. */
 function findInvalidChannelKind(channels: LetterChannelInput[] | undefined): string | null {
   if (!channels) return null
+  if (!Array.isArray(channels)) return 'channels must be an array'
   for (const ch of channels) {
     const kind = (ch as { kind?: unknown } | null)?.kind
     if (!VALID_CHANNEL_KINDS.includes(kind as ChannelKind)) {
