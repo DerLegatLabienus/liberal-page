@@ -164,20 +164,22 @@ export default function AuthControl() {
                   server/services/auth-providers/dev.ts. */}
               {import.meta.env.DEV && (
                 <div className="flex items-center gap-2 border-t border-dashed border-border pt-4">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => handleSignIn('dev-admin', 'dev')}
-                    className="h-9 flex-1 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                    className="h-9 flex-1 border-dashed text-xs font-semibold"
                   >
                     Dev Sign In (admin)
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => handleSignIn('dev-member', 'dev')}
-                    className="h-9 flex-1 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                    className="h-9 flex-1 border-dashed text-xs font-semibold"
                   >
                     Dev Sign In (member)
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
