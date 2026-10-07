@@ -4,7 +4,7 @@ The only queue of work for this repo. Open items only — a shipped item is **de
 keeps the record), not archived here.
 
 - **IDs** (`LibPage-NNN`) are permanent: never reused, and unchanged when an item is retitled or
-  reordered. **Next free ID: LibPage-023** — bump this line whenever an item is added, because
+  reordered. **Next free ID: LibPage-031** — bump this line whenever an item is added, because
   deleting a shipped item removes its ID from the file.
 - **Order is priority:** items appear below in the same order as the lists here.
 - **`[loop-safe]`** in a heading marks an item the weekly loop may take. The loop takes the first
@@ -24,6 +24,14 @@ keeps the record), not archived here.
 
 - **LibPage-020** — Reject an unknown channel kind when an admin saves a letter
 - **LibPage-021** — Sign-in dialog: replace the remaining hardcoded colours with tokens
+- **LibPage-023** — Per-letter daily analytics wrongly include the public SMS and WhatsApp buckets
+- **LibPage-024** — Rate-limit the letter beautify route
+- **LibPage-025** — BillCard: replace hardcoded colours with tokens
+- **LibPage-026** — MkCard: replace hardcoded colours with tokens
+- **LibPage-027** — JoinSelector: replace hardcoded colours with tokens
+- **LibPage-028** — ParliamentStrip: replace hardcoded colours with tokens
+- **LibPage-029** — GallerySection: replace hardcoded colours with tokens
+- **LibPage-030** — ToastContext: move the useToast hook to its own file
 - **LibPage-002** — Design — Secure the LLM call surface (abuse, injection, and spend)
 - **LibPage-018** — The gate does not type-check `server/` or `scripts/`
 - **LibPage-003** — Tighten the summarizer to Knesset provenance — verify the document is the one we asked for
@@ -94,6 +102,158 @@ the email field should be one. Keep the layout, sizes and behaviour as they are.
 `bg-white`) remains on the dialog.
 
 **Out of scope:** the sign-in logic, the Google button, any copy change.
+
+## LibPage-023 — Per-letter daily analytics wrongly include the public SMS and WhatsApp buckets [loop-safe]
+
+Split out of LibPage-006 on 2026-10-07.
+
+`LetterAnalyticsRepository.getForLetter()` returns `{ lifetime, daily }`, where `daily` is meant
+to hold one row per day. It is built as "every row that is not the lifetime row", so the fixed
+named buckets written by `recordNamed` (`public_sms`, `public_whatsapp` and any other non-date
+bucket) are returned among the daily rows. Nothing reads `daily` today, so this is latent, but
+the first per-letter daily view built on it would show two bogus "days".
+
+**Do:** make `daily` contain only rows whose bucket is a calendar day (the `YYYY-MM-DD` form
+`record` writes), newest first. Do not change what is stored. Add repository tests: a letter
+with a lifetime row, two day rows and a `public_sms` row returns exactly the two day rows in
+order; a letter with only named buckets returns an empty `daily`.
+
+**Out of scope:** no schema change, no new route, no change to `recordNamed`.
+
+## LibPage-024 — Rate-limit the letter beautify route [loop-safe]
+
+Split out of the review findings in LibPage-007 (pass 3) on 2026-10-07; still true in the code.
+
+`POST /api/admin/letters/beautify` calls the LLM on every request and has no rate limit. It is
+admin-only, so the exposure is a runaway client or a stuck retry loop spending money, not an
+outside attacker. `POST /api/summarize` already uses `SlidingWindowLimiter` for the same reason.
+
+**Do:** apply a `SlidingWindowLimiter` to the beautify route the way `server/routes/summarize.ts`
+does (per caller, a small number per minute; answer 429 `rate_limited` when exceeded), with a
+reset helper for tests. Add route tests: requests under the limit succeed, the next one gets 429,
+and the limiter is checked before the LLM is called (the beautifier mock is not invoked on a
+429). Update the route's row in the API table in `CLAUDE.md`.
+
+**Out of scope:** who may call the route (the admin check stays exactly as it is), the feature
+flag, any other route.
+
+## LibPage-025 — BillCard: replace hardcoded colours with tokens [loop-safe]
+
+Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
+
+`src/components/parliament/BillCard.tsx` uses about 20 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
+`text-white` and the like). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
+from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
+sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
+palette class remains in the rendered card. Check the result in a browser against
+`npm run dev:frontend` in both the default view and any hover, selected or empty state the
+component has, and say in the PR what you looked at.
+
+**If the design system has no token for a case** (for example text over a photograph), do not
+invent one and do not leave a silent exception: list each such class in the PR under
+"Needs a design decision" and add the `needs-developer` label.
+
+**Out of scope:** any other component, any behaviour change.
+
+## LibPage-026 — MkCard: replace hardcoded colours with tokens [loop-safe]
+
+Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
+
+`src/components/parliament/MkCard.tsx` uses about 13 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
+`text-white` and the like). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
+from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
+sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
+palette class remains in the rendered card. Check the result in a browser against
+`npm run dev:frontend` in both the default view and any hover, selected or empty state the
+component has, and say in the PR what you looked at.
+
+**If the design system has no token for a case** (for example text over a photograph), do not
+invent one and do not leave a silent exception: list each such class in the PR under
+"Needs a design decision" and add the `needs-developer` label.
+
+**Out of scope:** any other component, any behaviour change.
+
+## LibPage-027 — JoinSelector: replace hardcoded colours with tokens [loop-safe]
+
+Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
+
+`src/components/parliament/JoinSelector.tsx` uses about 35 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
+`text-white` and the like). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
+from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
+sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
+palette class remains in the rendered selector. Check the result in a browser against
+`npm run dev:frontend` in both the default view and any hover, selected or empty state the
+component has, and say in the PR what you looked at.
+
+**If the design system has no token for a case** (for example text over a photograph), do not
+invent one and do not leave a silent exception: list each such class in the PR under
+"Needs a design decision" and add the `needs-developer` label.
+
+**Out of scope:** any other component, any behaviour change.
+
+## LibPage-028 — ParliamentStrip: replace hardcoded colours with tokens [loop-safe]
+
+Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
+
+`src/components/sections/ParliamentStrip.tsx` uses about 20 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
+`text-white` and the like). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
+from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
+sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
+palette class remains in the rendered strip. Check the result in a browser against
+`npm run dev:frontend` in both the default view and any hover, selected or empty state the
+component has, and say in the PR what you looked at.
+
+**If the design system has no token for a case** (for example text over a photograph), do not
+invent one and do not leave a silent exception: list each such class in the PR under
+"Needs a design decision" and add the `needs-developer` label.
+
+**Out of scope:** any other component, any behaviour change.
+
+## LibPage-029 — GallerySection: replace hardcoded colours with tokens [loop-safe]
+
+Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
+
+`src/components/sections/GallerySection.tsx` uses about 14 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
+`text-white` and the like). `docs/design-system.md` allows token utilities only.
+
+**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
+from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
+sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
+palette class remains in the rendered section. Check the result in a browser against
+`npm run dev:frontend` in both the default view and any hover, selected or empty state the
+component has, and say in the PR what you looked at.
+
+**If the design system has no token for a case** (for example text over a photograph), do not
+invent one and do not leave a silent exception: list each such class in the PR under
+"Needs a design decision" and add the `needs-developer` label.
+
+**Out of scope:** any other component, any behaviour change.
+
+## LibPage-030 — ToastContext: move the useToast hook to its own file [loop-safe]
+
+Split out on 2026-10-07 from the standing lint warnings.
+
+`npm run lint` reports two `react-refresh/only-export-components` warnings in
+`src/contexts/ToastContext.tsx`, because the file exports the provider component and also
+non-component values (the hook and the context). Fast refresh cannot preserve state for such a
+file.
+
+**Do:** move the non-component exports into a sibling file (for example
+`src/contexts/toast-context.ts` for the context object and `src/hooks/useToast.ts` for the hook,
+following whatever layout the existing hooks use) and update every import. Behaviour must not
+change. The two warnings for this file must be gone from `npm run lint`; existing tests must pass
+unchanged apart from import paths.
+
+**Out of scope:** `AuthContext.tsx` (auth area, not for the loop) and the `src/components/ui/*`
+warnings (those files follow the upstream component library's layout).
 
 ## LibPage-002 — Design — Secure the LLM call surface (abuse, injection, and spend)
 
@@ -289,7 +449,7 @@ Shipped: Email/SMS/WhatsApp channels via compose-assist deep links (spec
 - **Contract migration (drop legacy `letters` content columns).** `letters.subject/body_html/body_plain/to_addresses/cc_addresses/bcc_addresses` are now empty and unread (content lives in `letter_channels`). Dropping them is a **deploy-ordering hazard**: `scripts/backfill-channels.ts` *reads* them, and prod must run the backfill *between* the expand deploy and the contract deploy — so it can't be single-pushed. Do it as a separate deploy once prod is backfilled: remove the 7 columns from `server/db/schema/letters.ts`, `npm run db:generate`, and retire the backfill script + its test.
 - **i18n for the letters UI.** The letters admin composer + member detail page use hardcoded Hebrew (zero `t()` calls, consistent with the pre-existing letters UI). If English support is ever needed for these screens, wire them to `react-i18next` and add `letters.*` keys to `he.json`/`en.json`.
 - **Member SMS/WhatsApp sends route through the public endpoint** (`api.letters.publicSend`). Coherent for lifetime totals, but when the `publicSendTurnstile` flag is on, `publicSend` posts an empty token → the authenticated member's send is silently not counted. Consider a member-authed send path for sms/whatsapp, or exempt authed callers from Turnstile.
-- **`getForLetter().daily`** would include the `public_sms`/`public_whatsapp` bucket rows among "daily" rows (they aren't `'lifetime'`). Latent only — no live consumer. Fix if a per-letter daily analytics view is ever built.
+- ~~`getForLetter().daily` includes the public SMS/WhatsApp buckets~~ — moved to its own item, LibPage-023.
 - ~~Validate `channel.kind` at the admin API boundary~~ — moved to its own item, LibPage-020.
 
 ## LibPage-007 — Code review findings — rolling (Priority: Low–Medium)

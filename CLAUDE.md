@@ -321,8 +321,8 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 
 `type` is one of `bill`, `committee`, or `mk`.
 
-**Multi-channel letters (Email / SMS / WhatsApp).** A letter is a *campaign* that goes out over one
-or more channels via **compose-assist deep links — there is no backend sender**; each supporter
+**Multi-channel letters (Email / SMS / WhatsApp).** A Letter goes out over one or more Channels
+via **compose-assist deep links — there is no backend sender**; each Sender (see `GLOSSARY.md`)
 sends from their own mail/SMS/WhatsApp app. The compose-URL builders live in `src/lib/letter-urls.ts`
 (pure, no deps): `buildMailtoUrl`/`buildGmailComposeUrl` for email, `buildWhatsappUrl` (`wa.me`) and
 `buildSmsUrl` (`sms:<phone>?&body=` — the `?&` form works on both iOS and Android) for the deep-link
