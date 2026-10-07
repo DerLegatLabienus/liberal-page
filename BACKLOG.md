@@ -22,7 +22,6 @@ keeps the record), not archived here.
 
 ## Next
 
-- **LibPage-021** — Sign-in dialog: replace the remaining hardcoded colours with tokens
 - **LibPage-024** — Rate-limit the letter beautify route
 - **LibPage-025** — BillCard: replace hardcoded colours with tokens
 - **LibPage-026** — MkCard: replace hardcoded colours with tokens
@@ -69,21 +68,6 @@ keeps the record), not archived here.
 - [ ] 6. Weekly scheduled loop: picker, review pass and instructions built and run supervised
       (PR #4 merged, PR #5 trial) on 2026-10-05; the weekly schedule itself is not created yet
 
-## LibPage-021 — Sign-in dialog: replace the remaining hardcoded colours with tokens [loop-safe]
-
-Found while doing LibPage-009 (2026-10-05). The sign-in dialog in
-`src/components/layout/AuthControl.tsx` still uses about ten hardcoded palette classes
-(`bg-white`, `text-slate-*`, `border-slate-*`, `bg-slate-*`, `border-red-200` / `bg-red-50` /
-`text-red-700` on the error message, `focus:border-blue-500` / `ring-blue-500` on the email
-input). `docs/design-system.md` allows token utilities only.
-
-**Do:** replace each with the matching token utility from `docs/design-system.md` (surface,
-foreground, muted, border, destructive, ring), and use the shared `ui/` input if the doc says
-the email field should be one. Keep the layout, sizes and behaviour as they are. Extend
-`tests/components/auth/AuthControl.test.tsx` so no palette class (`slate-`, `red-`, `blue-`,
-`bg-white`) remains on the dialog.
-
-**Out of scope:** the sign-in logic, the Google button, any copy change.
 
 ## LibPage-024 — Rate-limit the letter beautify route [loop-safe]
 

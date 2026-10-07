@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -58,6 +58,34 @@ describe('AuthControl sign-in toasts', () => {
     expect(submit).toHaveAttribute('type', 'submit')
     expect(submit.className).toMatch(/\bbg-primary\b/)
     expect(submit.className).not.toMatch(/blue-\d/)
+  })
+
+  // Design system: the dialog uses token utilities only — no hardcoded palette classes on any
+  // element, including the error message and the email field (LibPage-021).
+  const PALETTE = /(^|\s|:)(bg-white|[a-z-]*(slate|red|blue|amber)-\d)/
+  const paletteClasses = (root: Element) =>
+    [root, ...root.querySelectorAll('*')]
+      .map((el) => el.getAttribute('class') ?? '')
+      .filter((cls) => PALETTE.test(cls))
+
+  it('uses no hardcoded palette classes in the sign-in dialog', async () => {
+    vi.mocked(api.auth.google).mockRejectedValue(Object.assign(new Error('not invited'), { status: 403 }))
+    renderControl()
+    await userEvent.click(await openLoginModal())
+    const alert = await screen.findByRole('alert') // error message rendered too
+    expect(alert.className).toMatch(/\btext-destructive\b/)
+    const dialog = screen.getByRole('dialog')
+    // The dev-only sign-in buttons render under vitest (import.meta.env.DEV), so they are covered.
+    expect(within(dialog).getAllByRole('button', { name: /Dev Sign In/ })).toHaveLength(2)
+    expect(paletteClasses(dialog)).toEqual([])
+  })
+
+  it('renders the email field as the shared Input', async () => {
+    renderControl()
+    await openLoginModal()
+    const email = screen.getByRole('dialog').querySelector('input[type="email"]')
+    expect(email).not.toBeNull()
+    expect(email).toHaveAttribute('data-slot', 'input')
   })
 
   it('shows an error toast when sign-in is rejected (uninvited 403)', async () => {
