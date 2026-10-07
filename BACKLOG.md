@@ -657,6 +657,13 @@ normal Postgres connection (the outbound proxy carries web traffic only; tested 
 connection string in a `Neon-Connection-String` request header. Tested from a developer machine
 with the read-only role on 2026-10-07: a view answered, `auth.users` and a write were refused.
 
+**Confirmed from the cloud on 2026-10-07:** with the allowed domains updated, the loop's
+environment reaches that HTTPS endpoint, and with the header taken from `LOOP_DATABASE_URL` a view
+answers while `auth.users` and a write are refused. So access works today through the
+environment variable; what is missing is the `loop:sql` command (step 3) and moving the secret
+out of the readable variable (steps 1, 2 and 5). No stored credential is attached yet: a request
+without the header is rejected.
+
 **Do:**
 1. Developer: in the `liberal-page-loop` cloud environment, add an **API credential** for host
    `api.c-3.eu-central-1.aws.neon.tech` with custom header `Neon-Connection-String` (no prefix)
