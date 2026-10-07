@@ -17,8 +17,9 @@ Design: `docs/superpowers/specs/2026-10-04-solo-dev-workflow-design.md`. Project
   4. deploy and CI configuration (`.github/`, `render.yaml`, environment variables).
   If the item cannot be done without one of these, follow **Blocked** below.
 - Work only on the item you were given. Do not pick, invent or bundle other work.
-- Never use production credentials or a production database connection, other than the
-  read-only one described under **Data access**, if this run has it.
+- Never use production credentials or a production database connection. The one exception is
+  the read-only `npm run loop:sql` command described under **Data access**, if this run has it.
+  Do not open a database connection any other way (no `psql`, no `pg` client, no `DATABASE_URL`).
 - Never edit `scripts/loop-read-views.sql`. It decides what you may read from the database, so
   only the developer changes it.
 
@@ -45,13 +46,29 @@ Push branches with `git push -u origin <branch>`.
 
 ## Data access
 
-If the environment variable `LOOP_DATABASE_URL` is set, you have a read-only connection to the
-database. If it is not set, you have no database access; that is normal, and the tests need none.
+You may be able to run read-only queries against the database with one command:
 
-- **What you can read:** only the views in the `loop_read` schema (`\dv loop_read.*` lists
-  them; `scripts/loop-read-views.sql` defines them). They are a deliberate allowlist: no email
-  addresses, phone numbers, user records, tokens or draft letters. Use them to understand the
-  shape and size of real data when the item calls for it.
+```
+npm run -s loop:sql -- "select count(*) from loop_read.bills"
+```
+
+It sends **one** read statement over HTTPS and prints the rows as JSON. Exit codes: `0` rows
+printed; `1` the database refused or could not be reached (the reason is on stderr); `2` the
+command refused the statement before sending it (not a single read statement); `3` **this run
+has no database access** (`LOOP_DATABASE_URL` is not set). Exit code 3 is normal: carry on
+without data, and the tests need none. Never print, echo or inspect `LOOP_DATABASE_URL` itself.
+
+- **What you can read:** only the views in the `loop_read` schema. To see what exists, ask the
+  database:
+  `npm run -s loop:sql -- "select table_name, column_name, data_type from information_schema.columns where table_schema = 'loop_read' order by 1, ordinal_position"`
+  (`scripts/loop-read-views.sql` defines them.) They are a deliberate allowlist: no email
+  addresses, phone numbers, user records, tokens or draft letters, and letter and summary
+  bodies appear only as a length. **Titles and names in the views are still real data**: do not
+  quote them in a PR or a comment. Use the views to understand the shape and size of real data
+  when the item calls for it. Results are capped at 200 rows and about 100,000 characters:
+  aggregate (`count`, `group by`, `min`/`max`, `length()`) instead of listing. Give every
+  selected column its own name (`a.id as a_id`): two columns with the same name collapse into
+  one.
 - **What you cannot do:** write anything, or read any real table. Do not try. A "permission
   denied" is the design working, not an obstacle to get around: do not look for another
   connection string, another role, a dump, a log or an API route that returns the same data.

@@ -216,6 +216,11 @@ joins `neon_superuser` and could read everything.
   uses. A migration that does so must start with `DROP SCHEMA loop_read CASCADE;`, and the SQL
   file must be updated and re-run afterwards. Migrations apply on boot, so forgetting this fails
   the deploy (the health check keeps the previous version serving).
+- **How the loop queries it:** `npm run -s loop:sql -- "<one select>"` (`scripts/loop/sql.ts`).
+  It talks to Neon's SQL-over-HTTPS endpoint, because the loop's cloud environment cannot open a
+  normal Postgres connection (its outbound proxy carries web traffic only). The command sends one
+  read statement, caps output at 200 rows and never prints the connection string; the role, not
+  the command, is what enforces read-only.
 - The connection string lives only in the routine's environment as `LOOP_DATABASE_URL`, never in
   the repo.
 

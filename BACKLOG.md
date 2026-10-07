@@ -44,7 +44,7 @@ keeps the record), not archived here.
 - **LibPage-016** — Alliance Guilds & Granular User Access
 - **LibPage-017** — Site-Wide Product Analytics
 - **LibPage-019** — Move the frontend to a host with per-PR previews
-- **LibPage-022** — Give the loop its read-only database access through a stored credential
+- **LibPage-022** — Move the loop's database secret into a stored credential and rotate it
 
 ---
 
@@ -645,35 +645,33 @@ redirect.
 **When:** after the weekly loop has produced a few PRs and seeing them rendered is actually
 missed. Risky tier (deploy config): spec, plan, confirmed push.
 
-## LibPage-022 — Give the loop its read-only database access through a stored credential [risky]
+## LibPage-022 — Move the loop's database secret into a stored credential and rotate it [risky]
 
-Added 2026-10-07. Parked until the loop itself has run cleanly for a while.
+Added 2026-10-07; narrowed the same day once the query command was built.
 
-**State today:** the `loop_reader` role and the 25 `loop_read` views exist on production and are
-verified (see `CLAUDE.md`). The loop cannot use them yet: its cloud environment cannot open a
-normal Postgres connection (the outbound proxy carries web traffic only; tested 2026-10-05).
+**State today:** the loop can query its read-only window. `npm run -s loop:sql` (see
+`scripts/loop/sql.ts`) sends one read statement to Neon's SQL-over-HTTPS endpoint using the
+connection string in the `LOOP_DATABASE_URL` environment variable of the `liberal-page-loop`
+cloud environment. The endpoint was confirmed from the cloud on 2026-10-07 with a hand-written
+Node `fetch` script (a view answers, `auth.users` and a write are refused); the command itself
+was verified from a developer machine the same day. A normal Postgres connection does not work from that environment (its
+outbound proxy carries web traffic only).
 
-**What works instead:** Neon answers SQL over HTTPS at `https://api.<region host>/sql`, with the
-connection string in a `Neon-Connection-String` request header. Tested from a developer machine
-with the read-only role on 2026-10-07: a view answered, `auth.users` and a write were refused.
-
-**Confirmed from the cloud on 2026-10-07:** with the allowed domains updated, the loop's
-environment reaches that HTTPS endpoint, and with the header taken from `LOOP_DATABASE_URL` a view
-answers while `auth.users` and a write are refused. So access works today through the
-environment variable; what is missing is the `loop:sql` command (step 3) and moving the secret
-out of the readable variable (steps 1, 2 and 5). No stored credential is attached yet: a request
-without the header is rejected.
+**What is left:** the connection string sits in an environment variable, which any command the
+loop runs can read. It is a read-only, views-only password, so the exposure is small, but it
+should not be readable at all.
 
 **Do:**
 1. Developer: in the `liberal-page-loop` cloud environment, add an **API credential** for host
    `api.c-3.eu-central-1.aws.neon.tech` with custom header `Neon-Connection-String` (no prefix)
-   holding the read-only connection string. The session then never sees the password, and
-   credential hosts are documented as exempt from the allowed-domains list (unconfirmed here).
-2. Developer: delete the `LOOP_DATABASE_URL` environment variable from that environment. It was
-   added on 2026-10-06 and is readable by any command the loop runs.
-3. Add a `loop:sql` command that posts a query to that endpoint with no credential of its own,
-   and point the "Data access" section of `scripts/loop/PROMPT.md` at it.
-4. Verify from a cloud run: a view answers; `auth.users` and a write are refused.
-5. Rotate the `loop_reader` password afterwards, because it sat in a readable variable.
+   holding the read-only connection string. The session then never sees the password.
+   (Unconfirmed: that the environment attaches a custom header this way. On 2026-10-07 a request
+   without the header was rejected, so nothing is attached today.)
+2. Change `scripts/loop/sql.ts` to send no header of its own when a flag such as
+   `LOOP_DATABASE_VIA_CREDENTIAL=1` is set, taking the endpoint host from a non-secret variable,
+   and verify from a cloud run: a view answers; `auth.users` and a write are refused.
+3. Developer: delete the `LOOP_DATABASE_URL` variable from that environment.
+4. Rotate the `loop_reader` password, because it sat in a readable variable since 2026-10-06, and
+   put the new connection string in the credential.
 
 Risky tier: production credentials.
