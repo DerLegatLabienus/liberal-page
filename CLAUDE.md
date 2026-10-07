@@ -216,6 +216,11 @@ joins `neon_superuser` and could read everything.
   uses. A migration that does so must start with `DROP SCHEMA loop_read CASCADE;`, and the SQL
   file must be updated and re-run afterwards. Migrations apply on boot, so forgetting this fails
   the deploy (the health check keeps the previous version serving).
+- **How the loop queries it:** `npm run -s loop:sql -- "<one select>"` (`scripts/loop/sql.ts`).
+  It talks to Neon's SQL-over-HTTPS endpoint, because the loop's cloud environment cannot open a
+  normal Postgres connection (its outbound proxy carries web traffic only). The command sends one
+  read statement, caps output at 200 rows and never prints the connection string; the role, not
+  the command, is what enforces read-only.
 - The connection string lives only in the routine's environment as `LOOP_DATABASE_URL`, never in
   the repo.
 
@@ -316,8 +321,8 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 
 `type` is one of `bill`, `committee`, or `mk`.
 
-**Multi-channel letters (Email / SMS / WhatsApp).** A letter is a *campaign* that goes out over one
-or more channels via **compose-assist deep links — there is no backend sender**; each supporter
+**Multi-channel letters (Email / SMS / WhatsApp).** A Letter goes out over one or more Channels
+via **compose-assist deep links — there is no backend sender**; each Sender (see `GLOSSARY.md`)
 sends from their own mail/SMS/WhatsApp app. The compose-URL builders live in `src/lib/letter-urls.ts`
 (pure, no deps): `buildMailtoUrl`/`buildGmailComposeUrl` for email, `buildWhatsappUrl` (`wa.me`) and
 `buildSmsUrl` (`sms:<phone>?&body=` — the `?&` form works on both iOS and Android) for the deep-link
