@@ -4,6 +4,8 @@ import { letterAnalytics } from '../db/schema'
 
 const DAY_WINDOW_DAYS = 365
 const LIFETIME = 'lifetime'
+/** The bucket form `record` writes for a calendar day (`YYYY-MM-DD`). */
+const DAY_BUCKET = /^\d{4}-\d{2}-\d{2}$/
 
 export type LetterAnalyticsRow = typeof letterAnalytics.$inferSelect
 export interface LifetimeStats { total: number; breakdown: Record<string, number> }
@@ -36,11 +38,15 @@ export class LetterAnalyticsRepository {
     await this.bump(letterId, bucket, breakdownKey, now)
   }
 
+  /**
+   * `daily` holds only calendar-day buckets, newest first: the `lifetime` row and the fixed named
+   * buckets `recordChannel` writes (`public_sms`, `public_whatsapp`) are not days.
+   */
   async getForLetter(letterId: number): Promise<{ lifetime: LetterAnalyticsRow | null; daily: LetterAnalyticsRow[] }> {
     const rows = await db.select().from(letterAnalytics).where(eq(letterAnalytics.letterId, letterId))
     const lifetime = rows.find((r) => r.bucket === LIFETIME) ?? null
     const daily = rows
-      .filter((r) => r.bucket !== LIFETIME)
+      .filter((r) => DAY_BUCKET.test(r.bucket))
       .sort((a, b) => b.bucket.localeCompare(a.bucket))
     return { lifetime, daily }
   }
