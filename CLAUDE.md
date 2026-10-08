@@ -8,37 +8,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend:** Express 5 + `tsx` (port 3001)
 - Both live in the same repo. Vite proxies `/api/*` → `localhost:3001`.
 
-## Codebase questions — query the graph first
-
-This repo has a prebuilt knowledge graph at `graphify-out/graph.json` (gitignored, local only).
-**Before grepping or fanning out reads to answer a question about how the code fits together**
-("what calls X", "how does the letters send flow work", "where does auth live", "trace the poller"),
-query the graph — it answers from ~3,700 extracted symbols and design decisions and their edges instead of loading files
-into context:
-
-```bash
-graphify query "how does the multi-channel letter send flow work"
-graphify path "AuthRepository" "DB"        # shortest path between two symbols
-graphify explain "buildChannelSends"       # plain-language node explanation
-```
-
-Only fall back to Grep/Read when the graph does not cover it (it holds structure and symbol
-relationships, not line-level implementation) or when you are about to edit a file — edits still
-need the real bytes.
-
-**Keeping it fresh — mostly automatic.** A `post-commit` / `post-checkout` git hook
-(`graphify hook install`) rebuilds the **code** layer after every commit: detached, AST-only,
-no LLM, zero tokens. You do not need to run it, and neither do I.
-
-The hook deliberately skips **docs**, because doc extraction needs an LLM. Instead it appends
-changed `.md`/`.txt` paths to `graphify-out/.needs_update`. **At the start of a session, if that
-file exists, tell the user the doc layer is stale, list what changed, and offer to run
-`/graphify --update`** — do not run it unprompted, it spends their tokens. A full `/graphify .`
-clears the marker.
-
-Outputs: `graphify-out/graph.html` (interactive, open in a browser), `graphify-out/GRAPH_REPORT.md`
-(god nodes, community map, audit trail), `graphify-out/graph.json` (raw).
-
 ## Frontend/UX rules
 
 **Any frontend/UI change must follow [`docs/design-system.md`](docs/design-system.md).** In short:
@@ -431,3 +400,15 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 | Feature design / requirements — feature and risky tiers | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
 | Implementation plan steps — **risky tier only** | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
 | Backlog items | `BACKLOG.md` — commit immediately after adding |
+
+## graphify
+
+A knowledge graph of this repo lives in `graphify-out/` (gitignored, local only). How to use it
+is not documented here on purpose: a `PreToolUse` hook in `.claude/settings.local.json`
+(`graphify hook-guard`) gives that instruction at the moment of a search or read, and a
+`post-commit` / `post-checkout` git hook rebuilds the code layer for free.
+
+The one thing no hook does: the **docs** layer needs an LLM, so the git hook only appends changed
+`.md`/`.txt` paths to `graphify-out/.needs_update`. **At the start of a session, if that file
+exists, tell the user the doc layer is stale, list what changed, and offer to run
+`/graphify --update`** — do not run it unprompted, it spends their tokens.
