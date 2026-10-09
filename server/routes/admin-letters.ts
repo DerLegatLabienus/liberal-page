@@ -7,6 +7,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter, regenerateAllShares } from '../services/share-publisher'
 import { makeShareUrlResolver } from '../services/share-url'
+import { SlidingWindowLimiter } from '../services/rate-limit'
 import type { ChannelKind, LetterChannelInput } from '../../src/types'
 
 const router = Router()
@@ -14,6 +15,13 @@ const lettersRepo = new LettersRepository()
 const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
+
+// Every beautify request is an LLM call, so cap it per caller to stop a runaway client or a
+// stuck retry loop from spending money.
+const BEAUTIFY_MAX_PER_MINUTE = 10
+let beautifyLimiter = new SlidingWindowLimiter(BEAUTIFY_MAX_PER_MINUTE, 60_000)
+/** Test-only: fresh limiter window. */
+export function _resetBeautifyLimiter(): void { beautifyLimiter = new SlidingWindowLimiter(BEAUTIFY_MAX_PER_MINUTE, 60_000) }
 
 /** Shared shape for the zero-recipient check, satisfied by both incoming LetterChannelInput
  *  payloads and stored LetterChannelRow db rows. */
@@ -192,11 +200,15 @@ router.patch('/:id/pin', async (req, res) => {
 })
 
 // POST /api/admin/letters/beautify — AI clean + improve letter body HTML.
-// Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark).
+// Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark),
+// then rate limited per caller (429 rate_limited) before the LLM is called.
 router.post('/beautify', async (req, res) => {
   try {
     if (!(await flagsRepo.isEnabled('lettersBeautifyEnabled'))) {
       return res.status(404).json({ error: 'Not found' })
+    }
+    if (!beautifyLimiter.allow(String(req.user?.id ?? req.ip ?? 'unknown'))) {
+      return res.status(429).json({ error: 'rate_limited' })
     }
     const { html } = req.body as { html?: string }
     if (!html || !html.trim()) return res.status(400).json({ error: 'html is required' })

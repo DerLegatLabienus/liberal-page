@@ -22,7 +22,6 @@ keeps the record), not archived here.
 
 ## Next
 
-- **LibPage-024** — Rate-limit the letter beautify route
 - **LibPage-025** — BillCard: replace hardcoded colours with tokens
 - **LibPage-026** — MkCard: replace hardcoded colours with tokens
 - **LibPage-027** — JoinSelector: replace hardcoded colours with tokens
@@ -68,23 +67,6 @@ keeps the record), not archived here.
 - [ ] 6. Weekly scheduled loop: picker, review pass and instructions built and run supervised
       (PR #4 merged, PR #5 trial) on 2026-10-05; the weekly schedule itself is not created yet
 
-
-## LibPage-024 — Rate-limit the letter beautify route [loop-safe]
-
-Split out of the review findings in LibPage-007 (pass 3) on 2026-10-07; still true in the code.
-
-`POST /api/admin/letters/beautify` calls the LLM on every request and has no rate limit. It is
-admin-only, so the exposure is a runaway client or a stuck retry loop spending money, not an
-outside attacker. `POST /api/summarize` already uses `SlidingWindowLimiter` for the same reason.
-
-**Do:** apply a `SlidingWindowLimiter` to the beautify route the way `server/routes/summarize.ts`
-does (per caller, a small number per minute; answer 429 `rate_limited` when exceeded), with a
-reset helper for tests. Add route tests: requests under the limit succeed, the next one gets 429,
-and the limiter is checked before the LLM is called (the beautifier mock is not invoked on a
-429). Update the route's row in the API table in `CLAUDE.md`.
-
-**Out of scope:** who may call the route (the admin check stays exactly as it is), the feature
-flag, any other route.
 
 ## LibPage-025 — BillCard: replace hardcoded colours with tokens [loop-safe]
 

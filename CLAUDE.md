@@ -280,7 +280,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `PUT`    | `/api/admin/email-templates/:name` | update email template (admin) |
 | `PUT`    | `/api/admin/feature-flags/:name`   | update feature flag enabled/value (admin) |
 | `GET`    | `/api/admin/analytics/join`        | join click-through summary: lifetime + daily rows (admin) |
-| `POST`   | `/api/admin/letters/beautify`      | AI clean+improve letter body HTML (admin; gated by `lettersBeautifyEnabled` flag → 404 when off). Output is sanitized. |
+| `POST`   | `/api/admin/letters/beautify`      | AI clean+improve letter body HTML (admin; gated by `lettersBeautifyEnabled` flag → 404 when off; rate limited per caller, 10/min → 429 `rate_limited`). Output is sanitized. |
 | `POST`   | `/api/admin/letters/regenerate-shares` | rebuild the R2 public share page for every published letter (admin; per-letter no-op when R2 unconfigured or `publicSharePages` off). Returns `{ regenerated }`. Used to roll share-page changes onto existing letters without editing them. |
 | `GET`    | `/api/admin/letters/media`         | list R2-hosted letter image assets (admin; 503 when R2 unconfigured) |
 | `POST`   | `/api/admin/letters/media`         | upload raster image to R2 (admin; byte-sniff raster-only + 5 MB; 503 when R2 unconfigured) |
