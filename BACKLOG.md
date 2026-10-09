@@ -23,7 +23,6 @@ keeps the record), not archived here.
 ## Next
 
 - **LibPage-024** — Rate-limit the letter beautify route
-- **LibPage-025** — BillCard: replace hardcoded colours with tokens
 - **LibPage-026** — MkCard: replace hardcoded colours with tokens
 - **LibPage-027** — JoinSelector: replace hardcoded colours with tokens
 - **LibPage-028** — ParliamentStrip: replace hardcoded colours with tokens
@@ -85,26 +84,6 @@ and the limiter is checked before the LLM is called (the beautifier mock is not 
 
 **Out of scope:** who may call the route (the admin check stays exactly as it is), the feature
 flag, any other route.
-
-## LibPage-025 — BillCard: replace hardcoded colours with tokens [loop-safe]
-
-Split out on 2026-10-07 from a scan of `src/` for hardcoded palette classes.
-
-`src/components/parliament/BillCard.tsx` uses about 20 hardcoded palette classes (`slate-*`, `blue-*`, `red-*`, `bg-white`,
-`text-white` and the like). `docs/design-system.md` allows token utilities only.
-
-**Do:** replace each with the matching token utility from `docs/design-system.md`, composing
-from `src/components/ui/*` where the doc says a shared component should be used. Keep layout,
-sizes, behaviour and copy exactly as they are. Add or extend a component test asserting that no
-palette class remains in the rendered card. Check the result in a browser against
-`npm run dev:frontend` in both the default view and any hover, selected or empty state the
-component has, and say in the PR what you looked at.
-
-**If the design system has no token for a case** (for example text over a photograph), do not
-invent one and do not leave a silent exception: list each such class in the PR under
-"Needs a design decision" and add the `needs-developer` label.
-
-**Out of scope:** any other component, any behaviour change.
 
 ## LibPage-026 — MkCard: replace hardcoded colours with tokens [loop-safe]
 
