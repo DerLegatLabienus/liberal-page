@@ -403,12 +403,14 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 
 ## graphify
 
-A knowledge graph of this repo lives in `graphify-out/` (gitignored, local only). How to use it
-is not documented here on purpose: a `PreToolUse` hook in `.claude/settings.local.json`
-(`graphify hook-guard`) gives that instruction at the moment of a search or read, and a
-`post-commit` / `post-checkout` git hook rebuilds the code layer for free.
+A knowledge graph of this repo lives in `graphify-out/` (gitignored, local only). Nothing here is
+an instruction to follow; hooks do the work:
 
-The one thing no hook does: the **docs** layer needs an LLM, so the git hook only appends changed
-`.md`/`.txt` paths to `graphify-out/.needs_update`. **At the start of a session, if that file
-exists, tell the user the doc layer is stale, list what changed, and offer to run
-`/graphify --update`** — do not run it unprompted, it spends their tokens.
+- **Reminder to query the graph** before a code search: a `PreToolUse` hook.
+- **Code layer rebuild** (AST only, free) after commit, checkout, merge and rebase: git hooks.
+- **Stale docs notice** at session start: a `SessionStart` hook. The docs layer needs an LLM, so
+  it is only ever refreshed by `/graphify --update`, on request.
+
+All of these are per-machine and untracked (`.git/hooks/`, `.claude/settings.local.json`,
+`~/.claude/hooks/graphify-*.sh`). A fresh clone needs `graphify hook install` plus those local
+pieces. Uncommitted edits are not in the graph until committed, or until `graphify update .`.

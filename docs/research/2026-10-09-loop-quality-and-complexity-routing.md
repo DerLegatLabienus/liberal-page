@@ -642,6 +642,13 @@ flowchart TD
 Short version: the signals exist in the graph's schema, but in this repo's graph they are wrong
 for the frontend, so not today.
 
+> **Update 2026-10-10.** The frontend gap described below is fixed. graphify 0.9.48 did not follow
+> the root `tsconfig.json`'s `references` to `tsconfig.app.json`, where the `@/` alias is declared;
+> 0.9.83 does. After upgrading and rebuilding, importer counts match grep (`AuthControl.tsx` 2,
+> `BillCard.tsx` 1, `button.tsx` 14) and the graph has 8,456 links. The numbers in this section
+> are the 0.9.48 measurements and are kept as the record of what was found; the conclusion "not
+> today" no longer holds for that reason, though the scoring thresholds remain uncalibrated.
+
 **What the graph holds.** `graphify-out/graph.json` (built at `b190ce3`, graphify 0.9.48): 4,025
 nodes, 6,437 links, 423 communities, stored undirected (`"directed": false`). Nodes carry
 `source_file`, `community`, `file_type` (1,933 `code`, 1,213 `document`); links carry `relation`
@@ -722,7 +729,8 @@ comes from.
   authentication. Not verified either way.
 - **GitHub Actions cost** for extra jobs on this public repository was not looked up.
 - **Thresholds** in the scoring rule are uncalibrated (section 4).
-- **Whether graphify 0.9.83 resolves `@/` alias imports.** Only 0.9.48 was run.
+- ~~Whether graphify 0.9.83 resolves `@/` alias imports.~~ Verified 2026-10-10: it does (see the
+  update in section 6).
 - **Whether `master` is protected by a ruleset** that the owner's access cannot bypass.
 - **Reviewer variance** rests on one case (#7) and missing verdicts on two (#5, #6). The Actions
   logs of those runs were not read, so the cause (failure, timeout, re-run) is unknown.
