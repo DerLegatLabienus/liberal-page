@@ -157,9 +157,15 @@ describe('MkCard — vote activity colors', () => {
     expect(screen.getByText(/הצביע נגד/)).toBeInTheDocument()
   })
 
-  it('applies red color class for נגד vote', () => {
+  it('applies the destructive token for נגד vote', () => {
     const { container } = render(<MkCard mk={makeVote('הצביע נגד')} />)
-    expect(container.querySelector('.text-red-500')).toBeInTheDocument()
+    expect(container.querySelector('.text-destructive')).toBeInTheDocument()
+  })
+
+  it('applies the muted token for נעדר vote', () => {
+    const { container } = render(<MkCard mk={makeVote('נעדר')} />)
+    expect(screen.getByText(/נעדר ·/)).toHaveClass('text-muted-foreground')
+    expect(container.querySelector('.text-slate-400')).not.toBeInTheDocument()
   })
 
   it('applies green color class for בעד vote', () => {
@@ -254,5 +260,58 @@ describe('MkCard — inactive MK', () => {
     const activeMk = mkFixture({ inactive: false })
     render(<MkCard mk={activeMk} />)
     expect(screen.queryByText(/לא חבר/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('MkCard — design tokens only', () => {
+  // Raw Tailwind palette classes (bg-white, text-slate-400, hover:text-red-600, bg-purple-500/50 …).
+  const PALETTE_CLASS = /^(?:[a-z-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|divide)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})(?:\/\d+)?$/
+
+  // Waiting on a design decision (LibPage-026): the design system has no success/warning token
+  // for vote results, and no token for the per-entity MK accent (purple stripe + AI summary box).
+  // Shrink this list as tokens are decided; anything not listed here fails the test.
+  const PENDING_DESIGN_DECISION = new Set([
+    'text-green-600', 'text-yellow-600', 'bg-purple-500', 'bg-purple-50', 'text-purple-700',
+  ])
+
+  function paletteClasses(container: HTMLElement): string[] {
+    return [container, ...Array.from(container.querySelectorAll('*'))]
+      .flatMap((el) => Array.from(el.classList))
+      .filter((c) => PALETTE_CLASS.test(c))
+  }
+
+  const everyState = mkFixture({
+    inactive: true,
+    votingSummary: 'סיכום',
+    activity: ['בעד', 'נגד', 'נמנע', 'נעדר'].map((detail, i) => ({
+      type: 'vote' as const,
+      date: '2026-05-13T11:42:00',
+      title: `הצבעה ${i}`,
+      detail,
+      sourceUrl: `https://example.com/vote/${i}`,
+    })),
+  })
+
+  it('the pattern catches raw palette classes', () => {
+    for (const c of ['bg-white', 'text-slate-400', 'hover:text-red-600', 'border-slate-200', 'bg-purple-50']) {
+      expect(c).toMatch(PALETTE_CLASS)
+    }
+    for (const c of ['bg-card', 'text-destructive/80', 'border-border', 'text-muted-foreground']) {
+      expect(c).not.toMatch(PALETTE_CLASS)
+    }
+  })
+
+  it('renders no palette class outside the pending design decisions (activity feed)', () => {
+    const { container } = render(<MkCard mk={everyState} onRemove={() => {}} />)
+    expect(paletteClasses(container).filter((c) => !PENDING_DESIGN_DECISION.has(c))).toEqual([])
+  })
+
+  it('renders no palette class outside the pending design decisions (recent-votes fallback)', () => {
+    const mk = mkFixture({
+      activity: [],
+      recentVotes: ['בעד', 'נגד', 'נמנע', 'נעדר'].map((vote, i) => ({ date: '2026-01-01', billTitle: `חוק ${i}`, vote })),
+    })
+    const { container } = render(<MkCard mk={mk} onRemove={() => {}} />)
+    expect(paletteClasses(container).filter((c) => !PENDING_DESIGN_DECISION.has(c))).toEqual([])
   })
 })
