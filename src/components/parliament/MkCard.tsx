@@ -6,9 +6,9 @@ import type { MkActivity } from '@/types'
 
 const VOTE_COLORS: Record<string, string> = {
   'בעד': 'text-green-600',
-  'נגד': 'text-red-500',
+  'נגד': 'text-destructive',
   'נמנע': 'text-yellow-600',
-  'נעדר': 'text-slate-400',
+  'נעדר': 'text-muted-foreground',
 }
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -55,7 +55,7 @@ export default function MkCard({ mk, onRemove, maxActivity = 4 }: MkCardProps) {
   const photoUrl = mk.photoUrl
 
   return (
-    <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
+    <div className={`relative flex overflow-hidden rounded-lg border border-border bg-card ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
       <div className={`w-1 shrink-0 bg-purple-500 ${mk.inactive ? 'opacity-60' : ''}`} />
       <div className="flex-1 p-4" dir="rtl">
 
@@ -64,7 +64,7 @@ export default function MkCard({ mk, onRemove, maxActivity = 4 }: MkCardProps) {
             <img
               src={photoUrl}
               alt={mk.name}
-              className="h-10 w-10 shrink-0 rounded-full object-cover border border-slate-200"
+              className="h-10 w-10 shrink-0 rounded-full object-cover border border-border"
               onError={onImageError}
             />
           )}
@@ -79,8 +79,8 @@ export default function MkCard({ mk, onRemove, maxActivity = 4 }: MkCardProps) {
         </div>
 
         {mk.inactive && (
-          <div className="mb-3 rounded-md bg-slate-100 px-3 py-2">
-            <p className="text-right text-xs font-medium text-slate-500">לא חבר/ת כנסת פעיל/ה</p>
+          <div className="mb-3 rounded-md bg-muted px-3 py-2">
+            <p className="text-right text-xs font-medium text-muted-foreground">לא חבר/ת כנסת פעיל/ה</p>
           </div>
         )}
         {mk.votingSummary && (
@@ -122,7 +122,7 @@ export default function MkCard({ mk, onRemove, maxActivity = 4 }: MkCardProps) {
           )}
           {onRemove && (
             <button onClick={() => onRemove(mk.id)}
-              className="text-xs text-red-400 hover:text-red-600 ms-auto">
+              className="text-xs text-destructive/80 hover:text-destructive ms-auto">
               {t('tracker.remove')}
             </button>
           )}
