@@ -156,6 +156,14 @@ describe('reviewersWithFindings', () => {
 })
 
 describe('selectFixTarget', () => {
+  it('reports the issue number as the id for a PR opened from an issue', () => {
+    const c = comment(verdict('code-reviewer', ['agent']))
+    const target = selectFixTarget([
+      pr({ number: 40, title: 'fix(ui): use tokens in JoinSelector (#15)', headRefName: 'fix/15-joinselector-tokens', comments: [c] }),
+    ])
+    expect(target).toMatchObject({ pr: 40, branch: 'fix/15-joinselector-tokens', id: '#15' })
+  })
+
   it('targets an open loop PR with fresh agent findings and names the comments to act on', () => {
     const c = comment(verdict('architecture-reviewer', ['agent']))
     expect(selectFixTarget([pr({ comments: [c, comment(verdict('code-reviewer', []))] })])).toEqual({

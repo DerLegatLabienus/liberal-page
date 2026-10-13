@@ -1,178 +1,220 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { extractItemId, isLoopBranch, selectNextItem } from '../../../scripts/loop/select-item'
+import {
+  extractItemId,
+  type IssueData,
+  isLoopBranch,
+  isLoopPullRequest,
+  itemIdsOf,
+  selectNextIssue,
+} from '../../../scripts/loop/select-item'
 
+const OWNER = 'DerLegatLabienus'
 const none = new Set<string>()
 
-function backlog(...items: string[]): string {
-  return ['# Backlog', '', '## Now', '', '- **LibPage-001** — something', '', '---', '', ...items].join('\n')
+function issue(number: number, labels: string[], overrides: Partial<IssueData> = {}): IssueData {
+  return { number, title: `Issue ${number}`, labels, authorLogin: OWNER, isPullRequest: false, ...overrides }
 }
 
-function item(heading: string, body = 'Some description.'): string {
-  return `## ${heading}\n\n${body}\n`
-}
-
-describe('selectNextItem', () => {
-  it('picks the first tagged item in file order', () => {
-    const text = backlog(
-      item('LibPage-002 — Untagged thing'),
-      item('LibPage-003 — First tagged [loop-safe]'),
-      item('LibPage-004 — Second tagged [loop-safe]'),
-    )
-    expect(selectNextItem(text, none)).toEqual({ id: 'LibPage-003', title: 'First tagged' })
+describe('selectNextIssue', () => {
+  it('picks a loop-safe issue and reports its number, id and title', () => {
+    const picked = selectNextIssue([issue(15, ['loop-safe', 'P2'], { title: '  JoinSelector tokens ' })], OWNER, none)
+    expect(picked).toEqual({ id: '#15', number: 15, title: 'JoinSelector tokens' })
   })
 
-  it('skips untagged items', () => {
-    const text = backlog(item('LibPage-002 — Untagged'), item('LibPage-003 — Also untagged'))
-    expect(selectNextItem(text, none)).toBeNull()
+  it('skips issues without the loop-safe label', () => {
+    expect(selectNextIssue([issue(12, ['P1']), issue(15, ['loop-safe', 'P2'])], OWNER, none)?.number).toBe(15)
   })
 
-  it('refuses a tagged item marked [risky] in its heading', () => {
-    const text = backlog(
-      item('LibPage-002 — Add a migration [loop-safe] [risky]'),
-      item('LibPage-003 — Safe one [loop-safe]'),
-    )
-    expect(selectNextItem(text, none)?.id).toBe('LibPage-003')
+  it('refuses an issue labelled risky even when it is loop-safe', () => {
+    expect(selectNextIssue([issue(20, ['loop-safe', 'risky', 'P0'])], OWNER, none)).toBeNull()
   })
 
-  it('refuses a tagged item marked [risky] in its body', () => {
-    const text = backlog(item('LibPage-002 — Touches auth [loop-safe]', 'Changes the allowlist. [risky]'))
-    expect(selectNextItem(text, none)).toBeNull()
+  it('does not infer risk from the title', () => {
+    const picked = selectNextIssue([issue(21, ['loop-safe'], { title: 'Rename a migration helper in the auth tests' })], OWNER, none)
+    expect(picked?.number).toBe(21)
   })
 
-  it('refuses a tagged item whose status line says "Risky tier"', () => {
-    const text = backlog(
-      item('LibPage-002 — Workflow [loop-safe]', '**Status:** open. Risky tier (deploy + CI config).'),
-    )
-    expect(selectNextItem(text, none)).toBeNull()
+  it('takes the most urgent priority first, whatever the issue numbers', () => {
+    const issues = [issue(15, ['loop-safe', 'P2']), issue(40, ['loop-safe', 'P0']), issue(16, ['loop-safe', 'P1'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(40)
   })
 
-  it('does not infer risk from prose keywords', () => {
-    const text = backlog(
-      item('LibPage-002 — Docs for migrations and auth [loop-safe]', 'Explain how a migration and auth work.'),
-    )
-    expect(selectNextItem(text, none)?.id).toBe('LibPage-002')
+  it('takes the lowest issue number within a priority', () => {
+    const issues = [issue(18, ['loop-safe', 'P2']), issue(15, ['loop-safe', 'P2']), issue(16, ['loop-safe', 'P2'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(15)
   })
 
-  it('skips a tagged item whose ID is rejected and moves on to the next', () => {
-    const text = backlog(item('LibPage-002 — Rejected [loop-safe]'), item('LibPage-003 — Next [loop-safe]'))
-    expect(selectNextItem(text, new Set(['LibPage-002']))?.id).toBe('LibPage-003')
+  it('sorts an issue with no priority label after P3', () => {
+    const issues = [issue(5, ['loop-safe']), issue(30, ['loop-safe', 'P3'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(30)
+    expect(selectNextIssue([issue(5, ['loop-safe'])], OWNER, none)?.number).toBe(5)
   })
 
-  it('moves past an item that is in flight to the next tagged one', () => {
-    const text = backlog(
-      item('LibPage-002 — Has an open PR [loop-safe]'),
-      item('LibPage-003 — Was rejected [loop-safe]'),
-      item('LibPage-004 — Free [loop-safe]'),
-    )
-    const inFlightAndRejected = new Set(['LibPage-002', 'LibPage-003'])
-    expect(selectNextItem(text, inFlightAndRejected)?.id).toBe('LibPage-004')
+  it('uses the most urgent label when an issue carries two priorities', () => {
+    const issues = [issue(15, ['loop-safe', 'P1']), issue(16, ['loop-safe', 'P3', 'P0'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(16)
   })
 
-  it('picks a previously rejected item once it carries a new ID', () => {
-    const text = backlog(item('LibPage-018 — Rejected, retried [loop-safe]'))
-    expect(selectNextItem(text, new Set(['LibPage-002']))?.id).toBe('LibPage-018')
+  it('skips an excluded issue and moves on to the next', () => {
+    const issues = [issue(15, ['loop-safe', 'P2']), issue(16, ['loop-safe', 'P2'])]
+    expect(selectNextIssue(issues, OWNER, new Set(['#15']))?.number).toBe(16)
   })
 
-  it('returns null when every tagged item is rejected', () => {
-    const text = backlog(item('LibPage-002 — A [loop-safe]'), item('LibPage-003 — B [loop-safe]'))
-    expect(selectNextItem(text, new Set(['LibPage-002', 'LibPage-003']))).toBeNull()
+  it('returns null when every eligible issue is excluded, and for no issues at all', () => {
+    expect(selectNextIssue([issue(15, ['loop-safe'])], OWNER, new Set(['#15']))).toBeNull()
+    expect(selectNextIssue([], OWNER, none)).toBeNull()
   })
 
-  it('returns null for an empty backlog', () => {
-    expect(selectNextItem('', none)).toBeNull()
-    expect(selectNextItem('# Backlog\n\n## Now\n\n## Next\n', none)).toBeNull()
+  it('ignores an issue written by anyone but the repository owner, even if labelled', () => {
+    const issues = [issue(50, ['loop-safe', 'P0'], { authorLogin: 'someone-else' }), issue(15, ['loop-safe', 'P2'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(15)
+    expect(selectNextIssue([issues[0]], OWNER, none)).toBeNull()
   })
 
-  it('ignores a tagged heading with no ID', () => {
-    const text = backlog(item('Quick idea [loop-safe]'), item('Now [loop-safe]'))
-    expect(selectNextItem(text, none)).toBeNull()
+  it('matches the owner and the labels without regard to case', () => {
+    const picked = selectNextIssue([issue(15, ['Loop-Safe', 'p1'], { authorLogin: 'derlegatlabienus' })], OWNER, none)
+    expect(picked?.number).toBe(15)
   })
 
-  it('does not treat sub-headings or list lines as items', () => {
-    const text = backlog(
-      item('LibPage-002 — Parent', '### LibPage-099 — nested [loop-safe]\n\n- **LibPage-098** — listed [loop-safe]'),
-    )
-    expect(selectNextItem(text, none)).toBeNull()
+  it('never takes a pull request, which the issues endpoint also returns', () => {
+    expect(selectNextIssue([issue(11, ['loop-safe', 'loop'], { isPullRequest: true })], OWNER, none)).toBeNull()
   })
 
-  it('does not let one item\'s risky marker leak into the next', () => {
-    const text = backlog(
-      item('LibPage-002 — Risky, untagged', '**Status:** open. Risky tier.'),
-      item('LibPage-003 — Safe [loop-safe]'),
-    )
-    expect(selectNextItem(text, none)?.id).toBe('LibPage-003')
+  it('does not treat the legacy ID of another item as an exclusion for an issue', () => {
+    // An open PR from before the move excludes "LibPage-027", which is not issue #27.
+    expect(selectNextIssue([issue(27, ['loop-safe'])], OWNER, new Set(['LibPage-027']))?.number).toBe(27)
   })
 
-  it('strips tags and a trailing priority note from the title', () => {
-    const text = backlog(item('LibPage-002 — Fix the colour [loop-safe] (Priority: Low)'))
-    expect(selectNextItem(text, none)).toEqual({ id: 'LibPage-002', title: 'Fix the colour' })
+  it('excludes a migrated issue whose old ID had a loop PR before the move', () => {
+    const migrated = issue(14, ['loop-safe'], { title: 'MkCard: replace hardcoded colours with tokens (LibPage-026)' })
+    expect(selectNextIssue([migrated], OWNER, new Set(['LibPage-026']))).toBeNull()
+    expect(selectNextIssue([migrated], OWNER, new Set(['LibPage-027']))?.number).toBe(14)
   })
 
-  it('accepts a plain hyphen or en dash after the ID', () => {
-    expect(selectNextItem(backlog(item('LibPage-004 - Hyphen [loop-safe]')), none)?.id).toBe('LibPage-004')
-    expect(selectNextItem(backlog(item('LibPage-005 – En dash [loop-safe]')), none)?.id).toBe('LibPage-005')
+  it('refuses the risky label in any case', () => {
+    expect(selectNextIssue([issue(20, ['loop-safe', 'Risky'])], OWNER, none)).toBeNull()
   })
 
-  it('refuses an item that says "risky tier" anywhere in its body, not only on the status line', () => {
-    const text = backlog(
-      item('LibPage-006 — Late marker [loop-safe]', 'Intro paragraph.\n\nLater note: this is risky tier work.'),
-      item('LibPage-007 — Safe [loop-safe]'),
-    )
-    expect(selectNextItem(text, none)?.id).toBe('LibPage-007')
+  it('refuses an issue labelled needs-developer, even if loop-safe was not removed', () => {
+    expect(selectNextIssue([issue(15, ['loop-safe', 'needs-developer', 'P0'])], OWNER, none)).toBeNull()
+    const issues = [issue(15, ['loop-safe', 'Needs-Developer']), issue(16, ['loop-safe'])]
+    expect(selectNextIssue(issues, OWNER, none)?.number).toBe(16)
+  })
+})
+
+describe('isLoopPullRequest', () => {
+  const REPO = 'DerLegatLabienus/liberal-page'
+  const own = { branch: 'fix/15-tokens', labels: [] as string[], authorLogin: OWNER, headRepo: REPO }
+
+  it('accepts the owner\'s PR from this repository on a loop-shaped branch', () => {
+    expect(isLoopPullRequest(own, REPO)).toBe(true)
+    expect(isLoopPullRequest({ ...own, branch: 'refactor/LibPage-026-mkcard-tokens' }, REPO)).toBe(true)
   })
 
-  // Must stay green whatever is tagged in the real file: tagging an item is a normal edit.
-  it('parses the real BACKLOG.md: every LibPage heading is an item, and the pick is one of them', () => {
-    const text = readFileSync(path.resolve(__dirname, '../../../BACKLOG.md'), 'utf8')
-    const headings = text.split(/\r?\n/).filter((l) => l.startsWith('## LibPage-'))
-    expect(headings.length).toBeGreaterThan(0)
-    for (const h of headings) {
-      const id = extractItemId(h)!
-      const alone = selectNextItem(`${h.replace(/\[risky\]/gi, '')} [loop-safe]\n\nbody\n`, none)
-      expect(alone?.id, h).toBe(id)
-    }
-    const picked = selectNextItem(text, none)
-    if (picked) expect(headings.some((h) => extractItemId(h) === picked.id)).toBe(true)
+  it('accepts the owner\'s PR carrying the loop label whatever its branch is called', () => {
+    expect(isLoopPullRequest({ ...own, branch: 'claude/some-branch', labels: ['Loop'] }, REPO)).toBe(true)
+  })
+
+  it('rejects a PR on an ordinary branch without the label', () => {
+    expect(isLoopPullRequest({ ...own, branch: 'worktree-backlog-to-issues' }, REPO)).toBe(false)
+  })
+
+  it('rejects a loop-shaped branch from a fork, or one whose fork was deleted', () => {
+    expect(isLoopPullRequest({ ...own, headRepo: 'a-stranger/liberal-page' }, REPO)).toBe(false)
+    expect(isLoopPullRequest({ ...own, headRepo: null }, REPO)).toBe(false)
+  })
+
+  it('rejects a loop-shaped or loop-labelled PR by anyone but the owner', () => {
+    expect(isLoopPullRequest({ ...own, authorLogin: 'a-stranger' }, REPO)).toBe(false)
+    expect(isLoopPullRequest({ ...own, authorLogin: 'a-stranger', labels: ['loop'] }, REPO)).toBe(false)
+  })
+
+  it('matches the owner and the repository without regard to case', () => {
+    expect(isLoopPullRequest({ ...own, authorLogin: 'derlegatlabienus', headRepo: REPO.toLowerCase() }, REPO)).toBe(true)
+  })
+})
+
+describe('itemIdsOf', () => {
+  it('reads the issue from the branch, the title and the body alike', () => {
+    expect(itemIdsOf({ branch: 'fix/15-tokens', title: 'fix: tokens (#15)', body: 'Closes #15\n\nDetails.' })).toEqual(['#15'])
+  })
+
+  it('returns both IDs when the branch carries a legacy ID and the title the issue number', () => {
+    const ids = itemIdsOf({ branch: 'refactor/LibPage-027-joinselector', title: 'refactor: tokens (#15)', body: '' })
+    expect(ids.sort()).toEqual(['#15', 'LibPage-027'])
+  })
+
+  it('reads Closes and Refs lines from the body of a PR opened before the move', () => {
+    const ids = itemIdsOf({
+      branch: 'refactor/LibPage-026-mkcard-tokens',
+      title: 'refactor(parliament): use design tokens in MkCard (LibPage-026)',
+      body: 'LibPage-026 — MkCard\n\nCloses #14\n\nrefs #35 for the colours left in place.',
+    })
+    expect(ids.sort()).toEqual(['#14', '#35', 'LibPage-026'])
+  })
+
+  it('does not read a bare issue or PR number in the body as the PR\'s issue', () => {
+    expect(itemIdsOf({ branch: 'fix/15-tokens', title: 'fix: tokens (#15)', body: 'Overlaps: #10, #11. See #12.' })).toEqual(['#15'])
+  })
+
+  it('returns nothing for a PR that names no item', () => {
+    expect(itemIdsOf({ branch: 'claude/some-branch', title: 'chore: tidy', body: '' })).toEqual([])
   })
 })
 
 describe('isLoopBranch', () => {
-  it('accepts a conventional type prefix followed by the item ID', () => {
+  it('accepts a conventional type prefix followed by the issue number', () => {
+    expect(isLoopBranch('fix/123-auth-button-token')).toBe(true)
+    expect(isLoopBranch('feat/7-short-slug')).toBe(true)
+    expect(isLoopBranch('docs/45')).toBe(true)
+  })
+
+  it('still accepts a branch from before the move to issues', () => {
     expect(isLoopBranch('fix/LibPage-009-auth-button-token')).toBe(true)
-    expect(isLoopBranch('feat/LibPage-012-translate-protocols')).toBe(true)
-    expect(isLoopBranch('docs/libpage-020')).toBe(true)
+    expect(isLoopBranch('refactor/LibPage-026-mkcard-tokens')).toBe(true)
   })
 
   it('rejects branches without that shape', () => {
     expect(isLoopBranch('master')).toBe(false)
-    expect(isLoopBranch('fix/auth-button')).toBe(false)
-    expect(isLoopBranch('loop/LibPage-009-x')).toBe(false)
-    expect(isLoopBranch('feat/LibPage-0091x')).toBe(false)
-    expect(isLoopBranch('dependabot/npm/LibPage-1')).toBe(false)
+    expect(isLoopBranch('fix/auth-button-token')).toBe(false)
+    expect(isLoopBranch('loop/123-thing')).toBe(false)
+    expect(isLoopBranch('fix/123abc')).toBe(false)
+    expect(isLoopBranch('worktree-backlog-to-issues')).toBe(false)
   })
 })
 
 describe('extractItemId', () => {
-  it('reads the ID from a branch name', () => {
-    expect(extractItemId('fix/LibPage-009-auth-control-token')).toBe('LibPage-009')
+  it('reads the issue number from a branch name', () => {
+    expect(extractItemId('fix/123-auth-button-token')).toBe('#123')
+    expect(extractItemId('docs/45')).toBe('#45')
   })
 
-  it('reads the ID from a PR title', () => {
-    expect(extractItemId('fix(auth): use the primary token in AuthControl (LibPage-009)')).toBe('LibPage-009')
+  it('reads the issue number from a PR title', () => {
+    expect(extractItemId('fix(auth): use the primary token (#123)')).toBe('#123')
   })
 
-  it('normalises case', () => {
-    expect(extractItemId('loop/libpage-012-x')).toBe('LibPage-012')
+  it('reads a legacy ID from a branch or a title, normalising case', () => {
+    expect(extractItemId('fix/LibPage-009-auth-button-token')).toBe('LibPage-009')
+    expect(extractItemId('fix(auth): use the primary token (LibPage-009)')).toBe('LibPage-009')
+    expect(extractItemId('fix/libpage-009-x')).toBe('LibPage-009')
+  })
+
+  it('prefers the issue number when a title quotes a legacy ID as well', () => {
+    expect(extractItemId('refactor: JoinSelector tokens (LibPage-027) (#15)')).toBe('#15')
+  })
+
+  it('takes the number at the end of a title, not one mentioned earlier', () => {
+    expect(extractItemId('fix: follow up to (#12) tokens (#15)')).toBe('#15')
+    expect(extractItemId('fix: follow up to (#12) tokens')).toBeNull()
   })
 
   it('returns null when there is no ID', () => {
-    expect(extractItemId('fix/some-branch')).toBeNull()
-    expect(extractItemId('')).toBeNull()
+    expect(extractItemId('master')).toBeNull()
+    expect(extractItemId('fix(auth): use the primary token')).toBeNull()
   })
 
-  it('does not match a longer number as a shorter ID', () => {
-    expect(extractItemId('loop/LibPage-0091-x')).toBe('LibPage-0091')
+  it('does not read a number that is not in the ID position', () => {
+    expect(extractItemId('fix/auth-2-factor')).toBeNull()
+    expect(extractItemId('chore: bump to 1.2.3 #456')).toBeNull()
   })
 })

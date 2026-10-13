@@ -1,17 +1,15 @@
 // CLI for the weekly loop: prints what this run should do, as JSON, or "none".
-//   {"action":"fix","pr":N,"branch":"…","id":"LibPage-NNN","reviewers":[…],"agentFindings":A,"developerFindings":D,"comments":[url…]}
+//   {"action":"fix","pr":N,"branch":"…","id":"#123","reviewers":[…],"agentFindings":A,"developerFindings":D,"comments":[url…]}
 //       an open loop PR has reviewer findings an agent may fix — fix those, start nothing new
-//   {"action":"new","id":"LibPage-NNN","title":"…","openPrs":[…]}             take this backlog item
+//   {"action":"new","id":"#123","number":123,"title":"…","openPrs":[…]}       take this issue
+// The backlog is the repository's GitHub issues; `id` is the issue number as written in branch
+// names and PR titles. A PR opened before the move to issues carries a `LibPage-NNN` id instead.
 // Usage: npm run loop:next
 // Exit codes: 0 = printed an action or "none"; 2 = too many loop PRs already open; 1 = gh failed.
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { type LoopPrData, selectFixTarget } from './review-pass'
-import { extractItemId, isLoopBranch, selectNextItem } from './select-item'
+import { type IssueData, isLoopPullRequest, itemIdsOf, selectNextIssue } from './select-item'
 
-const LOOP_LABEL = 'loop'
 // Named outright rather than left to gh's `{owner}/{repo}` placeholder, so the picker does not
 // depend on how gh resolves the current repository in the cloud environment.
 const REPO = process.env.LOOP_REPO ?? 'DerLegatLabienus/liberal-page'
@@ -21,6 +19,7 @@ const MAX_OPEN = Number(process.env.LOOP_MAX_OPEN ?? 3)
 
 interface LoopPr extends LoopPrData {
   mergedAt: string | null
+  body: string
 }
 
 // Everything here uses GitHub's REST API through `gh api`. `gh pr list` and the other
@@ -31,8 +30,18 @@ interface RestPr {
   title: string
   draft: boolean
   merged_at: string | null
-  head: { ref: string; sha: string }
+  body: string | null
+  user: { login: string } | null
+  head: { ref: string; sha: string; repo: { full_name: string } | null }
   labels: { name: string }[]
+}
+
+interface RestIssue {
+  number: number
+  title: string
+  labels: { name: string }[]
+  user: { login: string } | null
+  pull_request?: unknown
 }
 
 interface RestComment {
@@ -73,12 +82,23 @@ function listCommits(pr: number): LoopPrData['commits'] {
 // Commits and comments are fetched for open PRs only; closed PRs only need their ID.
 function listLoopPrs(state: 'open' | 'closed'): LoopPr[] {
   // A loop PR is recognised by its branch shape or its label, so a PR that lost (or never
-  // got) the label is still counted.
+  // got) the label is still counted — but only when the owner opened it from this repository.
   return restList<RestPr>(`repos/${REPO}/pulls?state=${state}&per_page=100`)
-    .filter((pr) => isLoopBranch(pr.head.ref) || pr.labels.some((l) => l.name === LOOP_LABEL))
+    .filter((pr) =>
+      isLoopPullRequest(
+        {
+          branch: pr.head.ref,
+          labels: pr.labels.map((l) => l.name),
+          authorLogin: pr.user?.login ?? '',
+          headRepo: pr.head.repo?.full_name ?? null,
+        },
+        REPO,
+      ),
+    )
     .map((pr) => ({
       number: pr.number,
       title: pr.title,
+      body: pr.body ?? '',
       headRefName: pr.head.ref,
       headRefOid: pr.head.sha,
       isDraft: pr.draft,
@@ -88,8 +108,16 @@ function listLoopPrs(state: 'open' | 'closed'): LoopPr[] {
     }))
 }
 
-function itemIdOf(pr: LoopPr): string | null {
-  return extractItemId(pr.headRefName) ?? extractItemId(pr.title)
+// Open issues carrying the `loop-safe` label. The endpoint returns pull requests too, and
+// issues from any author; selectNextIssue filters both.
+function listCandidateIssues(): IssueData[] {
+  return restList<RestIssue>(`repos/${REPO}/issues?state=open&labels=loop-safe&per_page=100`).map((issue) => ({
+    number: issue.number,
+    title: issue.title,
+    labels: issue.labels.map((l) => l.name),
+    authorLogin: issue.user?.login ?? '',
+    isPullRequest: issue.pull_request !== undefined,
+  }))
 }
 
 function main(): void {
@@ -110,18 +138,17 @@ function main(): void {
     process.exit(2)
   }
 
-  // Skip every item that ever had a loop PR: in flight (open), rejected (closed unmerged),
-  // or done (merged). A merged item is normally gone from the backlog already; excluding it
-  // anyway keeps a stale checkout from redoing it, and means a blocked item whose
-  // explanation PR was merged is only retried under a new ID.
+  // Skip every issue that ever had a loop PR: in flight (open), rejected (closed unmerged),
+  // or done (merged). A merged PR normally closed its issue already; excluding it anyway
+  // covers a PR that only referred to the issue, so a part-done issue is not taken again
+  // until the developer files a new one.
   const excluded = new Set<string>()
   for (const pr of [...open, ...listLoopPrs('closed')]) {
-    const id = itemIdOf(pr)
-    if (id) excluded.add(id)
+    for (const id of itemIdsOf({ branch: pr.headRefName, title: pr.title, body: pr.body })) excluded.add(id)
   }
 
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-  const item = selectNextItem(readFileSync(path.join(root, 'BACKLOG.md'), 'utf8'), excluded)
+  // Only the repository owner's issues are instructions; see selectNextIssue.
+  const item = selectNextIssue(listCandidateIssues(), REPO.split('/')[0], excluded)
   // `openPrs` lets the agent check its change against work already in flight.
   console.log(item ? JSON.stringify({ action: 'new', ...item, openPrs: open.map((pr) => pr.number) }) : 'none')
 }
