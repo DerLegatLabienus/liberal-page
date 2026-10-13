@@ -168,14 +168,14 @@ describe('MkCard — vote activity colors', () => {
     expect(container.querySelector('.text-slate-400')).not.toBeInTheDocument()
   })
 
-  it('applies green color class for בעד vote', () => {
+  it('applies the success token for בעד vote', () => {
     const { container } = render(<MkCard mk={makeVote('הצביע בעד')} />)
-    expect(container.querySelector('.text-green-600')).toBeInTheDocument()
+    expect(container.querySelector('.text-success')).toBeInTheDocument()
   })
 
-  it('applies yellow color class for נמנע vote', () => {
+  it('applies the warning token for נמנע vote', () => {
     const { container } = render(<MkCard mk={makeVote('נמנע')} />)
-    expect(container.querySelector('.text-yellow-600')).toBeInTheDocument()
+    expect(container.querySelector('.text-warning')).toBeInTheDocument()
   })
 })
 
@@ -267,11 +267,11 @@ describe('MkCard — design tokens only', () => {
   // Raw Tailwind palette classes (bg-white, text-slate-400, hover:text-red-600, bg-purple-500/50 …).
   const PALETTE_CLASS = /^(?:[a-z-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|divide)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})(?:\/\d+)?$/
 
-  // Waiting on a design decision (LibPage-026): the design system has no success/warning token
-  // for vote results, and no token for the per-entity MK accent (purple stripe + AI summary box).
+  // Waiting on a design decision (LibPage-031): there is no token for the per-entity MK accent
+  // (purple stripe + AI summary box). Vote results use the success and warning tokens.
   // Shrink this list as tokens are decided; anything not listed here fails the test.
   const PENDING_DESIGN_DECISION = new Set([
-    'text-green-600', 'text-yellow-600', 'bg-purple-500', 'bg-purple-50', 'text-purple-700',
+    'bg-purple-500', 'bg-purple-50', 'text-purple-700',
   ])
 
   function paletteClasses(container: HTMLElement): string[] {

@@ -5,9 +5,9 @@ import type { Mk } from '@/types'
 import type { MkActivity } from '@/types'
 
 const VOTE_COLORS: Record<string, string> = {
-  'בעד': 'text-green-600',
+  'בעד': 'text-success',
   'נגד': 'text-destructive',
-  'נמנע': 'text-yellow-600',
+  'נמנע': 'text-warning',
   'נעדר': 'text-muted-foreground',
 }
 
