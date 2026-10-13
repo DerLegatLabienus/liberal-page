@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 import { createTestApp } from '../../support/test-app'
 import request from 'supertest'
 import { setupTestDb } from '../db-harness'
@@ -69,7 +69,25 @@ describe('POST /api/admin/letters/beautify', () => {
   })
 
   describe('rate limit', () => {
-    const LIMIT = 10
+    const LIMIT = 1
+    const WINDOW_MS = 120_000
+
+    // The limiter reads Date.now(). Only Date is faked: faking the timers too would hang
+    // supertest and pglite.
+    afterEach(() => { vi.useRealTimers() })
+
+    it('lets the same caller through again only after two minutes', async () => {
+      await flags.setFlag('lettersBeautifyEnabled', true, '')
+      const start = new Date('2026-01-01T00:00:00Z').getTime()
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(start)
+      expect((await beautify(adminToken)).status).toBe(200)
+      expect((await beautify(adminToken)).status).toBe(429)
+      vi.setSystemTime(start + WINDOW_MS - 1_000)
+      expect((await beautify(adminToken)).status).toBe(429)
+      vi.setSystemTime(start + WINDOW_MS + 1_000)
+      expect((await beautify(adminToken)).status).toBe(200)
+    })
 
     it('allows requests under the limit, then answers 429 rate_limited', async () => {
       await flags.setFlag('lettersBeautifyEnabled', true, '')

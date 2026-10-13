@@ -16,12 +16,15 @@ const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
 
-// Every beautify request is an LLM call, so cap it per caller to stop a runaway client or a
-// stuck retry loop from spending money.
-const BEAUTIFY_MAX_PER_MINUTE = 10
-let beautifyLimiter = new SlidingWindowLimiter(BEAUTIFY_MAX_PER_MINUTE, 60_000)
+// Every beautify request is an LLM call, so each caller gets one per two minutes: enough for
+// an admin polishing a letter, and it stops a runaway client or a stuck retry loop from
+// spending money.
+const BEAUTIFY_MAX_PER_WINDOW = 1
+const BEAUTIFY_WINDOW_MS = 120_000
+const newBeautifyLimiter = () => new SlidingWindowLimiter(BEAUTIFY_MAX_PER_WINDOW, BEAUTIFY_WINDOW_MS)
+let beautifyLimiter = newBeautifyLimiter()
 /** Test-only: fresh limiter window. */
-export function _resetBeautifyLimiter(): void { beautifyLimiter = new SlidingWindowLimiter(BEAUTIFY_MAX_PER_MINUTE, 60_000) }
+export function _resetBeautifyLimiter(): void { beautifyLimiter = newBeautifyLimiter() }
 
 /** Shared shape for the zero-recipient check, satisfied by both incoming LetterChannelInput
  *  payloads and stored LetterChannelRow db rows. */

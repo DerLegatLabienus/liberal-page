@@ -671,8 +671,12 @@ function NewLetterForm({ templates, beautifyEnabled, onOpen, onSubmit, initialLe
     try {
       const res = await api.admin.letters.beautify(bodyHtml)
       setBodyHtml(res.html)
-    } catch {
-      setBeautifyError('Beautify failed (AI service may be unavailable).')
+    } catch (err) {
+      setBeautifyError(
+        errorStatus(err) === 429
+          ? 'Beautify can run once every 2 minutes. Try again shortly.'
+          : 'Beautify failed (AI service may be unavailable).',
+      )
     } finally {
       setBeautifying(false)
     }
