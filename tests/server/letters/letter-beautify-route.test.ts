@@ -107,6 +107,27 @@ describe('POST /api/admin/letters/beautify', () => {
       expect(beautifyLetterHtml).toHaveBeenCalledTimes(LIMIT)
     })
 
+    it('an empty body does not use up the slot', async () => {
+      await flags.setFlag('lettersBeautifyEnabled', true, '')
+      expect((await beautify(adminToken, { html: '' })).status).toBe(400)
+      expect((await beautify(adminToken)).status).toBe(200)
+    })
+
+    it('gives the slot back when the AI service is not configured', async () => {
+      await flags.setFlag('lettersBeautifyEnabled', true, '')
+      vi.mocked(beautifyLetterHtml).mockRejectedValueOnce(new Error('beautify_unavailable'))
+      expect((await beautify(adminToken)).status).toBe(503)
+      expect((await beautify(adminToken)).status).toBe(200)
+    })
+
+    it('a call that reached the LLM and failed still uses up the slot', async () => {
+      await flags.setFlag('lettersBeautifyEnabled', true, '')
+      vi.mocked(beautifyLetterHtml).mockRejectedValueOnce(new Error('upstream exploded'))
+      expect((await beautify(adminToken)).status).toBe(500)
+      expect((await beautify(adminToken)).status).toBe(429)
+      expect(beautifyLetterHtml).toHaveBeenCalledTimes(1)
+    })
+
     it('limits each caller separately', async () => {
       await flags.setFlag('lettersBeautifyEnabled', true, '')
       for (let i = 0; i < LIMIT; i++) await beautify(adminToken)

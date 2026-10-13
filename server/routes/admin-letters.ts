@@ -205,25 +205,33 @@ router.patch('/:id/pin', async (req, res) => {
 // POST /api/admin/letters/beautify — AI clean + improve letter body HTML.
 // Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark),
 // then rate limited per caller (429 rate_limited) before the LLM is called.
+// Only a request that reaches the LLM uses up the caller's slot: an empty body is refused
+// before the limiter, and the slot is given back when the AI service is not configured. A
+// call that reached the LLM and failed still counts, so a client retrying against a failing
+// service stays limited.
 router.post('/beautify', async (req, res) => {
+  const limiterKey = String(req.user?.id ?? req.ip ?? 'unknown')
+  let slotTaken = false
   try {
     if (!(await flagsRepo.isEnabled('lettersBeautifyEnabled'))) {
       return res.status(404).json({ error: 'Not found' })
     }
-    if (!beautifyLimiter.allow(String(req.user?.id ?? req.ip ?? 'unknown'))) {
-      return res.status(429).json({ error: 'rate_limited' })
-    }
     const { html } = req.body as { html?: string }
     if (!html || !html.trim()) return res.status(400).json({ error: 'html is required' })
+
+    if (!beautifyLimiter.allow(limiterKey)) {
+      return res.status(429).json({ error: 'rate_limited' })
+    }
+    slotTaken = true
 
     const beautified = await beautifyLetterHtml(html)
     res.json({ html: beautified })
   } catch (err) {
     console.error('[admin/letters] beautify failed:', err)
-    const msg = err instanceof Error && err.message === 'beautify_unavailable'
-      ? 'AI service is not configured'
-      : 'Failed to beautify'
-    res.status(err instanceof Error && err.message === 'beautify_unavailable' ? 503 : 500).json({ error: msg })
+    const unavailable = err instanceof Error && err.message === 'beautify_unavailable'
+    // beautify_unavailable is thrown before any request is sent, so nothing was spent.
+    if (unavailable && slotTaken) beautifyLimiter.release(limiterKey)
+    res.status(unavailable ? 503 : 500).json({ error: unavailable ? 'AI service is not configured' : 'Failed to beautify' })
   }
 })
 

@@ -23,4 +23,16 @@ export class SlidingWindowLimiter {
     }
     return true
   }
+
+  /**
+   * Give back the most recent attempt recorded for `key`, for a caller whose request turned
+   * out not to do the work the limit protects. Call `allow` first and `release` afterwards:
+   * checking without recording would let two concurrent requests both pass.
+   */
+  release(key: string): void {
+    const hits = this.hits.get(key)
+    if (!hits || hits.length === 0) return
+    hits.pop()
+    if (hits.length === 0) this.hits.delete(key)
+  }
 }
