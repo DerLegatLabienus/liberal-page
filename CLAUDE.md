@@ -135,6 +135,22 @@ own PR branch, and never pushes to `master` or merges. The developer merges by h
 reviewers (`.claude/agents/*-reviewer.md`) comment on every PR and mark each finding
 `Needs: agent` or `Needs: developer`.
 
+**Answer every comment you act on — both lanes.** When a change is pushed in response to a
+comment on a pull request or an issue (a reviewer's finding, or the developer's own comment), a
+reply is posted in the same place, in the same sitting. This holds for the loop's review pass and
+for any developer session that pushes to a PR branch or fixes something an issue comment asked
+for. A fix without its reply is not done. The reply covers each comment acted on:
+
+- which comment it answers, as a link to it;
+- **Fixed**, **Fixed in part** or **Not changed**, with the short SHA of the commit;
+- what was changed, in a sentence or two;
+- for anything left: what remains, why, and where it is tracked.
+
+A comment that was not acted on gets no "fixed" reply. A reply posted from a developer session
+under the developer's account says so in its last line. GitHub has no threaded replies on PR and
+issue comments, so the reply is one new comment that links to each comment it answers; an inline
+review comment is answered in its own thread.
+
 **Classify every change before starting, and say which tier it is:**
 
 | Tier | Covers | Paperwork | Before push |

@@ -198,13 +198,23 @@ pass per PR to address what they found; after it, anything still open is the dev
    must be there. If you fixed nothing, still record the pass with
    `git commit --allow-empty -m "chore: no changes from review (review pass)" -m "Loop-Review-Pass: true" -m "Refs: LibPage-NNN"`,
    so the PR is not picked for a pass again next week.
-6. **Post ONE comment on the PR** (the "Post a comment" command above), headed
-   `### loop — review pass`, listing
-   every finding from step 2 as either:
-   - **Fixed** — reviewer, the finding's title, what you changed; or
-   - **Left for the developer** — reviewer, the finding's title, and the reason.
+6. **Answer the comments: post ONE comment on the PR** (the "Post a comment" command above),
+   headed `### loop — review pass`. This comment is your reply to the reviewers. **A fix you
+   pushed is not finished until it is answered here**: a reader of the PR must be able to see,
+   for each finding, what happened to it without reading the diff. List every finding from
+   step 2 as one of:
+   - **Fixed** — the reviewer, the finding's title as a link to the reviewer's comment (the URL
+     from `comments` in the JSON), the short SHA of the commit that fixed it, and what you
+     changed in one or two sentences;
+   - **Fixed in part** — the same, plus exactly what remains and why; or
+   - **Left for the developer** — the reviewer, the finding's title as a link, and the reason.
 
-   End with the gate result. Never describe a check you did not run as passed.
+   Answer every finding, including the ones you did not touch. End with the gate result. Never
+   describe a check you did not run as passed, and never call a finding fixed unless the commit
+   you name changes what the finding's **Where** points at.
+
+   If posting the comment fails, try once more. If it still fails, say so plainly in your
+   report, with the text you tried to post, so the developer can post it.
 7. **Stop.** Pushing re-runs the reviewers; their new comments are for the developer. Do not
    start a backlog item in this run.
 
