@@ -85,7 +85,7 @@ docs/             Architecture and project documentation
 - [Components](docs/components.md)
 - [Data schema](docs/data-schema.md)
 - [Project knowledge base](docs/README.md)
-- [Backlog](BACKLOG.md)
+- [Backlog](https://github.com/DerLegatLabienus/liberal-page/issues) (GitHub issues)
 
 ## Notes
 
