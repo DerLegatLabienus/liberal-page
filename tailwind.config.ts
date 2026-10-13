@@ -31,6 +31,14 @@ export default {
           DEFAULT: 'oklch(var(--destructive) / <alpha-value>)',
           foreground: 'oklch(var(--destructive-foreground) / <alpha-value>)',
         },
+        success: {
+          DEFAULT: 'oklch(var(--success) / <alpha-value>)',
+          foreground: 'oklch(var(--success-foreground) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'oklch(var(--warning) / <alpha-value>)',
+          foreground: 'oklch(var(--warning-foreground) / <alpha-value>)',
+        },
         card: {
           DEFAULT: 'oklch(var(--card) / <alpha-value>)',
           foreground: 'oklch(var(--card-foreground) / <alpha-value>)',

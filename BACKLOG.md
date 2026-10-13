@@ -4,7 +4,7 @@ The only queue of work for this repo. Open items only — a shipped item is **de
 keeps the record), not archived here.
 
 - **IDs** (`LibPage-NNN`) are permanent: never reused, and unchanged when an item is retitled or
-  reordered. **Next free ID: LibPage-031** — bump this line whenever an item is added, because
+  reordered. **Next free ID: LibPage-032** — bump this line whenever an item is added, because
   deleting a shipped item removes its ID from the file.
 - **Order is priority:** items appear below in the same order as the lists here.
 - **`[loop-safe]`** in a heading marks an item the weekly loop may take. The loop takes the first
@@ -49,6 +49,7 @@ keeps the record), not archived here.
 - **LibPage-017** — Site-Wide Product Analytics
 - **LibPage-019** — Move the frontend to a host with per-PR previews
 - **LibPage-022** — Move the loop's database secret into a stored credential and rotate it
+- **LibPage-031** — Design decision: colours the design system has no token for
 
 ---
 
@@ -119,6 +120,9 @@ palette class remains in the rendered selector. Check the result in a browser ag
 `npm run dev:frontend` in both the default view and any hover, selected or empty state the
 component has, and say in the PR what you looked at.
 
+**Status colours now have tokens** (2026-10-14): use `success` for green/emerald and `warning` for
+amber/orange/yellow, in the shapes shown under "Status colours" in `docs/design-system.md`.
+
 **If the design system has no token for a case** (for example text over a photograph), do not
 invent one and do not leave a silent exception: list each such class in the PR under
 "Needs a design decision" and add the `needs-developer` label.
@@ -139,6 +143,9 @@ palette class remains in the rendered strip. Check the result in a browser again
 `npm run dev:frontend` in both the default view and any hover, selected or empty state the
 component has, and say in the PR what you looked at.
 
+**Status colours now have tokens** (2026-10-14): use `success` for green/emerald and `warning` for
+amber/orange/yellow, in the shapes shown under "Status colours" in `docs/design-system.md`.
+
 **If the design system has no token for a case** (for example text over a photograph), do not
 invent one and do not leave a silent exception: list each such class in the PR under
 "Needs a design decision" and add the `needs-developer` label.
@@ -158,6 +165,9 @@ sizes, behaviour and copy exactly as they are. Add or extend a component test as
 palette class remains in the rendered section. Check the result in a browser against
 `npm run dev:frontend` in both the default view and any hover, selected or empty state the
 component has, and say in the PR what you looked at.
+
+**Status colours now have tokens** (2026-10-14): use `success` for green/emerald and `warning` for
+amber/orange/yellow, in the shapes shown under "Status colours" in `docs/design-system.md`.
 
 **If the design system has no token for a case** (for example text over a photograph), do not
 invent one and do not leave a silent exception: list each such class in the PR under
@@ -763,3 +773,22 @@ should not be readable at all.
    put the new connection string in the credential.
 
 Risky tier: production credentials.
+
+## LibPage-031 — Design decision: colours the design system has no token for
+
+Added 2026-10-14, after the loop's colour clean-ups (PR #10, PR #11) hit gaps. `success` and
+`warning` tokens were added the same day and close the largest gap. A scan of `src/` shows three
+kinds of hardcoded colour that still have no token and need a decision before any clean-up task
+can finish them:
+
+1. **Per-kind accent colours.** The MK card's purple stripe and summary box (`MkCard`), and the
+   constitution chapters' own colours (amber, teal, violet, indigo in `ConstitutionChapterCard`).
+   Decide: a small set of named accent tokens, or map them all to `primary`.
+2. **The brand gradient** on the hero and join sections (`from-blue-700 … to-sky-600`). Decide: a
+   named gradient utility, or a flat `primary` background.
+3. **Text and scrims over photographs** (`text-white`, `bg-black/…` in the gallery, hero, drawer
+   and footer). Decide: tokens such as `overlay` / `on-image`, or an accepted, documented
+   exception.
+
+Until decided, clean-up tasks leave these classes in place and list them, as
+`docs/design-system.md` now says. Not for the loop: it is a decision, not a task.
