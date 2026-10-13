@@ -7,6 +7,7 @@ import { FeatureFlagsRepository } from '../repositories/feature-flags-repository
 import { beautifyLetterHtml } from '../services/letter-beautifier'
 import { syncShareForLetter, removeShareForLetter, regenerateAllShares } from '../services/share-publisher'
 import { makeShareUrlResolver } from '../services/share-url'
+import { SlidingWindowLimiter } from '../services/rate-limit'
 import type { ChannelKind, LetterChannelInput } from '../../src/types'
 
 const router = Router()
@@ -14,6 +15,16 @@ const lettersRepo = new LettersRepository()
 const channelsRepo = new LetterChannelsRepository()
 const analyticsRepo = new LetterAnalyticsRepository()
 const flagsRepo = new FeatureFlagsRepository()
+
+// Every beautify request is an LLM call, so each caller gets one per two minutes: enough for
+// an admin polishing a letter, and it stops a runaway client or a stuck retry loop from
+// spending money.
+const BEAUTIFY_MAX_PER_WINDOW = 1
+const BEAUTIFY_WINDOW_MS = 120_000
+const newBeautifyLimiter = () => new SlidingWindowLimiter(BEAUTIFY_MAX_PER_WINDOW, BEAUTIFY_WINDOW_MS)
+let beautifyLimiter = newBeautifyLimiter()
+/** Test-only: fresh limiter window. */
+export function _resetBeautifyLimiter(): void { beautifyLimiter = newBeautifyLimiter() }
 
 /** Shared shape for the zero-recipient check, satisfied by both incoming LetterChannelInput
  *  payloads and stored LetterChannelRow db rows. */
@@ -192,8 +203,15 @@ router.patch('/:id/pin', async (req, res) => {
 })
 
 // POST /api/admin/letters/beautify — AI clean + improve letter body HTML.
-// Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark).
+// Gated by the lettersBeautifyEnabled flag (off by default → 404, capability stays dark),
+// then rate limited per caller (429 rate_limited) before the LLM is called.
+// Only a request that reaches the LLM uses up the caller's slot: an empty body is refused
+// before the limiter, and the slot is given back when the AI service is not configured. A
+// call that reached the LLM and failed still counts, so a client retrying against a failing
+// service stays limited.
 router.post('/beautify', async (req, res) => {
+  const limiterKey = String(req.user?.id ?? req.ip ?? 'unknown')
+  let slotTaken = false
   try {
     if (!(await flagsRepo.isEnabled('lettersBeautifyEnabled'))) {
       return res.status(404).json({ error: 'Not found' })
@@ -201,14 +219,19 @@ router.post('/beautify', async (req, res) => {
     const { html } = req.body as { html?: string }
     if (!html || !html.trim()) return res.status(400).json({ error: 'html is required' })
 
+    if (!beautifyLimiter.allow(limiterKey)) {
+      return res.status(429).json({ error: 'rate_limited' })
+    }
+    slotTaken = true
+
     const beautified = await beautifyLetterHtml(html)
     res.json({ html: beautified })
   } catch (err) {
     console.error('[admin/letters] beautify failed:', err)
-    const msg = err instanceof Error && err.message === 'beautify_unavailable'
-      ? 'AI service is not configured'
-      : 'Failed to beautify'
-    res.status(err instanceof Error && err.message === 'beautify_unavailable' ? 503 : 500).json({ error: msg })
+    const unavailable = err instanceof Error && err.message === 'beautify_unavailable'
+    // beautify_unavailable is thrown before any request is sent, so nothing was spent.
+    if (unavailable && slotTaken) beautifyLimiter.release(limiterKey)
+    res.status(unavailable ? 503 : 500).json({ error: unavailable ? 'AI service is not configured' : 'Failed to beautify' })
   }
 })
 
