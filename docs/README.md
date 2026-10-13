@@ -14,4 +14,4 @@
 | [design-system.md](./design-system.md) | Frontend/UX source of truth — tokens, components, RTL, feedback, a11y |
 | [components.md](./components.md) | Current frontend component reference |
 | [data-schema.md](./data-schema.md) | TypeScript interfaces, Postgres schema, and JSON shapes |
-| [backlog.md](../BACKLOG.md) | Prioritized feature and technical backlog |
+| [GitHub issues](https://github.com/DerLegatLabienus/liberal-page/issues) | The backlog: every open task, with type, size and priority labels |

@@ -33,3 +33,6 @@ graphify-out/
 review-comment.md
 pr-body.md
 comment.md
+
+# Claude Code per-machine settings (personal permissions and hooks)
+.claude/settings.local.json

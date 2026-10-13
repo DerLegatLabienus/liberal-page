@@ -249,12 +249,12 @@ interview answer to "have you worked with X?" — say the term, then the anchor.
 
 | Term | How it fits this project |
 |---|---|
-| Spec-driven development | 44 dated design specs in `docs/superpowers/specs/` — written before implementation, referenced from BACKLOG entries |
+| Spec-driven development | 44 dated design specs in `docs/superpowers/specs/` — written before implementation, referenced from the backlog (GitHub issues since 2026-10-14) |
 | Integration testing | `supertest` drives the real Express app against pglite — routes, middleware, and repositories exercised together |
 | Auto-mocking | `react-i18next` auto-mocked for component tests via `src/__mocks__/react-i18next.ts` |
 | Environment parity | The same driver and migrations run in dev (Docker), prod (Neon), and tests (pglite) — parity by construction, switched by one env var |
 | CI gating | Lint + typecheck + tests + build on every push; the gap (deploy workflow not `needs:`-gated on CI) was itself found in a self-review pass |
-| Rolling self-review | Seven structured review passes over the codebase with findings triaged into BACKLOG — fixed or consciously deferred with rationale |
+| Rolling self-review | Seven structured review passes over the codebase with findings triaged into the backlog (now a GitHub issue) — fixed or consciously deferred with rationale |
 
 ## Framing tips for interviews
 

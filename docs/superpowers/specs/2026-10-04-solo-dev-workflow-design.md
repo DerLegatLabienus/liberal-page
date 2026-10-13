@@ -4,6 +4,12 @@
 **Status:** agreed in a grilling session, not yet implemented
 **Tier (by this spec's own rules):** risky — it changes deploy and CI configuration
 
+> **Superseded in part, 2026-10-14.** The backlog is no longer `BACKLOG.md`: it is the
+> repository's GitHub issues, and a blocked attempt is explained in a comment on the issue, not
+> in a docs-only pull request. Wherever this spec says "backlog item", `BACKLOG.md`, `LibPage-NNN`
+> or `[loop-safe]`, read `docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md`.
+> The rest of this spec stands.
+
 ## Problem Statement
 
 I am the only developer on this project. My workflow today is "let the superpowers skills drive,

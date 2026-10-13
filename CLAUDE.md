@@ -8,37 +8,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend:** Express 5 + `tsx` (port 3001)
 - Both live in the same repo. Vite proxies `/api/*` → `localhost:3001`.
 
-## Codebase questions — query the graph first
-
-This repo has a prebuilt knowledge graph at `graphify-out/graph.json` (gitignored, local only).
-**Before grepping or fanning out reads to answer a question about how the code fits together**
-("what calls X", "how does the letters send flow work", "where does auth live", "trace the poller"),
-query the graph — it answers from ~3,700 extracted symbols and design decisions and their edges instead of loading files
-into context:
-
-```bash
-graphify query "how does the multi-channel letter send flow work"
-graphify path "AuthRepository" "DB"        # shortest path between two symbols
-graphify explain "buildChannelSends"       # plain-language node explanation
-```
-
-Only fall back to Grep/Read when the graph does not cover it (it holds structure and symbol
-relationships, not line-level implementation) or when you are about to edit a file — edits still
-need the real bytes.
-
-**Keeping it fresh — mostly automatic.** A `post-commit` / `post-checkout` git hook
-(`graphify hook install`) rebuilds the **code** layer after every commit: detached, AST-only,
-no LLM, zero tokens. You do not need to run it, and neither do I.
-
-The hook deliberately skips **docs**, because doc extraction needs an LLM. Instead it appends
-changed `.md`/`.txt` paths to `graphify-out/.needs_update`. **At the start of a session, if that
-file exists, tell the user the doc layer is stale, list what changed, and offer to run
-`/graphify --update`** — do not run it unprompted, it spends their tokens. A full `/graphify .`
-clears the marker.
-
-Outputs: `graphify-out/graph.html` (interactive, open in a browser), `graphify-out/GRAPH_REPORT.md`
-(god nodes, community map, audit trail), `graphify-out/graph.json` (raw).
-
 ## Frontend/UX rules
 
 **Any frontend/UI change must follow [`docs/design-system.md`](docs/design-system.md).** In short:
@@ -160,11 +129,27 @@ rule for this repo** — there is no worktree or merge-at-session-end rule.
 branches, no PRs, no worktrees. Never run `superpowers:using-git-worktrees` or
 `superpowers:finishing-a-development-branch` here, even when another skill hands off to them.
 
-**PR lane — unattended work only** (the weekly loop: `npm run loop:next` picks the work,
-`scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
+**PR lane — unattended work only** (the loop: `npm run loop:next` picks the next issue from the
+backlog, `scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
 own PR branch, and never pushes to `master` or merges. The developer merges by hand. Four named
 reviewers (`.claude/agents/*-reviewer.md`) comment on every PR and mark each finding
 `Needs: agent` or `Needs: developer`.
+
+**Answer every comment you act on — both lanes.** When a change is pushed in response to a
+comment on a pull request or an issue (a reviewer's finding, or the developer's own comment), a
+reply is posted in the same place, in the same sitting. This holds for the loop's review pass and
+for any developer session that pushes to a PR branch or fixes something an issue comment asked
+for. A fix without its reply is not done. The reply covers each comment acted on:
+
+- which comment it answers, as a link to it;
+- **Fixed**, **Fixed in part** or **Not changed**, with the short SHA of the commit;
+- what was changed, in a sentence or two;
+- for anything left: what remains, why, and where it is tracked.
+
+A comment that was not acted on gets no "fixed" reply. A reply posted from a developer session
+under the developer's account says so in its last line. GitHub has no threaded replies on PR and
+issue comments, so the reply is one new comment that links to each comment it answers; an inline
+review comment is answered in its own thread.
 
 **Classify every change before starting, and say which tier it is:**
 
@@ -182,7 +167,7 @@ in the session instead.
 
 **Independent review (feature and risky):** one general reviewer, run as a fresh agent that sees
 the diff and the spec but not the authoring conversation (`superpowers:requesting-code-review`).
-**Fix every finding before the push** — nothing is deferred to the backlog. This is not the four
+**Fix every finding before the push** — nothing is deferred to an issue. This is not the four
 named PR reviewers; those belong to the PR lane.
 
 **Real-app check:** a change to a user-visible flow is driven in a browser against `npm run dev`
@@ -199,6 +184,52 @@ commit's CI checks pass** (set 2026-10-05), so a commit that fails CI does not r
 run its migrations. **PR previews are off on Render and must stay off** (set 2026-10-05): a preview
 copies every production secret and the production database connection. The health check path is
 `/api/health` (set 2026-10-05), so a build that does not answer never replaces the running one.
+
+### The backlog: GitHub issues
+
+The backlog is this repository's GitHub issues (since 2026-10-14; design in
+`docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md`). There is no backlog file.
+The issue number is the ID; items migrated from the old file keep `(LibPage-NNN)` in their title.
+
+**Creating an issue in a developer session:** propose the title, body and labels, and create it
+only after the developer approves. Issues are public and cannot be cleanly unsent. Never add
+`loop-safe` unless the developer asked for it.
+
+**Every issue is written as an agile item**, with these sections:
+
+| Section | Content |
+|---|---|
+| Request | Who needs what, and why |
+| Context | What exists today, with file paths |
+| Acceptance criteria | A checklist of observable outcomes |
+| Out of scope | What not to touch |
+| Definition of done | Criteria met and tested; gate green; docs updated; checked in the running app (or `curl` for a route); merged. A spike is done when its spec is accepted. Risky work adds spec, plan and confirmation |
+
+**Labels:**
+
+| Group | Labels | Meaning |
+|---|---|---|
+| Type | `type:story`, `type:bug`, `type:task`, `type:spike` | User-facing capability; defect; technical work; design or investigation |
+| Size | `size:S`, `size:M`, `size:L` | A rough estimate. It does not gate the loop |
+| Priority | `P0`, `P1`, `P2`, `P3` | `P0` is reserved for something broken in production |
+| Loop | `loop-safe`, `risky`, `needs-developer`, `loop` | The loop may take it; risky tier; waiting for the developer; a PR opened by the loop |
+
+**What the loop does with issues** (`scripts/loop/select-item.ts`, `scripts/loop/issue.ts`):
+
+- It takes only open issues the repository owner wrote, labelled `loop-safe` and neither `risky`
+  nor `needs-developer`, that never had a loop PR. Most urgent priority first, then the lowest
+  number. A loop PR is one the owner opened from this repository on a `<type>/<number>-slug`
+  branch or with the `loop` label.
+- It reads the issue body and the owner's comments (`npm run -s loop:issue -- <number>`), never
+  anyone else's. Its own comments begin `### loop — ` and are filtered out, because it posts
+  under the owner's account.
+- Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
+  `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
+- When blocked it posts one `### loop — blocked` comment and swaps `loop-safe` for
+  `needs-developer`. To retry, answer in a comment, put `loop-safe` back and remove
+  `needs-developer`.
+- It never creates an issue, never adds `loop-safe`, and never edits an issue's body. These are
+  instructions in its prompt; nothing in GitHub enforces them.
 
 ### The loop's read-only database window (`loop_read`)
 
@@ -406,7 +437,7 @@ cover the layer those can't: booting the actual server process and a real browse
 - `/portfolio-review` (`.claude/skills/portfolio-review/SKILL.md`) — regenerates
   `docs/portfolio-review.md`, a portfolio-ready review of the architecture, stack, solved
   technical issues, and a concepts-in-context technical glossary, mined from the repo docs,
-  git history, and `BACKLOG.md`.
+  git history, and the GitHub issues.
 
 ## Visual Companion (Brainstorming)
 
@@ -430,4 +461,18 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 | Data shapes, JSON schema | `docs/data-schema.md` |
 | Feature design / requirements — feature and risky tiers | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
 | Implementation plan steps — **risky tier only** | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
-| Backlog items | `BACKLOG.md` — commit immediately after adding |
+| Backlog items | A GitHub issue, created only after the developer approves its title, body and labels (see "The backlog: GitHub issues") |
+
+## graphify
+
+A knowledge graph of this repo lives in `graphify-out/` (gitignored, local only). Nothing here is
+an instruction to follow; hooks do the work:
+
+- **Reminder to query the graph** before a code search: a `PreToolUse` hook.
+- **Code layer rebuild** (AST only, free) after commit, checkout, merge and rebase: git hooks.
+- **Stale docs notice** at session start: a `SessionStart` hook. The docs layer needs an LLM, so
+  it is only ever refreshed by `/graphify --update`, on request.
+
+All of these are per-machine and untracked (`.git/hooks/`, `.claude/settings.local.json`,
+`~/.claude/hooks/graphify-*.sh`). A fresh clone needs `graphify hook install` plus those local
+pieces. Uncommitted edits are not in the graph until committed, or until `graphify update .`.

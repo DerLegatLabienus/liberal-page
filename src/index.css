@@ -21,6 +21,10 @@
     --accent-foreground: 0.205 0 0;
     --destructive: 0.577 0.245 27.325;
     --destructive-foreground: 0.985 0.005 240;
+    --success: 0.527 0.154 150.069;
+    --success-foreground: 0.985 0 0;
+    --warning: 0.555 0.163 48.998;
+    --warning-foreground: 0.985 0 0;
     --border: 0.922 0 0;
     --input: 0.922 0 0;
     --ring: 0.546 0.245 262.881;
@@ -64,6 +68,10 @@
     --accent: 0.269 0 0;
     --accent-foreground: 0.985 0 0;
     --destructive: 0.704 0.191 22.216;
+    --success: 0.792 0.209 151.711;
+    --success-foreground: 0.145 0 0;
+    --warning: 0.828 0.189 84.429;
+    --warning-foreground: 0.145 0 0;
     --border: 1 0 0;
     --input: 1 0 0;
     --ring: 0.556 0 0;
