@@ -3,17 +3,17 @@ import { useDirection } from '@/hooks/useDirection'
 import type { Bill } from '@/types'
 
 const STATUS_BADGE: Record<string, string> = {
-  'בוועדה': 'bg-green-100 text-green-700',
-  'הצבעה קרובה': 'bg-orange-100 text-orange-700',
-  'עבר': 'bg-slate-100 text-slate-600',
-  'נדחה': 'bg-red-100 text-red-600',
+  'בוועדה': 'bg-success/10 text-success',
+  'הצבעה קרובה': 'bg-warning/10 text-warning',
+  'עבר': 'bg-muted text-muted-foreground',
+  'נדחה': 'bg-destructive/10 text-destructive',
 }
 
 const STATUS_BAR: Record<string, string> = {
-  'בוועדה': 'bg-green-500',
-  'הצבעה קרובה': 'bg-orange-500',
-  'עבר': 'bg-slate-400',
-  'נדחה': 'bg-red-400',
+  'בוועדה': 'bg-success',
+  'הצבעה קרובה': 'bg-warning',
+  'עבר': 'bg-muted-foreground/60',
+  'נדחה': 'bg-destructive/80',
 }
 
 interface BillCardProps {
@@ -26,12 +26,12 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
   const direction = useDirection()
 
   return (
-    <div className={`relative flex overflow-hidden rounded-lg border border-border bg-white ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
-      <div className={`w-1 shrink-0 ${STATUS_BAR[bill.status] ?? 'bg-slate-300'}`} />
+    <div className={`relative flex overflow-hidden rounded-lg border border-border bg-card ${direction === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
+      <div className={`w-1 shrink-0 ${STATUS_BAR[bill.status] ?? 'bg-border'}`} />
       <div className="flex-1 p-4" dir="rtl">
         <div className="mb-2 flex items-start justify-between gap-2">
           <p className="text-right text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[bill.status] ?? 'bg-slate-100 text-slate-700'}`}>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[bill.status] ?? 'bg-secondary text-secondary-foreground'}`}>
             {bill.status}
           </span>
         </div>
@@ -39,8 +39,8 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
           {bill.number} · {bill.committee}
         </p>
         {bill.notes && (
-          <div className="mb-2 rounded-md bg-blue-50 p-2">
-            <p className="mb-1 text-right text-xs font-semibold text-blue-700">✦ סיכום</p>
+          <div className="mb-2 rounded-md bg-primary/10 p-2">
+            <p className="mb-1 text-right text-xs font-semibold text-primary">✦ סיכום</p>
             <p className="text-right leading-relaxed text-xs text-muted-foreground">{bill.notes}</p>
           </div>
         )}
@@ -60,7 +60,7 @@ export default function BillCard({ bill, onRemove }: BillCardProps) {
 
             {onRemove && (
               <button onClick={() => onRemove(bill.id)}
-                className="text-xs text-red-400 hover:text-red-600">
+                className="text-xs text-destructive/70 hover:text-destructive">
                 הסר
               </button>
             )}
