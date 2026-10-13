@@ -129,8 +129,8 @@ rule for this repo** — there is no worktree or merge-at-session-end rule.
 branches, no PRs, no worktrees. Never run `superpowers:using-git-worktrees` or
 `superpowers:finishing-a-development-branch` here, even when another skill hands off to them.
 
-**PR lane — unattended work only** (the weekly loop: `npm run loop:next` picks the work,
-`scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
+**PR lane — unattended work only** (the loop: `npm run loop:next` picks the next issue from the
+backlog, `scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
 own PR branch, and never pushes to `master` or merges. The developer merges by hand. Four named
 reviewers (`.claude/agents/*-reviewer.md`) comment on every PR and mark each finding
 `Needs: agent` or `Needs: developer`.
@@ -167,7 +167,7 @@ in the session instead.
 
 **Independent review (feature and risky):** one general reviewer, run as a fresh agent that sees
 the diff and the spec but not the authoring conversation (`superpowers:requesting-code-review`).
-**Fix every finding before the push** — nothing is deferred to the backlog. This is not the four
+**Fix every finding before the push** — nothing is deferred to an issue. This is not the four
 named PR reviewers; those belong to the PR lane.
 
 **Real-app check:** a change to a user-visible flow is driven in a browser against `npm run dev`
@@ -184,6 +184,52 @@ commit's CI checks pass** (set 2026-10-05), so a commit that fails CI does not r
 run its migrations. **PR previews are off on Render and must stay off** (set 2026-10-05): a preview
 copies every production secret and the production database connection. The health check path is
 `/api/health` (set 2026-10-05), so a build that does not answer never replaces the running one.
+
+### The backlog: GitHub issues
+
+The backlog is this repository's GitHub issues (since 2026-10-14; design in
+`docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md`). There is no backlog file.
+The issue number is the ID; items migrated from the old file keep `(LibPage-NNN)` in their title.
+
+**Creating an issue in a developer session:** propose the title, body and labels, and create it
+only after the developer approves. Issues are public and cannot be cleanly unsent. Never add
+`loop-safe` unless the developer asked for it.
+
+**Every issue is written as an agile item**, with these sections:
+
+| Section | Content |
+|---|---|
+| Request | Who needs what, and why |
+| Context | What exists today, with file paths |
+| Acceptance criteria | A checklist of observable outcomes |
+| Out of scope | What not to touch |
+| Definition of done | Criteria met and tested; gate green; docs updated; checked in the running app (or `curl` for a route); merged. A spike is done when its spec is accepted. Risky work adds spec, plan and confirmation |
+
+**Labels:**
+
+| Group | Labels | Meaning |
+|---|---|---|
+| Type | `type:story`, `type:bug`, `type:task`, `type:spike` | User-facing capability; defect; technical work; design or investigation |
+| Size | `size:S`, `size:M`, `size:L` | A rough estimate. It does not gate the loop |
+| Priority | `P0`, `P1`, `P2`, `P3` | `P0` is reserved for something broken in production |
+| Loop | `loop-safe`, `risky`, `needs-developer`, `loop` | The loop may take it; risky tier; waiting for the developer; a PR opened by the loop |
+
+**What the loop does with issues** (`scripts/loop/select-item.ts`, `scripts/loop/issue.ts`):
+
+- It takes only open issues the repository owner wrote, labelled `loop-safe` and neither `risky`
+  nor `needs-developer`, that never had a loop PR. Most urgent priority first, then the lowest
+  number. A loop PR is one the owner opened from this repository on a `<type>/<number>-slug`
+  branch or with the `loop` label.
+- It reads the issue body and the owner's comments (`npm run -s loop:issue -- <number>`), never
+  anyone else's. Its own comments begin `### loop — ` and are filtered out, because it posts
+  under the owner's account.
+- Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
+  `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
+- When blocked it posts one `### loop — blocked` comment and swaps `loop-safe` for
+  `needs-developer`. To retry, answer in a comment, put `loop-safe` back and remove
+  `needs-developer`.
+- It never creates an issue, never adds `loop-safe`, and never edits an issue's body. These are
+  instructions in its prompt; nothing in GitHub enforces them.
 
 ### The loop's read-only database window (`loop_read`)
 
@@ -391,7 +437,7 @@ cover the layer those can't: booting the actual server process and a real browse
 - `/portfolio-review` (`.claude/skills/portfolio-review/SKILL.md`) — regenerates
   `docs/portfolio-review.md`, a portfolio-ready review of the architecture, stack, solved
   technical issues, and a concepts-in-context technical glossary, mined from the repo docs,
-  git history, and `BACKLOG.md`.
+  git history, and the GitHub issues.
 
 ## Visual Companion (Brainstorming)
 
@@ -415,7 +461,7 @@ bash /path/to/start-server.sh --project-dir /path/to/project --host 0.0.0.0 --ur
 | Data shapes, JSON schema | `docs/data-schema.md` |
 | Feature design / requirements — feature and risky tiers | `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` |
 | Implementation plan steps — **risky tier only** | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` |
-| Backlog items | `BACKLOG.md` — commit immediately after adding |
+| Backlog items | A GitHub issue, created only after the developer approves its title, body and labels (see "The backlog: GitHub issues") |
 
 ## graphify
 

@@ -5,7 +5,7 @@ const router = Router()
 const repo = new JoinAnalyticsRepository()
 
 // Record a Join-section click-through. Fire-and-forget from the client; the join flow
-// never depends on the response. Admin read view: GET /api/admin/analytics/join (backlog #16, shipped).
+// never depends on the response. Admin read view: GET /api/admin/analytics/join (item 16 of the old backlog file, shipped).
 router.post('/join', async (req, res) => {
   const { status, mode } = req.body as { status?: string; mode?: string }
   try {

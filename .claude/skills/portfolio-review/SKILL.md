@@ -1,6 +1,6 @@
 ---
 name: portfolio-review
-description: Regenerate docs/portfolio-review.md — a portfolio-ready review of this project's architecture, stack, services, demonstrated backend skills, solved technical issues, and a concepts-in-context glossary (every technical idiom/buzzword mapped to where it lives in this repo), mined from the repo docs, git history, and BACKLOG.md. Use when the user wants to introduce the project, refresh the portfolio report, prepare interview material, or summarize what was built and what problems were solved.
+description: Regenerate docs/portfolio-review.md — a portfolio-ready review of this project's architecture, stack, services, demonstrated backend skills, solved technical issues, and a concepts-in-context glossary (every technical idiom/buzzword mapped to where it lives in this repo), mined from the repo docs, git history, and the GitHub issues. Use when the user wants to introduce the project, refresh the portfolio report, prepare interview material, or summarize what was built and what problems were solved.
 triggers:
   - portfolio review
   - introduce the project
@@ -23,7 +23,7 @@ developer-portfolio / interview audience.
 | `docs/data-schema.md` | table inventory, domain-schema grouping, design principles |
 | `CLAUDE.md` | API route table, deploy workflow, external data sources |
 | `package.json` | dependency list → technology stack table |
-| `BACKLOG.md` | ✅ resolved items (each is a solved-problem story), 🔲 open items (honesty section), and the "Code Review Findings" passes (self-found issues) |
+| GitHub issues (`gh issue list --state all --limit 200`, then `gh issue view <n>`) | Closed issues (each is a solved-problem story), open issues (honesty section), and the "Code review findings" issue (self-found issues). Items shipped before 2026-10-14 are in the history of the deleted `BACKLOG.md` |
 | `docs/superpowers/specs/` | count + filenames = evidence of design-before-build habit |
 | git history | scale stats and the fix/revert commit log |
 
@@ -44,11 +44,11 @@ developer-portfolio / interview audience.
 2. **Mine solved problems** from three streams:
    - `git log --oneline --no-merges | grep -iE '^\w+ (fix|revert|hotfix)'` — read subjects for
      root-cause stories (races, CORS, bidi, OData quirks, reverts).
-   - `BACKLOG.md` ✅ items — each carries the problem, the fix, and often the file paths.
-   - `BACKLOG.md` "Code Review Findings" passes — issues found via self-review; note which were
+   - Closed GitHub issues, and for older work the history of the deleted `BACKLOG.md` — each carries the problem, the fix, and often the file paths.
+   - The "Code review findings" issue — issues found via self-review; note which were
      fixed vs. consciously deferred.
 3. **Extract the concepts-in-context glossary** — sweep the same corpus (architecture doc,
-   BACKLOG, specs, commit subjects) for recurring technical idioms/concepts/buzzwords, and for
+   issues, specs, commit subjects) for recurring technical idioms/concepts/buzzwords, and for
    each write ONE line: *how it fits this project* (the anchoring file, feature, or incident) —
    never a textbook definition. Group by category: Security & auth / Data & persistence /
    Resilience & operations / Web platform & i18n / AI / Testing & process.
@@ -70,7 +70,7 @@ developer-portfolio / interview audience.
 
 ## Success criteria
 
-- Every claim in the report is backed by something in the repo (a commit, a BACKLOG entry, a
+- Every claim in the report is backed by something in the repo (a commit, an issue, a
   spec, or code) — nothing aspirational.
 - Scale stats are regenerated, not copied from the previous version.
 - Solved-issue entries follow problem → fix → (optional) lesson; each is tellable in 60 seconds.
@@ -83,7 +83,7 @@ developer-portfolio / interview audience.
 - **Don't dump raw git logs or full doc files into the conversation** — batch + query via
   context-mode, or pipe through `grep`/`head`.
 - Commit subjects alone can mislead — when a fix looks significant, confirm the story against
-  BACKLOG.md or the spec before presenting it as a narrative.
+  the issue or the spec before presenting it as a narrative.
 - The strongest stories are already known — SSRF hardening, refresh-token rotation race, Resend
   webhook revert, `LastUpdatedDate` data-quality incident, satori bidi. New sessions should check
   for *newer* stories (recent commits since the report's generation date) rather than re-deriving
