@@ -23,7 +23,7 @@ developer-portfolio / interview audience.
 | `docs/data-schema.md` | table inventory, domain-schema grouping, design principles |
 | `CLAUDE.md` | API route table, deploy workflow, external data sources |
 | `package.json` | dependency list → technology stack table |
-| GitHub issues (`gh issue list --state all --limit 200`, then `gh issue view <n>`) | Closed issues (each is a solved-problem story), open issues (honesty section), and the "Code review findings" issue (self-found issues). Items shipped before 2026-10-14 are in the history of the deleted `BACKLOG.md` |
+| GitHub issues (`gh issue list --state all --limit 200`, then `gh issue view <n>`) | Closed issues (each is a solved-problem story), open issues (honesty section), and the "Code review findings" issue (self-found issues). Work shipped before 2026-10-14 predates the issues: read it from commit messages and the dated specs |
 | `docs/superpowers/specs/` | count + filenames = evidence of design-before-build habit |
 | git history | scale stats and the fix/revert commit log |
 
@@ -44,7 +44,7 @@ developer-portfolio / interview audience.
 2. **Mine solved problems** from three streams:
    - `git log --oneline --no-merges | grep -iE '^\w+ (fix|revert|hotfix)'` — read subjects for
      root-cause stories (races, CORS, bidi, OData quirks, reverts).
-   - Closed GitHub issues, and for older work the history of the deleted `BACKLOG.md` — each carries the problem, the fix, and often the file paths.
+   - Closed GitHub issues — each carries the problem, the fix, and often the file paths. For work shipped before 2026-10-14, use commit messages and the dated specs instead.
    - The "Code review findings" issue — issues found via self-review; note which were
      fixed vs. consciously deferred.
 3. **Extract the concepts-in-context glossary** — sweep the same corpus (architecture doc,
