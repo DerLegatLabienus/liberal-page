@@ -40,8 +40,26 @@ Colors are **oklch design tokens**, defined in `src/index.css` and exposed as Ta
 | `bg-muted` / `text-muted-foreground` | Subtle backgrounds; secondary/hint text |
 | `bg-accent` / `text-accent-foreground` | Hover/active neutral surface |
 | `bg-destructive` / `text-destructive` | Errors, destructive actions |
+| `bg-success` / `text-success` | Positive state: passed, in progress as planned, a vote "for", a confirmation |
+| `bg-warning` / `text-warning` | Needs attention: something due soon, a draft, an abstention, a caution note |
 | `border-border`, `border-input` | Hairline borders, field borders |
 | `ring-ring` | Focus ring (brand blue) |
+
+**Status colours.** `success` and `warning` (added 2026-10-14) follow the same three shapes as
+`destructive`, so a status reads the same everywhere:
+
+| Shape | Classes |
+|---|---|
+| Soft badge or notice | `bg-success/10 text-success` (add `border border-success/30` for a bordered notice) |
+| Solid bar, dot or filled badge | `bg-success` (with `text-success-foreground` if it carries text) |
+| Coloured text or icon alone | `text-success` |
+
+Swap `success` for `warning` or `destructive` as the meaning requires. Do not reach for
+`green-*`, `emerald-*`, `amber-*`, `orange-*` or `yellow-*`.
+
+**Not covered by a token yet** (leave as they are and flag for a design decision; do not invent
+one): per-kind accent colours (the MK card's purple, the constitution chapters' own colours), the
+brand gradient on the hero and join sections, and white text or dark scrims over photographs.
 
 `--radius` is `0.625rem`; use `rounded-md`/`rounded-lg`/`rounded-xl` off it, not arbitrary pixel radii.
 `--popover`, `--chart-*`, `--sidebar-*` are full `oklch(...)` values (not alpha-injectable).
