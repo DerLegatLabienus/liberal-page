@@ -55,14 +55,14 @@ describe('BillCard', () => {
     expect(paletteClasses(container)).toEqual([])
   })
 
-  // No success/warning token exists yet. These two statuses keep their palette classes
-  // until the developer makes a design decision (LibPage-025). Pinned so the exception is
-  // explicit and nothing else slips in alongside it.
+  // Status colours come from the success and warning tokens (added 2026-10-14).
   it.each([
-    ['בוועדה', ['bg-green-500', 'bg-green-100', 'text-green-700']],
-    ['הצבעה קרובה', ['bg-orange-500', 'bg-orange-100', 'text-orange-700']],
-  ])('status %s keeps only its known untokenised status colours', (status, expected) => {
+    ['בוועדה', 'success'],
+    ['הצבעה קרובה', 'warning'],
+  ])('status %s uses the %s token and no palette class', (status, token) => {
     const { container } = render(<BillCard bill={billFixture({ status })} onRemove={() => {}} />)
-    expect(paletteClasses(container)).toEqual(expected)
+    expect(paletteClasses(container)).toEqual([])
+    expect(container.innerHTML).toContain(`bg-${token}/10`)
+    expect(container.innerHTML).toContain(`text-${token}`)
   })
 })

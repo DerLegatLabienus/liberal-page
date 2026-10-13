@@ -2,19 +2,16 @@ import { useTranslation } from 'react-i18next'
 import { useDirection } from '@/hooks/useDirection'
 import type { Bill } from '@/types'
 
-// 'בוועדה' (green) and 'הצבעה קרובה' (orange) have no matching design-system token
-// (there is no success/warning token in src/index.css). They stay as palette classes
-// pending a design decision (LibPage-025) and are pinned in BillCard.test.tsx.
 const STATUS_BADGE: Record<string, string> = {
-  'בוועדה': 'bg-green-100 text-green-700',
-  'הצבעה קרובה': 'bg-orange-100 text-orange-700',
+  'בוועדה': 'bg-success/10 text-success',
+  'הצבעה קרובה': 'bg-warning/10 text-warning',
   'עבר': 'bg-muted text-muted-foreground',
   'נדחה': 'bg-destructive/10 text-destructive',
 }
 
 const STATUS_BAR: Record<string, string> = {
-  'בוועדה': 'bg-green-500',
-  'הצבעה קרובה': 'bg-orange-500',
+  'בוועדה': 'bg-success',
+  'הצבעה קרובה': 'bg-warning',
   'עבר': 'bg-muted-foreground/60',
   'נדחה': 'bg-destructive/80',
 }
