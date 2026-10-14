@@ -51,15 +51,15 @@ export default function JoinSelector() {
   const selectedModeKey = MODE_OPTION_KEYS.find((o) => o.value === mode)
 
   return (
-    <div className="mx-auto max-w-3xl rounded-lg bg-white p-4 text-start text-slate-900 shadow-xl md:p-6" dir={direction}>
+    <div className="mx-auto max-w-3xl rounded-lg bg-card p-4 text-start text-card-foreground shadow-xl md:p-6" dir={direction}>
       <div className="mb-5">
-        <p className="mb-2 text-sm font-semibold text-blue-700">{t('join.choose_path')}</p>
-        <p className="text-sm leading-relaxed text-slate-600">{t('join.choose_subtitle')}</p>
+        <p className="mb-2 text-sm font-semibold text-primary">{t('join.choose_path')}</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t('join.choose_subtitle')}</p>
       </div>
 
       <div className="space-y-5">
         <div>
-          <p className="mb-2 text-sm font-semibold text-slate-800">{t('join.membership_status')}</p>
+          <p className="mb-2 text-sm font-semibold text-foreground">{t('join.membership_status')}</p>
           <div className="grid gap-2 md:grid-cols-3">
             {STATUS_OPTION_KEYS.map((option) => (
               <button
@@ -67,21 +67,21 @@ export default function JoinSelector() {
                 type="button"
                 onClick={() => setStatus(option.value)}
                 className={cn(
-                  'min-h-28 rounded-lg border bg-white p-3 text-start transition-colors',
-                  'hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-                  status === option.value && 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  'min-h-28 rounded-lg border bg-card p-3 text-start transition-colors',
+                  'hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  status === option.value && 'border-primary bg-primary/5 ring-1 ring-primary'
                 )}
                 aria-pressed={status === option.value}
               >
-                <span className="block text-sm font-semibold text-slate-900">{t(option.titleKey)}</span>
-                <span className="mt-2 block text-xs leading-relaxed text-slate-600">{t(option.descKey)}</span>
+                <span className="block text-sm font-semibold text-foreground">{t(option.titleKey)}</span>
+                <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">{t(option.descKey)}</span>
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-semibold text-slate-800">{t('join.join_type')}</p>
+          <p className="mb-2 text-sm font-semibold text-foreground">{t('join.join_type')}</p>
           <div className="grid grid-cols-2 gap-2">
             {MODE_OPTION_KEYS.map((option) => (
               <button
@@ -89,9 +89,9 @@ export default function JoinSelector() {
                 type="button"
                 onClick={() => setMode(option.value)}
                 className={cn(
-                  'rounded-lg border bg-white px-4 py-3 text-center text-sm font-semibold transition-colors',
-                  'hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-                  mode === option.value && 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600'
+                  'rounded-lg border bg-card px-4 py-3 text-center text-sm font-semibold transition-colors',
+                  'hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  mode === option.value && 'border-primary bg-primary/5 text-primary ring-1 ring-primary'
                 )}
                 aria-pressed={mode === option.value}
               >
@@ -101,13 +101,13 @@ export default function JoinSelector() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-900">
+        <div className="rounded-lg border border-border bg-muted p-4">
+          <p className="text-sm font-semibold text-foreground">
             {selectedStatusKey && selectedModeKey
               ? `${t(selectedStatusKey.titleKey)} · ${t(selectedModeKey.labelKey)}`
               : t('join.summary_placeholder')}
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">{t('join.privacy_note')}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t('join.privacy_note')}</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -122,7 +122,7 @@ export default function JoinSelector() {
               }}
               className={cn(
                 buttonVariants({ size: 'lg' }),
-                'h-11 flex-1 gap-2 bg-blue-700 text-white hover:bg-blue-800'
+                'h-11 flex-1 gap-2 hover:bg-primary/90'
               )}
             >
               {t('join.open_form')}
@@ -142,17 +142,17 @@ export default function JoinSelector() {
           </a>
         </div>
 
-        <div className="grid gap-2 border-t border-slate-200 pt-4 text-xs sm:grid-cols-2">
-          <a className="text-blue-700 hover:underline" href={EFFECTIVE_SOFT_URLS.new.individual} target="_blank" rel="noopener noreferrer">
+        <div className="grid gap-2 border-t border-border pt-4 text-xs sm:grid-cols-2">
+          <a className="text-primary hover:underline" href={EFFECTIVE_SOFT_URLS.new.individual} target="_blank" rel="noopener noreferrer">
             {t('join.link_new_individual')}
           </a>
-          <a className="text-blue-700 hover:underline" href={EFFECTIVE_SOFT_URLS.new.couple} target="_blank" rel="noopener noreferrer">
+          <a className="text-primary hover:underline" href={EFFECTIVE_SOFT_URLS.new.couple} target="_blank" rel="noopener noreferrer">
             {t('join.link_new_couple')}
           </a>
-          <a className="text-blue-700 hover:underline" href={EFFECTIVE_SOFT_URLS.existing.individual} target="_blank" rel="noopener noreferrer">
+          <a className="text-primary hover:underline" href={EFFECTIVE_SOFT_URLS.existing.individual} target="_blank" rel="noopener noreferrer">
             {t('join.link_existing_individual')}
           </a>
-          <a className="text-blue-700 hover:underline" href={EFFECTIVE_SOFT_URLS.existing.couple} target="_blank" rel="noopener noreferrer">
+          <a className="text-primary hover:underline" href={EFFECTIVE_SOFT_URLS.existing.couple} target="_blank" rel="noopener noreferrer">
             {t('join.link_existing_couple')}
           </a>
         </div>
