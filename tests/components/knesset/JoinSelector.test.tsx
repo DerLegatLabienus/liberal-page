@@ -50,3 +50,39 @@ describe('JoinSelector', () => {
     expect(api.analytics.joinClick).toHaveBeenCalledWith('existing', 'couple')
   })
 })
+
+describe('JoinSelector — design tokens only', () => {
+  // Raw Tailwind palette classes, including variant-prefixed ones (hover:bg-blue-50, ring-blue-600/50 …).
+  const PALETTE_CLASS = /^(?:[a-z-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|divide)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})(?:\/\d+)?$/
+
+  function paletteClasses(container: HTMLElement): string[] {
+    return [container, ...Array.from(container.querySelectorAll('*'))]
+      .flatMap((el) => Array.from(el.classList))
+      .filter((c) => PALETTE_CLASS.test(c))
+  }
+
+  it('the pattern catches raw palette classes', () => {
+    for (const c of ['bg-white', 'text-white', 'text-slate-600', 'hover:bg-blue-50', 'focus-visible:ring-blue-500', 'border-slate-200']) {
+      expect(c).toMatch(PALETTE_CLASS)
+    }
+    for (const c of ['bg-card', 'hover:bg-primary/5', 'border-border', 'text-muted-foreground', 'ring-ring']) {
+      expect(c).not.toMatch(PALETTE_CLASS)
+    }
+  })
+
+  it('renders no palette class before anything is selected', () => {
+    const { container } = render(<JoinSelector />)
+    expect(paletteClasses(container)).toEqual([])
+  })
+
+  it('renders no palette class once a status and mode are selected', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<JoinSelector />)
+
+    await user.click(screen.getByRole('button', { name: /אני כבר חבר/i }))
+    await user.click(screen.getByRole('button', { name: 'זוגי' }))
+
+    expect(screen.getByRole('link', { name: /פתחו את הטופס הרשמי/i })).toBeInTheDocument()
+    expect(paletteClasses(container)).toEqual([])
+  })
+})
