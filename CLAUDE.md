@@ -35,6 +35,7 @@ npm run db:import-mks    # import all current-Knesset MKs as letter_contacts (id
 npm run db:up            # start local Postgres (Docker)
 npm run db:down          # stop local Postgres
 npm run db:reset         # wipe volume and start fresh (ephemeral)
+npm run -s loop:gate     # run the four gate checks, print one evidence block (exit 0 only if all pass; failing checks' last 20 lines on stderr)
 ```
 
 ### Local database

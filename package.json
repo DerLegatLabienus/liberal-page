@@ -29,6 +29,7 @@
     "loop:next": "tsx scripts/loop/next-item.ts",
     "loop:issue": "tsx scripts/loop/issue.ts",
     "loop:sql": "tsx scripts/loop/sql.ts",
+    "loop:gate": "tsx scripts/loop/gate.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d db"
