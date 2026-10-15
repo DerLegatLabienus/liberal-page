@@ -55,6 +55,63 @@ new builds only; a run at the limit may still write a plan.
 
 **Changed from today:** the picker no longer skips an issue because it is labelled `risky`.
 
+## Triage and one vocabulary
+
+*Added 2026-10-15, approved by the developer.*
+
+**One vocabulary.** The workflow labels become the five triage labels, used by the loop, the
+agent skills and the developer's sessions alike. There is no mapping between two sets of names.
+
+| Label | Replaces | Meaning |
+|---|---|---|
+| `needs-triage` | new | Not assessed yet |
+| `needs-info` | `needs-developer` | Questions for the author, or the loop is blocked |
+| `ready-for-agent` | `loop-safe` | Assessed, clear and wanted; the loop may take it |
+| `ready-for-human` | new | Wanted, but the developer builds it |
+| `wontfix` | existing | Not wanted, or already done |
+
+`type:`, `size:`, `P0`-`P3`, `risky` and `loop` stay as they are. In the rest of this spec,
+`loop-safe` reads as `ready-for-agent` and `needs-developer` as `needs-info` once the rename
+ships.
+
+**One set of rules.** How issues are written, the labels, the triage checks and what the loop
+may pick live in `docs/agents/backlog-rules.md`. The loop's prompt, the agent skills (through
+`docs/agents/`) and `CLAUDE.md` all point there instead of keeping their own copy, so the loop's
+triage, its planning and building, and the developer's own work agree on the rules.
+
+**Triage is the loop's job.** Triage assesses an issue: is it real, is it already done, is it
+clear, and who should build it. It does not decide how to build it; that is the plan.
+
+- After its main action (review pass, build or plan), a run triages up to three issues: open
+  issues with no workflow label, labelled `needs-triage`, or `needs-info` with a new reply from
+  the author.
+- Checks: reproduce a bug where possible; search for an existing implementation; list questions
+  if unclear; decide loop or developer; set type, size and priority if missing (`P0` only for
+  something broken in production; the developer may change any of them).
+- Outcome: one `### loop — triage` comment with the reasoning (for a ready issue, a short brief),
+  and one workflow label. Questions go out as `needs-info`, since the loop cannot interview the
+  developer. A rejected issue is labelled `wontfix` and explained; the developer closes it.
+- Only issues the developer wrote can become `ready-for-agent`. Other people's issues can end at
+  `needs-info`, `ready-for-human` or `wontfix`; to hand one to the loop, the developer restates
+  it in an issue of their own.
+- **An issue the loop marked ready is always planned and approved before it is built**, whatever
+  its size. Issues the developer marked ready follow the size rule. The picker tells them apart by
+  the latest triage comment: the loop's carries the Claude app's stamp. Label events are not
+  used for this: on the loop's PRs some carried the stamp and some (PR #4's label, every
+  assignment) did not.
+- The developer does not run `/triage` separately.
+
+**Picker changes.** It takes only `ready-for-agent` issues, and skips any that also carry
+`needs-triage`, `needs-info`, `ready-for-human` or `wontfix`, or that have an open blocker
+(GitHub's issue dependencies, which `/to-tickets` uses for "blocked by").
+
+**The rename is risky tier.** Besides the picker, its tests, the loop's prompt and `CLAUDE.md`,
+the two reviewer workflows (`.github/workflows/pr-review.yml`, `claude-code-review.yml`) and the
+four reviewer briefs apply or mention `needs-developer`. A reviewer adding a label that no longer
+exists would silently re-create it and split the vocabulary again. So the label renames on
+GitHub, the code, the prompt, the workflows and the briefs ship as one change, with a plan and the
+developer's confirmation before the push, and with the routine paused.
+
 ## The plan
 
 One comment on the issue, under the heading `### loop — plan`. Every section below is
@@ -258,7 +315,7 @@ production data scripts) is open to the loop when the approved plan names the ar
 | Packages were declared | Packages added to `package.json` (dependencies or devDependencies) are listed. Any the plan's `New dependencies` line does not name fails the check. The list is printed in the PR body either way |
 | Cross-module dependencies were declared | An import scan of `master` and of the branch lists every new import from one area into another (areas below). One the plan does not name fails the check. The list is printed in the PR body either way |
 | Layering is respected | A new import that goes against the layering below fails the check unless the plan names it as an exception with a reason |
-| Guardrails stay closed | Any change under `scripts/loop/**`, `.claude/**`, the reviewer workflows (`pr-review.yml`, `claude-code-review.yml`, `claude.yml`) or `scripts/loop-read-views.sql` fails the check |
+| Guardrails stay closed | Any change under `scripts/loop/**`, `.claude/**`, the reviewer workflows (`pr-review.yml`, `claude-code-review.yml`, `claude.yml`) or `scripts/loop-read-views.sql` or `docs/agents/**` (the rules the loop follows) fails the check |
 | Migrations apply | Every migration is applied to a fresh in-memory database, as the repo's tests already do, and the result is printed |
 | Schema changes only add | A new migration containing a drop, a rename or a type change fails the check |
 
@@ -306,7 +363,9 @@ hands it back through the blocked path. It becomes possible when multi-part work
 | `scripts/loop/PROMPT.md` | A Plan section; the build steps above; the hard limit on the risky tier replaced by the rules here; the guardrail list |
 | `docs/nfr.md` | New, drafted then corrected by the developer |
 | `CLAUDE.md`, the workflow spec | The loop's rules updated to match |
-| GitHub | One new label, `plan-ready` |
+| GitHub | One new label, `plan-ready`; the workflow labels renamed (see Triage and one vocabulary) |
+| `docs/agents/backlog-rules.md` | The one source for issue rules; the loop's prompt points to it |
+| `.github/workflows/pr-review.yml`, `claude-code-review.yml`, `.claude/agents/*-reviewer.md` | `needs-developer` becomes `needs-info` (risky tier, part of the rename) |
 
 No file under `.github/` or `.claude/` changes.
 
@@ -347,6 +406,8 @@ The supervised trial tests the first three.
 
 Built in the trunk lane. Each step is testable before the next.
 
+0. **The vocabulary rename**, as one risky-tier change (see Triage and one vocabulary), with the
+   routine paused. Everything after it uses the new names.
 1. `docs/nfr.md`, drafted and corrected.
 2. The proof commands: `loop:gate`, `loop:proof`, `loop:guard`.
 3. The picker: the app stamp, approval, the `plan` action, `risky` eligibility. Tested read-only

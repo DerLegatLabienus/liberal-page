@@ -187,49 +187,11 @@ copies every production secret and the production database connection. The healt
 
 ### The backlog: GitHub issues
 
-The backlog is this repository's GitHub issues (since 2026-10-14; design in
-`docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md`). There is no backlog file.
-The issue number is the ID; items migrated from the old file keep `(LibPage-NNN)` in their title.
-
-**Creating an issue in a developer session:** propose the title, body and labels, and create it
-only after the developer approves. Issues are public and cannot be cleanly unsent. Never add
-`loop-safe` unless the developer asked for it.
-
-**Every issue is written as an agile item**, with these sections:
-
-| Section | Content |
-|---|---|
-| Request | Who needs what, and why |
-| Context | What exists today, with file paths |
-| Acceptance criteria | A checklist of observable outcomes |
-| Out of scope | What not to touch |
-| Definition of done | Criteria met and tested; gate green; docs updated; checked in the running app (or `curl` for a route); merged. A spike is done when its spec is accepted. Risky work adds spec, plan and confirmation |
-
-**Labels:**
-
-| Group | Labels | Meaning |
-|---|---|---|
-| Type | `type:story`, `type:bug`, `type:task`, `type:spike` | User-facing capability; defect; technical work; design or investigation |
-| Size | `size:S`, `size:M`, `size:L` | A rough estimate. It does not gate the loop |
-| Priority | `P0`, `P1`, `P2`, `P3` | `P0` is reserved for something broken in production |
-| Loop | `loop-safe`, `risky`, `needs-developer`, `loop` | The loop may take it; risky tier; waiting for the developer; a PR opened by the loop |
-
-**What the loop does with issues** (`scripts/loop/select-item.ts`, `scripts/loop/issue.ts`):
-
-- It takes only open issues the repository owner wrote, labelled `loop-safe` and neither `risky`
-  nor `needs-developer`, that never had a loop PR. Most urgent priority first, then the lowest
-  number. A loop PR is one the owner opened from this repository on a `<type>/<number>-slug`
-  branch or with the `loop` label.
-- It reads the issue body and the owner's comments (`npm run -s loop:issue -- <number>`), never
-  anyone else's. Its own comments begin `### loop — ` and are filtered out, because it posts
-  under the owner's account.
-- Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
-  `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
-- When blocked it posts one `### loop — blocked` comment and swaps `loop-safe` for
-  `needs-developer`. To retry, answer in a comment, put `loop-safe` back and remove
-  `needs-developer`.
-- It never creates an issue, never adds `loop-safe`, and never edits an issue's body. These are
-  instructions in its prompt; nothing in GitHub enforces them.
+The backlog is this repository's GitHub issues. **All rules for issues live in one file,
+[`docs/agents/backlog-rules.md`](docs/agents/backlog-rules.md)**: where the backlog lives, how an
+issue is written (agile sections), labels, triage, creating issues only after the developer
+approves, and what the loop does with issues. The loop, the agent skills and developer sessions
+all follow that file, so read it before creating, labelling or picking up an issue.
 
 ### The loop's read-only database window (`loop_read`)
 
@@ -476,3 +438,17 @@ an instruction to follow; hooks do the work:
 All of these are per-machine and untracked (`.git/hooks/`, `.claude/settings.local.json`,
 `~/.claude/hooks/graphify-*.sh`). A fresh clone needs `graphify hook install` plus those local
 pieces. Uncommitted edits are not in the graph until committed, or until `graphify update .`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, created only after the developer approves them. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five triage roles map onto this repo's labels (moving to the canonical names). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` is the glossary, ADRs go in `docs/adr/`. See `docs/agents/domain.md`.
