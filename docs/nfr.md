@@ -25,7 +25,6 @@ Sources are paths from the repository root. `CLAUDE.md` means the project `CLAUD
   `docs/superpowers/specs/2026-06-03-multi-user-accounts-design.md`.
 - **SEC-3. An email is trusted only when the provider has verified it** (nOAuth mitigation):
   Google's `email_verified === true`, or delivery for the magic link. Unverified gets `403`.
-  Microsoft stays off until the `xms_edov` claim can be relied on.
   *Source:* `docs/superpowers/specs/2026-07-07-multi-provider-login-design.md` (Security
   considerations), `CLAUDE.md` (`POST /api/auth/:provider`).
 - **SEC-4. Tokens are short-lived or hashed.** Access JWTs last 15 minutes; refresh tokens rotate
@@ -246,12 +245,13 @@ Sources are paths from the repository root. `CLAUDE.md` means the project `CLAUD
   *Source:* `docs/design-system.md` §5.
 - **RTL-4. No bare "Loading…" text on an RTL page** (the bidi ellipsis bug); use a skeleton.
   *Source:* `docs/design-system.md` §7.
-- **RTL-5. Admin tools are `dir="ltr"` with no i18n keys**, a deliberate exception.
-  *Source:* `docs/design-system.md` §5, `CLAUDE.md` (Multi-channel letters).
-  **The sources disagree on the language — for the developer to settle:** `docs/design-system.md`
-  §5 says the admin surfaces, `AdminLettersPage` included, are English; `CLAUDE.md` says the
-  letters admin UI is Hebrew-only.
-- **RTL-6. Hebrew in generated images is reordered to visual order** (`server/services/bidi.ts`)
+- **RTL-5. Letter content is Hebrew and right-to-left wherever it is shown**: the member letter
+  pages, the public share pages, and the rich HTML a member copies into their mail app.
+  *Source:* `docs/design-system.md` §5, `docs/architecture.md` (Public Share Pages).
+- **RTL-6. Admin tools are English, `dir="ltr"`, with no i18n keys** — a deliberate exception
+  for operator tools. A letter shown inside an admin tool keeps its own right-to-left direction.
+  *Source:* `docs/design-system.md` §5.
+- **RTL-7. Hebrew in generated images is reordered to visual order** (`server/services/bidi.ts`)
   because `satori` has no bidi support.
   *Source:* `docs/architecture.md` (Public Share Pages).
 

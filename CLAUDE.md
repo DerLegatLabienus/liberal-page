@@ -313,7 +313,7 @@ The site is **Hebrew-first**. Language is detected via `?lang=` query param or `
 | `POST`   | `/api/admin/letters/media`         | upload raster image to R2 (admin; byte-sniff raster-only + 5 MB; 503 when R2 unconfigured) |
 | `DELETE` | `/api/admin/letters/media/:id`     | delete image from R2 + DB (admin; 503 when R2 unconfigured) |
 | `GET`    | `/api/letters/contacts`            | **requireAuth + `lettersEnabled`.** Read-only address book for the recipient picker (optional `?q=` search, optional `?channel=email\|sms\|whatsapp` to return only contacts reachable on that channel; unknown channel → 400). Returns widened contacts (email/phone/hasWhatsapp/photoUrl/mkSiteId). |
-| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages, and the member detail page for SMS/WhatsApp. **Query params:** `?action=mailto\|gmail\|copy\|sms\|whatsapp` (+ optional `&contactId=N`); returns **204**. Records the `public_*` bucket **and** rolls into the `lifetime` bucket; for sms/whatsapp with a `contactId`, also records a per-recipient breakdown. Gated by `lettersEnabled` + letter published. When `publicSendTurnstile` is on, verifies a Cloudflare Turnstile token (query param) via `siteverify`; fails open when `TURNSTILE_SECRET_KEY` is unset. |
+| `POST`   | `/api/public/letters/:id/send` | **Public, no-auth.** Fire-and-forget send counter for the public share/send pages, and the member detail page for SMS/WhatsApp. **Query params:** `?action=mailto\|gmail\|copy\|sms\|whatsapp` (+ optional `&contactId=N`); returns **204**. Records the `public_*` bucket **and** rolls into the `lifetime` bucket; for sms/whatsapp with a `contactId`, also records a per-recipient breakdown. Gated by `lettersEnabled` + letter published. When `publicSendTurnstile` is on, verifies a Cloudflare Turnstile token (sent as the beacon's `text/plain` request body) via `siteverify`; fails open when `TURNSTILE_SECRET_KEY` is unset. |
 
 `type` is one of `bill`, `committee`, or `mk`.
 
@@ -329,7 +329,8 @@ Email `bodyText` (the mailto/Gmail body) is derived server-side as `stripHtml(bo
 `replaceForLetter`; `renderedHtml` is `bodyHtml` injected into the selected template's `{{CONTENT}}`.
 Recipients are stored as **`contact_id[]` and resolved live** from `letter_contacts` — fixing a
 contact's phone/email updates every letter (draft or published). Member client-side recipient
-editing was removed; the letters admin UI is Hebrew-only (no i18n keys).
+editing was removed. The letters admin UI follows the admin rule (English, LTR, no i18n
+keys); letter content itself is always Hebrew RTL — see `docs/design-system.md` §5.
 
 **Share links.** Every published letter gets a public, no-login R2 page at
 `{R2_PUBLIC_BASE_URL}/letter/{id}.html` (written by `share-publisher.ts`). The API attaches a

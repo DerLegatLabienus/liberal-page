@@ -150,10 +150,12 @@ upserts the user by email and records the `(provider, provider_sub)` pair in `us
 for auditability — email is the account key, so an invited person signing in with a different
 provider links to the same account.
 
-Front doors: **Google** (GIS ID token) and **Microsoft** (MSAL ID token) both dispatch through
-`POST /api/auth/:provider`, each verified server-side by its own adapter in
-`server/services/auth-providers/` — Google via `google-auth-library`, Microsoft via the shared
-`oidc.ts` helper (`jose`: signature against the provider's live JWKS + `iss` + `aud` + `exp`).
+Front doors: **Google** (GIS ID token) dispatches through `POST /api/auth/:provider`, verified
+server-side by its adapter in `server/services/auth-providers/` (`google-auth-library`).
+**Microsoft is disabled** (not registered, so `/api/auth/microsoft` → 400): safe support needs the
+Entra app to emit the `xms_edov` optional claim, which is not maintained. Its adapter
+(`microsoft.ts`, via the shared `oidc.ts` helper — `jose`: signature against the provider's live
+JWKS + `iss` + `aud` + `exp`) is kept dormant and tested as the blueprint for re-enabling.
 An **email magic-link** (`POST /api/auth/magic-link/request` + `/verify`) authenticates the
 email directly (no provider identity) via a hashed, single-use, 15-minute token emailed
 through Resend. Each provider is independently optional: unset config → 503 from the route,

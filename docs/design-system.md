@@ -111,6 +111,9 @@ brand gradient on the hero and join sections, and white text or dark scrims over
 - **Internal/admin tools are English + `dir="ltr"` — a deliberate exception.** The admin surfaces
   (`AdminPanel`/`AdminPage`, `AdminLettersPage`) are operator tools; they are English and LTR, and do
   **not** need i18n keys. Keep them consistent with each other, not with the public RTL site.
+- **Letter content is always Hebrew RTL**, wherever it appears — member letter pages, public share
+  pages, copied rich HTML, and previews or editors inside the admin tools (wrap it in
+  `dir="rtl"`). Letters are written to Israeli recipients; only the tool around them is LTR.
 
 ---
 
