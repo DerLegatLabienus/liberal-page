@@ -37,6 +37,7 @@ npm run db:down          # stop local Postgres
 npm run db:reset         # wipe volume and start fresh (ephemeral)
 npm run -s loop:gate     # run the four gate checks, print one evidence block (exit 0 only if all pass; failing checks' last 20 lines on stderr)
 npm run -s loop:guard -- [--base <ref>] [--plan <plan.md>]  # new packages, cross-area imports and layering vs the plan's New dependencies line; exit 0 pass, 1 fail, 2 could not run
+npm run -s loop:proof -- [--base <ref>] [--refactor]  # prove the branch's tests fail on master's source and pass on the branch (refactor: test logic unchanged, suite green on both); exit 0 proved/exempt, 1 otherwise
 ```
 
 ### Local database

@@ -30,6 +30,7 @@
     "loop:issue": "tsx scripts/loop/issue.ts",
     "loop:sql": "tsx scripts/loop/sql.ts",
     "loop:gate": "tsx scripts/loop/gate.ts",
+    "loop:proof": "tsx scripts/loop/proof.ts",
     "loop:guard": "tsx scripts/loop/guard.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
