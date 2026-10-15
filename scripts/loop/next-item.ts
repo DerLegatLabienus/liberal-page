@@ -108,10 +108,10 @@ function listLoopPrs(state: 'open' | 'closed'): LoopPr[] {
     }))
 }
 
-// Open issues carrying the `loop-safe` label. The endpoint returns pull requests too, and
+// Open issues carrying the `ready-for-agent` label. The endpoint returns pull requests too, and
 // issues from any author; selectNextIssue filters both.
 function listCandidateIssues(): IssueData[] {
-  return restList<RestIssue>(`repos/${REPO}/issues?state=open&labels=loop-safe&per_page=100`).map((issue) => ({
+  return restList<RestIssue>(`repos/${REPO}/issues?state=open&labels=ready-for-agent&per_page=100`).map((issue) => ({
     number: issue.number,
     title: issue.title,
     labels: issue.labels.map((l) => l.name),

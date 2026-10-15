@@ -16,88 +16,88 @@ function issue(number: number, labels: string[], overrides: Partial<IssueData> =
 }
 
 describe('selectNextIssue', () => {
-  it('picks a loop-safe issue and reports its number, id and title', () => {
-    const picked = selectNextIssue([issue(15, ['loop-safe', 'P2'], { title: '  JoinSelector tokens ' })], OWNER, none)
+  it('picks a ready-for-agent issue and reports its number, id and title', () => {
+    const picked = selectNextIssue([issue(15, ['ready-for-agent', 'P2'], { title: '  JoinSelector tokens ' })], OWNER, none)
     expect(picked).toEqual({ id: '#15', number: 15, title: 'JoinSelector tokens' })
   })
 
-  it('skips issues without the loop-safe label', () => {
-    expect(selectNextIssue([issue(12, ['P1']), issue(15, ['loop-safe', 'P2'])], OWNER, none)?.number).toBe(15)
+  it('skips issues without the ready-for-agent label', () => {
+    expect(selectNextIssue([issue(12, ['P1']), issue(15, ['ready-for-agent', 'P2'])], OWNER, none)?.number).toBe(15)
   })
 
-  it('refuses an issue labelled risky even when it is loop-safe', () => {
-    expect(selectNextIssue([issue(20, ['loop-safe', 'risky', 'P0'])], OWNER, none)).toBeNull()
+  it('refuses an issue labelled risky even when it is ready-for-agent', () => {
+    expect(selectNextIssue([issue(20, ['ready-for-agent', 'risky', 'P0'])], OWNER, none)).toBeNull()
   })
 
   it('does not infer risk from the title', () => {
-    const picked = selectNextIssue([issue(21, ['loop-safe'], { title: 'Rename a migration helper in the auth tests' })], OWNER, none)
+    const picked = selectNextIssue([issue(21, ['ready-for-agent'], { title: 'Rename a migration helper in the auth tests' })], OWNER, none)
     expect(picked?.number).toBe(21)
   })
 
   it('takes the most urgent priority first, whatever the issue numbers', () => {
-    const issues = [issue(15, ['loop-safe', 'P2']), issue(40, ['loop-safe', 'P0']), issue(16, ['loop-safe', 'P1'])]
+    const issues = [issue(15, ['ready-for-agent', 'P2']), issue(40, ['ready-for-agent', 'P0']), issue(16, ['ready-for-agent', 'P1'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(40)
   })
 
   it('takes the lowest issue number within a priority', () => {
-    const issues = [issue(18, ['loop-safe', 'P2']), issue(15, ['loop-safe', 'P2']), issue(16, ['loop-safe', 'P2'])]
+    const issues = [issue(18, ['ready-for-agent', 'P2']), issue(15, ['ready-for-agent', 'P2']), issue(16, ['ready-for-agent', 'P2'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(15)
   })
 
   it('sorts an issue with no priority label after P3', () => {
-    const issues = [issue(5, ['loop-safe']), issue(30, ['loop-safe', 'P3'])]
+    const issues = [issue(5, ['ready-for-agent']), issue(30, ['ready-for-agent', 'P3'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(30)
-    expect(selectNextIssue([issue(5, ['loop-safe'])], OWNER, none)?.number).toBe(5)
+    expect(selectNextIssue([issue(5, ['ready-for-agent'])], OWNER, none)?.number).toBe(5)
   })
 
   it('uses the most urgent label when an issue carries two priorities', () => {
-    const issues = [issue(15, ['loop-safe', 'P1']), issue(16, ['loop-safe', 'P3', 'P0'])]
+    const issues = [issue(15, ['ready-for-agent', 'P1']), issue(16, ['ready-for-agent', 'P3', 'P0'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(16)
   })
 
   it('skips an excluded issue and moves on to the next', () => {
-    const issues = [issue(15, ['loop-safe', 'P2']), issue(16, ['loop-safe', 'P2'])]
+    const issues = [issue(15, ['ready-for-agent', 'P2']), issue(16, ['ready-for-agent', 'P2'])]
     expect(selectNextIssue(issues, OWNER, new Set(['#15']))?.number).toBe(16)
   })
 
   it('returns null when every eligible issue is excluded, and for no issues at all', () => {
-    expect(selectNextIssue([issue(15, ['loop-safe'])], OWNER, new Set(['#15']))).toBeNull()
+    expect(selectNextIssue([issue(15, ['ready-for-agent'])], OWNER, new Set(['#15']))).toBeNull()
     expect(selectNextIssue([], OWNER, none)).toBeNull()
   })
 
   it('ignores an issue written by anyone but the repository owner, even if labelled', () => {
-    const issues = [issue(50, ['loop-safe', 'P0'], { authorLogin: 'someone-else' }), issue(15, ['loop-safe', 'P2'])]
+    const issues = [issue(50, ['ready-for-agent', 'P0'], { authorLogin: 'someone-else' }), issue(15, ['ready-for-agent', 'P2'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(15)
     expect(selectNextIssue([issues[0]], OWNER, none)).toBeNull()
   })
 
   it('matches the owner and the labels without regard to case', () => {
-    const picked = selectNextIssue([issue(15, ['Loop-Safe', 'p1'], { authorLogin: 'derlegatlabienus' })], OWNER, none)
+    const picked = selectNextIssue([issue(15, ['Ready-For-Agent', 'p1'], { authorLogin: 'derlegatlabienus' })], OWNER, none)
     expect(picked?.number).toBe(15)
   })
 
   it('never takes a pull request, which the issues endpoint also returns', () => {
-    expect(selectNextIssue([issue(11, ['loop-safe', 'loop'], { isPullRequest: true })], OWNER, none)).toBeNull()
+    expect(selectNextIssue([issue(11, ['ready-for-agent', 'loop'], { isPullRequest: true })], OWNER, none)).toBeNull()
   })
 
   it('does not treat the legacy ID of another item as an exclusion for an issue', () => {
     // An open PR from before the move excludes "LibPage-027", which is not issue #27.
-    expect(selectNextIssue([issue(27, ['loop-safe'])], OWNER, new Set(['LibPage-027']))?.number).toBe(27)
+    expect(selectNextIssue([issue(27, ['ready-for-agent'])], OWNER, new Set(['LibPage-027']))?.number).toBe(27)
   })
 
   it('excludes a migrated issue whose old ID had a loop PR before the move', () => {
-    const migrated = issue(14, ['loop-safe'], { title: 'MkCard: replace hardcoded colours with tokens (LibPage-026)' })
+    const migrated = issue(14, ['ready-for-agent'], { title: 'MkCard: replace hardcoded colours with tokens (LibPage-026)' })
     expect(selectNextIssue([migrated], OWNER, new Set(['LibPage-026']))).toBeNull()
     expect(selectNextIssue([migrated], OWNER, new Set(['LibPage-027']))?.number).toBe(14)
   })
 
   it('refuses the risky label in any case', () => {
-    expect(selectNextIssue([issue(20, ['loop-safe', 'Risky'])], OWNER, none)).toBeNull()
+    expect(selectNextIssue([issue(20, ['ready-for-agent', 'Risky'])], OWNER, none)).toBeNull()
   })
 
-  it('refuses an issue labelled needs-developer, even if loop-safe was not removed', () => {
-    expect(selectNextIssue([issue(15, ['loop-safe', 'needs-developer', 'P0'])], OWNER, none)).toBeNull()
-    const issues = [issue(15, ['loop-safe', 'Needs-Developer']), issue(16, ['loop-safe'])]
+  it('refuses an issue labelled needs-info, even if ready-for-agent was not removed', () => {
+    expect(selectNextIssue([issue(15, ['ready-for-agent', 'needs-info', 'P0'])], OWNER, none)).toBeNull()
+    const issues = [issue(15, ['ready-for-agent', 'Needs-Info']), issue(16, ['ready-for-agent'])]
     expect(selectNextIssue(issues, OWNER, none)?.number).toBe(16)
   })
 })

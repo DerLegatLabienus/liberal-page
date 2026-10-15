@@ -38,7 +38,7 @@ describe('developerComments', () => {
 
   it('keeps a developer heading that starts with the word loop but is not a loop heading', () => {
     const comments = [
-      { authorLogin: OWNER, body: '### loop-safe again: retry without the migration' },
+      { authorLogin: OWNER, body: '### loop-progress notes: retry without the migration' },
       { authorLogin: OWNER, body: '### Loop notes\n\nmine' },
     ]
     expect(developerComments(comments, OWNER)).toEqual(comments)

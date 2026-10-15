@@ -204,7 +204,7 @@ or runs it). The role was made with plain SQL on purpose: a role created in the 
 joins `neon_superuser` and could read everything.
 
 - **New tables and columns are invisible to the loop** until added to a view in that file. If the
-  loop needs one, it asks in its PR (`needs-developer` label); it never changes the views.
+  loop needs one, it asks in its PR (`needs-info` label); it never changes the views.
 - **Migration hazard:** Postgres refuses to drop or retype a column, or drop a table, that a view
   uses. A migration that does so must start with `DROP SCHEMA loop_read CASCADE;`, and the SQL
   file must be updated and re-run afterwards. Migrations apply on boot, so forgetting this fails

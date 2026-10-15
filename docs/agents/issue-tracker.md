@@ -6,7 +6,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 [`backlog-rules.md`](backlog-rules.md).** Read it before creating or changing an issue. In short:
 every issue uses the agile sections (Request, Context, Acceptance criteria, Out of scope,
 Definition of done) and gets type, size and priority labels; nothing is created without the
-developer's approval; never add `loop-safe` unless the developer asks. An issue that changes the
+developer's approval; never add `ready-for-agent` unless the developer asks. An issue that changes the
 loop's own files (`scripts/loop/**`, `.claude/**`, `docs/agents/**`) is never for the loop.
 
 ## Conventions

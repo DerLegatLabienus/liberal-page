@@ -117,5 +117,5 @@ test case, an unhandled null, a wrong token or class, a stale doc line, a rename
 missed. **When in doubt, `developer`.** A wrong `agent` lets unattended code change something it
 should not; a wrong `developer` costs one glance.
 
-If any finding is marked `developer`, also add the `needs-developer` label to the pull request
+If any finding is marked `developer`, also add the `needs-info` label to the pull request
 with the exact command given in your instructions. Never remove that label.

@@ -15,7 +15,7 @@ export interface IssueComment {
 
 // Every comment the loop posts carries a heading of this shape: `### loop — blocked`, with a
 // dash after the word. The dash is required so that a developer's own heading such as
-// `### loop-safe again` is not mistaken for one. Any line may match, not only the first, so a
+// `### loop-progress notes` is not mistaken for one. Any line may match, not only the first, so a
 // loop comment that was posted with something above its heading is still recognised.
 const LOOP_HEADING = /^\s*###\s+loop\s+[—–-]/im
 

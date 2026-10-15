@@ -19,9 +19,9 @@ export interface IssueData {
   isPullRequest: boolean
 }
 
-const LOOP_SAFE = 'loop-safe'
+const READY_FOR_AGENT = 'ready-for-agent'
 const RISKY = 'risky'
-const NEEDS_DEVELOPER = 'needs-developer'
+const NEEDS_INFO = 'needs-info'
 const LOOP_LABEL = 'loop'
 // A migrated issue keeps its old backlog ID at the end of its title: `… (LibPage-027)`.
 const LEGACY_TITLE_ID = /\(libpage-(\d+)\)/i
@@ -45,13 +45,13 @@ function isExcluded(issue: IssueData, excludedIds: Set<string>): boolean {
 }
 
 /**
- * The issue the loop takes next: written by the repository owner, labelled `loop-safe`, not
- * labelled `risky` or `needs-developer`, and not excluded. Most urgent priority first, then the
+ * The issue the loop takes next: written by the repository owner, labelled `ready-for-agent`, not
+ * labelled `risky` or `needs-info`, and not excluded. Most urgent priority first, then the
  * lowest issue number.
  *
  * Risk is never inferred from an issue's wording: only the `risky` label refuses it.
- * `needs-developer` refuses it too, so that an issue the loop handed back stays out of the queue
- * even if removing `loop-safe` failed. `excludedIds` holds every item that ever had a loop PR
+ * `needs-info` refuses it too, so that an issue the loop handed back stays out of the queue
+ * even if removing `ready-for-agent` failed. `excludedIds` holds every item that ever had a loop PR
  * (open, rejected or merged), so no issue is taken twice. Only the owner's issues count because
  * the repository is public: anyone can open an issue, and a maintainer adding a label to it
  * must not make its text instructions.
@@ -61,9 +61,9 @@ export function selectNextIssue(issues: IssueData[], owner: string, excludedIds:
     (issue) =>
       !issue.isPullRequest &&
       issue.authorLogin.toLowerCase() === owner.toLowerCase() &&
-      hasLabel(issue.labels, LOOP_SAFE) &&
+      hasLabel(issue.labels, READY_FOR_AGENT) &&
       !hasLabel(issue.labels, RISKY) &&
-      !hasLabel(issue.labels, NEEDS_DEVELOPER) &&
+      !hasLabel(issue.labels, NEEDS_INFO) &&
       !isExcluded(issue, excludedIds),
   )
   eligible.sort((a, b) => priorityRank(a.labels) - priorityRank(b.labels) || a.number - b.number)

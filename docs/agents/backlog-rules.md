@@ -18,7 +18,7 @@ title.
 
 From a developer session or a skill: propose the title, body and labels, and create the issue
 only after the developer approves. Issues are public and cannot be cleanly unsent. Never add
-`loop-safe` unless the developer asked for it.
+`ready-for-agent` unless the developer asked for it.
 
 The loop never creates issues.
 
@@ -41,17 +41,12 @@ Every issue is written as an agile item, with these sections:
 | Type | `type:story`, `type:bug`, `type:task`, `type:spike` | User-facing capability; defect; technical work; design or investigation |
 | Size | `size:S`, `size:M`, `size:L` | A rough estimate |
 | Priority | `P0`, `P1`, `P2`, `P3` | `P0` is reserved for something broken in production |
-| Workflow | `loop-safe`, `needs-developer` | The loop may take it; waiting for the developer |
+| Workflow | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` | Not assessed yet; questions for the author, or the loop is blocked; assessed, clear and wanted, the loop may take it; wanted, the developer builds it; not wanted or already done (the developer closes it) |
 | Other | `risky`, `loop` | Risky tier; a PR opened by the loop |
 
-**Vocabulary change approved, not yet made.** The workflow labels are to become the five
-triage labels, used by the loop, the skills and the developer alike: `needs-triage`,
-`needs-info` (replacing `needs-developer`), `ready-for-agent` (replacing `loop-safe`),
-`ready-for-human` and `wontfix`. The rename also touches the reviewer workflows under
-`.github/workflows/`, which apply `needs-developer` to PRs, so it ships as one risky-tier change
-together with the loop's code and prompt. Until then the labels in the table above are the live
-ones. Design: `docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md`, "Triage and one
-vocabulary".
+The workflow labels are the five triage roles of the agent skills, under the same names, so
+the loop, the skills and the developer's sessions use one vocabulary (since 2026-10-15,
+replacing the two labels the loop used before).
 
 ## Triage: assessing an issue
 
@@ -84,8 +79,8 @@ built.
 
 (`scripts/loop/select-item.ts`, `scripts/loop/issue.ts`)
 
-- It takes only open issues the repository owner wrote, labelled `loop-safe` and neither `risky`
-  nor `needs-developer`, that never had a loop PR. Most urgent priority first, then the lowest
+- It takes only open issues the repository owner wrote, labelled `ready-for-agent` and neither
+  `risky` nor `needs-info`, that never had a loop PR. Most urgent priority first, then the lowest
   number. A loop PR is one the owner opened from this repository on a `<type>/<number>-slug`
   branch or with the `loop` label.
 - It reads the issue body and the owner's comments (`npm run -s loop:issue -- <number>`), never
@@ -93,11 +88,11 @@ built.
   under the owner's account.
 - Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
   `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
-- When blocked it posts one `### loop — blocked` comment and swaps `loop-safe` for
-  `needs-developer`. To retry, answer in a comment, put `loop-safe` back and remove
-  `needs-developer`.
-- It never creates an issue, never adds `loop-safe`, and never edits an issue's body. These are
-  instructions in its prompt; nothing in GitHub enforces them.
+- When blocked it posts one `### loop — blocked` comment and swaps `ready-for-agent` for
+  `needs-info`. To retry, answer in a comment, put `ready-for-agent` back and remove
+  `needs-info`.
+- It never creates an issue, never adds `ready-for-agent`, and never edits an issue's body. These
+  are instructions in its prompt; nothing in GitHub enforces them.
 
 The plan-first changes to this (plans, approval, risky work, proof scripts) are designed in
 `docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md` and are not built yet.

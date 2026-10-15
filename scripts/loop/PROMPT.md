@@ -21,7 +21,7 @@ Project rules: `CLAUDE.md`.
   4. deploy and CI configuration (`.github/`, `render.yaml`, environment variables).
   If the issue cannot be done without one of these, follow **Blocked** below.
 - Work only on the issue you were given. Do not pick, invent or bundle other work.
-- **Never create an issue, never add the `loop-safe` label to anything, and never edit an
+- **Never create an issue, never add the `ready-for-agent` label to anything, and never edit an
   issue's title or body.** You post under the developer's account, so GitHub cannot tell your
   issues and labels from theirs: only the developer decides what the loop may work on. If you
   find work worth doing, describe it in your PR body or in a comment on your issue.
@@ -46,8 +46,8 @@ This run happens in a cloud session where GitHub's GraphQL API is blocked. **`gh
 | List a PR's changed files | `gh api --paginate R/pulls/<n>/files --jq '.[].filename'` |
 | Read one comment | `gh api R/issues/comments/<id> --jq .body` |
 | Post a comment (PR or issue) | `gh api R/issues/<n>/comments -F body=@comment.md` |
-| Flag a PR or issue for the developer | `gh api R/issues/<n>/labels -f 'labels[]=needs-developer'` |
-| Take an issue out of the loop's queue | `gh api -X DELETE R/issues/<n>/labels/loop-safe` |
+| Flag a PR or issue for the developer | `gh api R/issues/<n>/labels -f 'labels[]=needs-info'` |
+| Take an issue out of the loop's queue | `gh api -X DELETE R/issues/<n>/labels/ready-for-agent` |
 | Mark an issue risky | `gh api R/issues/<n>/labels -f 'labels[]=risky'` |
 
 **Every comment you post must begin with a heading that starts `### loop — `** (for example
@@ -91,7 +91,7 @@ without data, and the tests need none. Never print, echo or inspect `LOOP_DATABA
   any other way.** To ask:
   1. Add a section to your PR body headed `## Data access request`, saying exactly which table
      and columns you need, what question they would answer, and what you did without them.
-  2. Add the `needs-developer` label to the PR.
+  2. Add the `needs-info` label to the PR.
   3. Carry on with whatever part of the issue does not depend on that data. If nothing can be
      done without it, follow **Blocked** and put the same request in the blocked comment.
 
@@ -104,7 +104,7 @@ without data, and the tests need none. Never print, echo or inspect `LOOP_DATABA
 1. **Find out what this run does.** First make sure you are on an up-to-date `master`
    (`git checkout master && git pull --ff-only`), then run `npm run loop:next`.
    - Exit code 2 (too many loop PRs open): stop. Report which PRs are open. Do nothing else.
-   - Prints `none`: stop. Report that no eligible `loop-safe` issue exists. Do nothing else.
+   - Prints `none`: stop. Report that no eligible `ready-for-agent` issue exists. Do nothing else.
    - Prints JSON with `"action":"fix"` —
      `{"action":"fix","pr":N,"branch":"...","id":"#123","reviewers":[...],"agentFindings":A,"developerFindings":D,"comments":[...]}`: one of your
      open PRs has reviewer findings an agent may fix. Follow **Review pass** below and
@@ -152,7 +152,7 @@ without data, and the tests need none. Never print, echo or inspect `LOOP_DATABA
      when the developer merges.
    - Some are not: the PR body says `Refs #<number>` instead, never `Closes`, and lists each
      criterion that remains and why. After opening the PR, take the issue out of the queue
-     (remove `loop-safe`) and flag it (add `needs-developer`) with the commands in the table
+     (remove `ready-for-agent`) and flag it (add `needs-info`) with the commands in the table
      above, so the developer decides what happens to the rest.
 
 7. **Open the pull request** against `master`:
@@ -266,15 +266,15 @@ again. There is no pull request for this.
 
    Be concrete: name files, routes and error messages. A vague note is worse than none. Keep
    database titles and names out of it, as in any comment.
-3. Take the issue out of the queue (remove `loop-safe`) and flag it for the developer (add
-   `needs-developer`), with the commands in the table above. Add `risky` as well only when the
+3. Take the issue out of the queue (remove `ready-for-agent`) and flag it for the developer (add
+   `needs-info`), with the commands in the table above. Add `risky` as well only when the
    issue itself needs risky-tier work; not when the block is another open PR's migration.
    **If the comment or either label command fails, say so at the top of your report**, with the
    command and its error, so the developer can fix the labels by hand. An issue labelled
-   `needs-developer` is never picked, so either label change alone stops it being retried.
+   `needs-info` is never picked, so either label change alone stops it being retried.
 
-To retry, the developer answers in their own comment, puts `loop-safe` back and removes
-`needs-developer`. Because the issue never had a pull request, the loop can take it again; the
+To retry, the developer answers in their own comment, puts `ready-for-agent` back and removes
+`needs-info`. Because the issue never had a pull request, the loop can take it again; the
 developer's comment is then part of what `npm run -s loop:issue` prints.
 
 ## Report
