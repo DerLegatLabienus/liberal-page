@@ -1,40 +1,66 @@
-// CLI for the unattended loop: check a branch's new dependencies against its plan.
+// CLI for the unattended loop: check a branch against its plan and the rules for risky work.
 // Usage: npm run -s loop:guard -- [--base <ref>] [--plan <plan.md>]
 //
-// Compares the base (the merge base with origin/master or master, or --base) with HEAD:
-//   - packages added to package.json (dependencies or devDependencies),
-//   - new imports from one area of the code into another (an import scan of both trees, read
-//     from git objects; nothing is checked out and the working tree is never touched),
-//   - new imports that break the layering (docs/superpowers/specs/
-//     2026-10-14-loop-plan-and-proof-design.md, "Risky work"),
-//   - risky areas the changed paths fall in (migrations, auth, CI and deploy configuration,
-//     production data script; see RISKY_AREAS),
-//   - guardrail paths (the rules the loop follows; see isGuardrailPath),
+// Compares the base (the merge base with origin/master or master, or --base) with HEAD. Both
+// trees are read from git objects; nothing is checked out and the working tree is never read.
+//   - packages added to package.json (dependencies, devDependencies, optionalDependencies,
+//     peerDependencies), and any added or changed one installed from outside the npm registry,
+//   - new imports from one area of the code into another, and new imports that break the
+//     layering (docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md, "Risky work"),
+//   - risky areas the change falls in (migrations, auth, CI and deploy configuration,
+//     production data script; see RISKY_AREAS and riskyContext below),
+//   - guardrail paths (the rules the loop follows; see isGuardrailPath) and `loop:*` scripts,
 //   - HEAD's migrations applied to a fresh in-memory pglite database,
-//   - new migrations that drop, rename or change a type (see destructiveStatements), and edits
-//     to a migration already on the base.
-// Each package and import must be named on the plan's `**New dependencies:**` line; a layering
-// break must be named there as an exception with a reason. Each risky area touched must be
-// named on the `**Risky areas:**` line. Guardrails and migration findings fail whatever the
-// plan says. Without --plan, nothing counts as declared.
+//   - new migrations that drop, rename, change a type or delete data (destructiveStatements),
+//     and edits to a migration already on the base.
 // Prints one evidence block (`<!-- loop:guard -->`) on stdout.
 //
-// Plan matching (forgiving on purpose, see parsePlan / packageDeclared / edgeDeclaration):
-//   - a package is declared when its full name appears anywhere in the New dependencies text
-//     as a whole token (backticks and an `@version` suffix are fine; `react` does not match
-//     `react-dom`);
-//   - an import is declared by an `A → B` pair (`->` and `=>` work too) on that text, where each
-//     side is an area (`src/components`), a file path (extension and `@/` optional) or a folder
-//     prefix of the file (`server/db` covers `server/db/index.ts`). Direction matters;
-//   - a pair is a layering exception when its line contains the word "exception" and some
-//     reason besides the pair and the words "layering"/"exception".
+// WHERE IT RUNS. A branch can edit this file and the `loop:guard` script, so the guard must
+// not be taken from the branch it judges. The loop runs master's copy: for example
+// `git show origin/master:scripts/loop/guard.ts` (and evidence.ts) written to a temp folder and
+// run from the branch's checkout, or a checkout of master, with --base and --plan set by the
+// caller, never by the branch. Wiring that up is #45. Here, as a second line, any change to a
+// `loop:*` package.json script or to scripts/loop/** is a guardrail violation.
+//
+// Every rule fails closed. Decisions, so a reviewer can check them:
+//   - Plan lines are read strictly. Each item is one bullet (or the text after the label).
+//     Reading stops at a heading, at a line no deeper than the label line, and at any line that
+//     carries a different `**Label:**` (New dependencies keeps `**Packages:**` and
+//     `**Cross-module dependencies:**`).
+//   - Risky areas: each item (split on `,` and `;`) must be an area name or a listed alias
+//     (RISKY_ALIASES), case-insensitive, trailing punctuation ignored. `none`, optionally with
+//     ` — reason`, ` - reason`, `: reason` or `(reason)`, names nothing. Anything else is an
+//     `unclear` finding that fails and names the item; so is `none` next to an area.
+//   - A package is declared only by an item whose first token is `name` or `name@version`
+//     (backticks fine). An import only by an item that starts with an `A → B` pair (`->`, `=>`
+//     too); each side is an area, a file path (extension and `@/` optional) or a folder prefix.
+//     An item holding a negation (no, not, n't, without, instead of, considered, rejected)
+//     declares nothing.
+//   - A layering break is excused only by an item that declares the import and contains
+//     `exception:` followed by a reason of at least three words.
+//   - Packages from outside the registry (npm:, git, github:, file:, link:, URLs, owner/repo)
+//     fail whatever the plan says.
+//   - package.json changes to `scripts` (other than loop:*, which are guardrails), install
+//     hooks, `overrides` or `resolutions` count as CI and deploy configuration.
+//   - Auth also covers any file whose diff adds or removes a line using requireAuth,
+//     requireAdmin or optionalAuth. A production data script is also any changed script outside
+//     scripts/loop that imports server/db or server/repositories.
+//   - Migrations: any DROP fails except DROP INDEX, DROP CONSTRAINT, DROP NOT NULL, DROP DEFAULT
+//     and exactly `DROP SCHEMA [IF EXISTS] loop_read CASCADE` (CLAUDE.md requires it before a
+//     migration that touches a column the loop's views use). RENAME, a type change, TRUNCATE,
+//     DELETE FROM and any EXECUTE (dynamic SQL cannot be checked) fail. Comments and string
+//     contents (E'' escapes included) are ignored; dollar-quoted bodies are scanned. Migration
+//     files are every .sql under server/db/migrations/ (nested too); a journal tag pointing
+//     outside that folder fails, and so does a .sql file the journal does not list.
+//   - Paths come from git with -z and core.quotePath=false, and renames are off, so a file moved
+//     out of a guarded folder shows its old path. A path holding a newline stops the run (2).
+//   - HEAD's package.json must be readable and valid JSON, or the run stops (2).
 //
 // Each rule is one entry in CHECKS (a function from the context to findings), so a new rule is
 // added there without touching the others.
 //
-// Exit codes: 0 = pass; 1 = an undeclared package, import or risky area, an unexcused layering
-//             break, a guardrail change, or a migration that fails, drops, renames or retypes;
-//             2 = could not run (bad arguments, unreadable plan, git failed).
+// Exit codes: 0 = pass; 1 = any finding is undeclared, unclear or a violation;
+//             2 = could not run (bad arguments, unreadable plan or package.json, git failed).
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
@@ -56,23 +82,80 @@ export function isScannedFile(file: string): boolean {
   return CODE_EXTENSIONS.includes(path.posix.extname(file))
 }
 
+/** After one of these (or at the start), a `/` opens a regex literal rather than dividing. */
+const REGEX_MAY_FOLLOW = new Set([...'(,=:[!&|?{};+-*%<>~^'])
+
+/**
+ * Source with `//` and `/* … *\/` comments removed. Strings, template literals and regex
+ * literals are copied as they are, so `'http://x'` or `/\/\*+/` is not read as a comment.
+ */
+export function stripJsComments(source: string): string {
+  let out = ''
+  let last = ''
+  let i = 0
+  const n = source.length
+  while (i < n) {
+    const c = source[i]
+    const next = source[i + 1]
+    if (c === "'" || c === '"' || c === '`') {
+      let j = i + 1
+      while (j < n && source[j] !== c) {
+        if (source[j] === '\\') j++
+        else if (c !== '`' && source[j] === '\n') break
+        j++
+      }
+      out += source.slice(i, j + 1)
+      last = c
+      i = j + 1
+    } else if (c === '/' && next === '/') {
+      while (i < n && source[i] !== '\n') i++
+    } else if (c === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2)
+      out += ' '
+      i = end === -1 ? n : end + 2
+    } else if (c === '/' && (last === '' || REGEX_MAY_FOLLOW.has(last))) {
+      let j = i + 1
+      let inClass = false
+      while (j < n && source[j] !== '\n') {
+        if (source[j] === '\\') { j += 2; continue }
+        if (source[j] === '[') inClass = true
+        else if (source[j] === ']') inClass = false
+        else if (source[j] === '/' && !inClass) break
+        j++
+      }
+      out += source.slice(i, j + 1)
+      last = 'a'
+      i = j + 1
+    } else {
+      out += c
+      if (!/\s/.test(c)) last = c
+      i++
+    }
+  }
+  return out
+}
+
+/** A quoted module name: '…', "…", or a backtick string with no `${`. */
+const STR = String.raw`(?:'([^'\n]+)'|"([^"\n]+)"|` + '`([^`$\\n]+)`)'
+
 const SPECIFIER_PATTERNS = [
   // import … from 'x' and export … from 'x', across multi-line braces. The prefix stops at a
   // quote, so the captured string is always the one right after `from`.
-  /\b(?:import|export)\b[^'"`;]*?\bfrom\s*['"]([^'"\n]+)['"]/g,
+  new RegExp(String.raw`\b(?:import|export)\b[^'"` + '`' + String.raw`;]*?\bfrom\s*${STR}`, 'g'),
   // side-effect import: import './x.css'
-  /\bimport\s*['"]([^'"\n]+)['"]/g,
-  // dynamic import('x')
-  /\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g,
+  new RegExp(String.raw`\bimport\s*${STR}`, 'g'),
+  // dynamic import('x'); a comment before the string is already stripped
+  new RegExp(String.raw`\bimport\s*\(\s*${STR}\s*\)`, 'g'),
   // vi.mock('x') / vi.doMock('x')
-  /\bvi\.(?:mock|doMock)\s*\(\s*['"]([^'"\n]+)['"]/g,
+  new RegExp(String.raw`\bvi\.(?:mock|doMock)\s*\(\s*${STR}`, 'g'),
 ]
 
 /** Every module specifier a source file names, once each, in first-seen order. */
 export function extractSpecifiers(source: string): string[] {
+  const code = stripJsComments(source)
   const found = new Set<string>()
   for (const pattern of SPECIFIER_PATTERNS) {
-    for (const match of source.matchAll(pattern)) found.add(match[1])
+    for (const m of code.matchAll(pattern)) found.add(m[1] ?? m[2] ?? m[3])
   }
   return [...found]
 }
@@ -200,64 +283,103 @@ export function layeringViolation(edge: Edge): string | null {
 // ---------------------------------------------------------------------------------------------
 // Packages
 
-export interface PackageJson {
-  dependencies?: Record<string, string>
-  devDependencies?: Record<string, string>
+export const DEPENDENCY_LISTS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const
+export type DependencyList = (typeof DEPENDENCY_LISTS)[number]
+
+export type PackageJson = { [L in DependencyList]?: Record<string, string> } & {
+  scripts?: Record<string, string>
+  overrides?: unknown
+  resolutions?: unknown
 }
 
 export interface AddedPackage {
   name: string
   version: string
-  dev: boolean
+  list: DependencyList
 }
 
-/** Packages on HEAD in neither base list. A move between the lists or a version bump is not new. */
+function entries(pkg: PackageJson | null): AddedPackage[] {
+  return DEPENDENCY_LISTS.flatMap((list) =>
+    Object.entries(pkg?.[list] ?? {}).map(([name, version]) => ({ name, version: String(version), list })))
+}
+
+const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+
+/** Packages on HEAD in none of the base lists. A move between lists or a version bump is not new. */
 export function addedPackages(base: PackageJson | null, head: PackageJson): AddedPackage[] {
-  const known = new Set([...Object.keys(base?.dependencies ?? {}), ...Object.keys(base?.devDependencies ?? {})])
-  const added: AddedPackage[] = []
-  for (const [list, dev] of [[head.dependencies, false], [head.devDependencies, true]] as const) {
-    for (const [name, version] of Object.entries(list ?? {})) {
-      if (!known.has(name)) added.push({ name, version, dev })
-    }
+  const known = new Set(entries(base).map((e) => e.name))
+  return entries(head).filter((e) => !known.has(e.name)).sort(byName)
+}
+
+/** A version spec that installs from somewhere other than the npm registry. */
+const NON_REGISTRY = /^(?:npm:|git(?:\+|:|@)|github:|gitlab:|bitbucket:|gist:|file:|link:|portal:|workspace:|https?:\/\/)|^[\w.-]+\/[\w.-]+(?:#.*)?$/i
+
+/** Dependencies added, or changed, to a source outside the registry. Unchanged ones are baseline. */
+export function nonRegistrySources(base: PackageJson | null, head: PackageJson): AddedPackage[] {
+  const before = new Map(entries(base).map((e) => [`${e.list}\0${e.name}`, e.version]))
+  return entries(head)
+    .filter((e) => NON_REGISTRY.test(e.version.trim()) && before.get(`${e.list}\0${e.name}`) !== e.version)
+    .sort(byName)
+}
+
+const isLoopScript = (name: string) => name.startsWith('loop:')
+const INSTALL_HOOKS = new Set(['preinstall', 'install', 'postinstall', 'prepare', 'preprepare', 'postprepare', 'prepublish'])
+
+function changedKeys(a: Record<string, string> = {}, b: Record<string, string> = {}): string[] {
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => a[k] !== b[k]).sort()
+}
+
+/** `loop:*` scripts added, removed or changed: the guard's own wiring. */
+export function loopScriptChanges(base: PackageJson | null, head: PackageJson): string[] {
+  return changedKeys(base?.scripts, head.scripts).filter(isLoopScript)
+}
+
+/** package.json changes that count as CI and deploy configuration. */
+export function packageJsonRiskyChanges(base: PackageJson | null, head: PackageJson): string[] {
+  const found = changedKeys(base?.scripts, head.scripts).filter((k) => !isLoopScript(k))
+    .map((k) => `package.json scripts.${k}${INSTALL_HOOKS.has(k) ? ' (install hook)' : ''}`)
+  for (const field of ['overrides', 'resolutions'] as const) {
+    if (JSON.stringify(base?.[field] ?? null) !== JSON.stringify(head[field] ?? null)) found.push(`package.json ${field}`)
   }
-  return added.sort((a, b) => a.name.localeCompare(b.name))
+  return found
 }
 
 // ---------------------------------------------------------------------------------------------
-// The plan's New dependencies line
+// The plan
 
 export interface PlanDeclaration {
   /** True when the plan declares nothing (says `none`, or has no New dependencies line). */
   none: boolean
-  /** One entry per declared line: the text after the label, and each sub-bullet under it. */
+  /** One entry per declared item: the text after the label, and each line under it. */
   items: string[]
 }
 
 const DEPS_LABEL = /\*\*New dependencies:?\*\*:?/i
+const DEPS_SUBLABELS = ['packages', 'cross-module dependencies']
+const RISKY_LABEL = /\*\*Risky areas:?\*\*:?/i
+const ANY_LABEL = /\*\*([^*\n]+?)(?::\*\*|\*\*:)/g
 const BULLET = /^\s*[-*+]\s+/
 const indentOf = (line: string) => /^\s*/.exec(line)![0].length
+const NEGATION = /\b(?:no|not|without|instead\s+of|considered|rejected)\b|n't\b/i
+const NONE_ITEM = /^none\b/i
 
 /** Strips a bullet marker and a leading bold label (`**Packages:**`). */
 function itemText(line: string): string {
   return line.replace(BULLET, '').trim().replace(/^\*\*[^*]+\*\*:?\s*/, '').trim()
 }
 
-/**
- * Reads every `**New dependencies:**` line of a plan: the rest of that line, then the lines
- * under it. Under a bullet, those are the lines indented deeper (blank lines between them are
- * fine); under a plain line, the list that follows it, up to a blank line or a heading.
- */
-export function parsePlan(markdown: string): PlanDeclaration {
-  const items = labelledItems(markdown, DEPS_LABEL)
-  return { none: items.length === 0, items }
+/** Whether a line carries a bold label other than the allowed sub-labels. */
+function carriesOtherLabel(line: string, subLabels: readonly string[]): boolean {
+  return [...line.matchAll(ANY_LABEL)].some((m) => !subLabels.includes(m[1].trim().toLowerCase()))
 }
 
 /**
- * The items of every line carrying `label` (the reading rule of parsePlan). An item that starts
- * with `none` declares nothing and is dropped, so its reason ("None: no migrations or auth
- * change", "none (considered date-fns)") is never read as naming what it mentions.
+ * The raw items of every line carrying `label`: the rest of that line, then the lines under it.
+ * Under a bullet, those are the lines indented deeper (blank lines between them are fine);
+ * under a plain line, the list that follows it, up to a blank line. Reading always stops at a
+ * heading and at a line carrying any other `**Label:**`.
  */
-function labelledItems(markdown: string, labelPattern: RegExp): string[] {
+function labelledItems(markdown: string, labelPattern: RegExp, subLabels: readonly string[] = []): string[] {
   const lines = markdown.split(/\r?\n/)
   const items: string[] = []
   for (let i = 0; i < lines.length; i++) {
@@ -277,25 +399,41 @@ function labelledItems(markdown: string, labelPattern: RegExp): string[] {
         if (next !== undefined && indentOf(next) > indent) continue
         break
       }
-      if (/^\s*#/.test(line)) break
+      if (/^\s*#/.test(line) || carriesOtherLabel(line, subLabels)) break
       if (isBullet ? indentOf(line) <= indent : !BULLET.test(line) && indentOf(line) <= indent) break
       const text = itemText(line)
       if (text) items.push(text)
     }
     i = j - 1
   }
-  return items.filter((item) => !/^none\b/i.test(item.replace(/`/g, '').trim()))
+  return items
 }
 
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** The `**New dependencies:**` items. Items that start with `none` declare nothing and are dropped. */
+export function parsePlan(markdown: string): PlanDeclaration {
+  const items = labelledItems(markdown, DEPS_LABEL, DEPS_SUBLABELS)
+    .filter((item) => !NONE_ITEM.test(item.replace(/`/g, '').trim()))
+  return { none: items.length === 0, items }
+}
 
-/** Whether the plan names a package, as a whole token (see the header comment). */
+/** An item as matched: backticks removed. Null when it holds a negation, so it declares nothing. */
+function declaringText(item: string): string | null {
+  const text = item.replace(/`/g, '').trim()
+  return NEGATION.test(text) ? null : text
+}
+
+/** Whether an item's first token is `name` or `name@version`. */
 export function packageDeclared(name: string, plan: PlanDeclaration): boolean {
-  const text = plan.items.join('\n').replace(/`/g, ' ')
-  return new RegExp(`(?<![\\w@/.-])${escapeRegex(name)}(?![\\w/-])`, 'i').test(text)
+  return plan.items.some((item) => {
+    const text = declaringText(item)
+    if (text === null) return false
+    const first = text.split(/[\s,;()]+/)[0].replace(/[.,;:]+$/, '')
+    return first === name || first.startsWith(`${name}@`)
+  })
 }
 
-const ARROW_PAIR = /([\w@./-]+)\s*(?:→|->|=>)\s*([\w@./-]+)/g
+const LEADING_PAIR = /^([\w@./-]+)\s*(?:→|->|=>)\s*([\w@./-]+)/
+const EXCEPTION_REASON = /\bexception:\s*(.+)$/i
 
 function normalizeSide(token: string): string {
   let t = token.replace(/^@\//, 'src/').replace(/^\.\//, '').replace(/[./]+$/, '')
@@ -316,15 +454,12 @@ export function edgeDeclaration(edge: Edge, plan: PlanDeclaration): { declared: 
   let declared = false
   let exception = false
   for (const item of plan.items) {
-    const text = item.replace(/`/g, '')
-    for (const [pair, from, to] of text.matchAll(ARROW_PAIR)) {
-      if (!sideMatches(from, edge.fromFile, edge.fromArea) || !sideMatches(to, edge.toFile, edge.toArea)) continue
-      declared = true
-      if (/\bexceptions?\b/i.test(text)) {
-        const reason = text.replace(pair, ' ').replace(/\b(?:layering|exceptions?)\b/gi, ' ').replace(/[^\p{L}\p{N}]+/gu, '')
-        if (reason) exception = true
-      }
-    }
+    const text = declaringText(item)
+    const pair = text === null ? null : LEADING_PAIR.exec(text)
+    if (!pair || !sideMatches(pair[1], edge.fromFile, edge.fromArea) || !sideMatches(pair[2], edge.toFile, edge.toArea)) continue
+    declared = true
+    const reason = EXCEPTION_REASON.exec(text!)
+    if (reason && reason[1].split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length >= 3) exception = true
   }
   return { declared, exception }
 }
@@ -334,39 +469,41 @@ export function edgeDeclaration(edge: Edge, plan: PlanDeclaration): { declared: 
 
 export type RiskyArea = 'migrations' | 'auth' | 'ci-deploy' | 'prod-data'
 
+/** Names of auth and access-control code in server/repositories and server/services. */
+const AUTH_NAMED = /^server\/(?:repositories|services)\/(?:[^/]+\/)*[^/]*(?:role|allowlist|refresh-token|invite)[^/]*$/
+
 /**
  * The risky tier (CLAUDE.md, "Classify every change") as paths. A path may be in two areas
  * (`server/db/schema/auth.ts`). The order here is the order findings are printed in.
  *   - migrations: anything that changes the database shape or how it is migrated;
  *   - auth (auth and access control): every server file or folder whose name starts with
- *     `auth`, all of server/middleware (where the gates live), and server/routes/admin.ts
- *     (the invite allowlist and user roles). Other admin routes are features behind the gate;
- *   - ci-deploy (CI and deploy configuration): .github/**, render.yaml, .env.example;
+ *     `auth`, all of server/middleware (where the gates live), server/routes/admin.ts (the
+ *     invite allowlist and user roles), server/repositories/users-repository.ts, and any
+ *     repository or service named for roles, the allowlist, refresh tokens or invites. Other
+ *     admin routes are features behind the gate, but see authGateFiles;
+ *   - ci-deploy (CI and deploy configuration): .github/**, render.yaml, .env.example, and see
+ *     packageJsonRiskyChanges;
  *   - prod-data (production data script): scripts/seed-data/** and the top-level scripts that
- *     write to a database (seed, backfill, import, migrate, regen).
+ *     write to a database (seed, backfill, import, migrate, regen), and see prodDataScripts.
  */
-export const RISKY_AREAS: ReadonlyArray<{ area: RiskyArea; matches: (file: string) => boolean; named: RegExp }> = [
+export const RISKY_AREAS: ReadonlyArray<{ area: RiskyArea; matches: (file: string) => boolean }> = [
   {
     area: 'migrations',
     matches: (f) => under(f, 'server/db/migrations') || under(f, 'server/db/schema') ||
       f === 'server/db/migrate.ts' || f === 'drizzle.config.ts',
-    named: /migration|schema|\bdb\b|database/,
   },
   {
     area: 'auth',
     matches: (f) => /^server\/(?:[^/]+\/)*auth[^/]*(?:\/|$)/.test(f) || under(f, 'server/middleware') ||
-      f === 'server/routes/admin.ts',
-    named: /\bauth|access control|log-?in|sign[- ]?in|session|permission|\broles?\b/,
+      f === 'server/routes/admin.ts' || f === 'server/repositories/users-repository.ts' || AUTH_NAMED.test(f),
   },
   {
     area: 'ci-deploy',
     matches: (f) => under(f, '.github') || f === 'render.yaml' || f === '.env.example',
-    named: /\bci\b|deploy|workflow|github|render|\benv\b|environment variable/,
   },
   {
     area: 'prod-data',
     matches: (f) => under(f, 'scripts/seed-data') || /^scripts\/(?:seed|backfill|import|migrate|regen)[^/]*$/.test(f),
-    named: /production data|prod data|data script|\bseed|backfill|\bimport/,
   },
 ]
 
@@ -375,16 +512,79 @@ export function riskyAreasOf(file: string): RiskyArea[] {
   return RISKY_AREAS.filter((r) => r.matches(file)).map((r) => r.area)
 }
 
-const RISKY_LABEL = /\*\*Risky areas:?\*\*:?/i
+/** The only words the Risky areas line may use, lowercase. */
+export const RISKY_ALIASES: Readonly<Record<string, RiskyArea>> = {
+  'migrations': 'migrations',
+  'migration': 'migrations',
+  'database migrations': 'migrations',
+  'database migration': 'migrations',
+  'auth': 'auth',
+  'auth and access control': 'auth',
+  'access control': 'auth',
+  'ci and deploy configuration': 'ci-deploy',
+  'ci': 'ci-deploy',
+  'deploy': 'ci-deploy',
+  'ci-deploy': 'ci-deploy',
+  'production data script': 'prod-data',
+  'production data scripts': 'prod-data',
+  'prod data': 'prod-data',
+  'prod-data': 'prod-data',
+}
+
+/** `none`, optionally with ` — reason`, ` - reason`, `: reason` or `(reason)`. */
+const NONE_DECLARATION = /^none\s*(?:\.?\s*$|(?:—|–|-|:)\s*\S.*$|\(.*\)\s*\.?\s*$)/i
+
+/** The areas a plan's `**Risky areas:**` line names, and the items that are not an area or `none`. */
+export function parseRiskyAreas(markdown: string): { areas: RiskyArea[]; unclear: string[] } {
+  const named = new Set<RiskyArea>()
+  const unclear: string[] = []
+  let none = false
+  for (const item of labelledItems(markdown, RISKY_LABEL)) {
+    const text = item.replace(/`/g, '').trim()
+    if (NONE_DECLARATION.test(text)) { none = true; continue }
+    for (const piece of text.split(/[,;]/)) {
+      const key = piece.trim().replace(/[.,;:!]+$/, '').trim().toLowerCase()
+      if (!key) continue
+      const area = RISKY_ALIASES[key]
+      if (area) named.add(area)
+      else unclear.push(piece.trim())
+    }
+  }
+  if (none && (named.size > 0 || unclear.length > 0)) unclear.push('none, together with areas')
+  return { areas: RISKY_AREAS.map((r) => r.area).filter((a) => named.has(a)), unclear }
+}
+
+const AUTH_GATE = /\b(?:requireAuth|requireAdmin|optionalAuth)\b/
 
 /**
- * The areas a plan's `**Risky areas:**` line names (read like the New dependencies line).
- * Forgiving: each area is recognised by a few words (`RISKY_AREAS[].named`), so "DB migration",
- * "access control" or "the GitHub workflow" count. `none` or no line names nothing.
+ * Files whose diff (`git diff -U0`) adds or removes a line using an auth gate. Header lines are
+ * told apart from content by position: after `diff --git` until the first `@@`.
  */
-export function parseRiskyAreas(markdown: string): RiskyArea[] {
-  const text = labelledItems(markdown, RISKY_LABEL).join('\n').toLowerCase()
-  return RISKY_AREAS.filter((r) => r.named.test(text)).map((r) => r.area)
+export function authGateFiles(diff: string): string[] {
+  const found: string[] = []
+  let minus = ''
+  let file = ''
+  let inHeader = false
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('diff --git ')) { inHeader = true; minus = ''; file = ''; continue }
+    if (inHeader) {
+      if (line.startsWith('--- ')) minus = line.slice(4).replace(/^a\//, '')
+      else if (line.startsWith('+++ ')) file = line.slice(4) === '/dev/null' ? minus : line.slice(4).replace(/^b\//, '')
+      else if (line.startsWith('@@')) inHeader = false
+      continue
+    }
+    if ((line.startsWith('+') || line.startsWith('-')) && AUTH_GATE.test(line) && file && !found.includes(file)) found.push(file)
+  }
+  return found
+}
+
+/** Changed scripts (outside scripts/loop) that import server/db or a repository: they write data. */
+export function prodDataScripts(changed: readonly string[], headEdges: readonly Edge[]): string[] {
+  const touched = new Set(changed)
+  return [...new Set(headEdges
+    .filter((e) => under(e.fromFile, 'scripts') && !under(e.fromFile, 'scripts/loop') && touched.has(e.fromFile))
+    .filter((e) => under(e.toFile, 'server/db') || under(e.toFile, 'server/repositories'))
+    .map((e) => e.fromFile))].sort()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -402,72 +602,110 @@ export function isGuardrailPath(file: string): boolean {
   return GUARDRAIL_FILES.includes(file) || GUARDRAIL_FOLDERS.some((d) => under(file, d))
 }
 
+/** NUL-separated git output (`-z`) as paths, exactly as git stores them. */
+export function parseNulList(out: string): string[] {
+  return out.split('\0').filter(Boolean)
+}
+
 // ---------------------------------------------------------------------------------------------
 // Migrations
 
 const MIGRATIONS_DIR = 'server/db/migrations'
-const isMigrationSql = (file: string) => new RegExp(`^${MIGRATIONS_DIR}/[^/]+\\.sql$`).test(file)
+const JOURNAL = `${MIGRATIONS_DIR}/meta/_journal.json`
+const isMigrationSql = (file: string) => under(file, MIGRATIONS_DIR) && file.endsWith('.sql')
 
 /**
- * SQL with comments removed (`--` to the end of the line, `/* … *\/`) and the contents of
- * single-quoted strings blanked, so seed text such as `'drop table'` is not read as a statement.
- * Dollar-quoted bodies are not handled (no migration here uses them).
+ * SQL with comments removed (`--` to the end of the line, nested `/* … *\/`) and the contents of
+ * single-quoted strings blanked (E'' strings with backslash escapes too), so seed text such as
+ * `'drop table'` is not read as a statement. Dollar-quoted bodies (`$$ … $$`, `$tag$ … $tag$`)
+ * are not strings to skip: their content is scanned like the rest.
  */
 export function stripSqlComments(sql: string): string {
   let out = ''
-  for (let i = 0; i < sql.length; i++) {
+  const n = sql.length
+  let i = 0
+  while (i < n) {
     const c = sql[i]
-    if (c === '-' && sql[i + 1] === '-') {
-      const end = sql.indexOf('\n', i)
-      if (end === -1) break
-      out += '\n'
-      i = end
-    } else if (c === '/' && sql[i + 1] === '*') {
-      const end = sql.indexOf('*/', i + 2)
+    const next = sql[i + 1]
+    const prevIsWord = i > 0 && /[\w$]/.test(sql[i - 1])
+    if (c === '-' && next === '-') {
+      while (i < n && sql[i] !== '\n') i++
+    } else if (c === '/' && next === '*') {
+      let depth = 1
+      i += 2
+      while (i < n && depth > 0) {
+        if (sql[i] === '/' && sql[i + 1] === '*') { depth++; i += 2 } else if (sql[i] === '*' && sql[i + 1] === '/') { depth--; i += 2 } else i++
+      }
       out += ' '
-      if (end === -1) break
-      i = end + 1
+    } else if ((c === 'e' || c === 'E') && next === "'" && !prevIsWord) {
+      let j = i + 2
+      while (j < n) {
+        if (sql[j] === '\\') j += 2
+        else if (sql[j] === "'" && sql[j + 1] === "'") j += 2
+        else if (sql[j] === "'") break
+        else j++
+      }
+      out += "''"
+      i = j + 1
     } else if (c === "'") {
       let j = i + 1
-      while (j < sql.length) {
+      while (j < n) {
         if (sql[j] === "'" && sql[j + 1] === "'") j += 2
         else if (sql[j] === "'") break
         else j++
       }
       out += "''"
-      i = j
-    } else out += c
+      i = j + 1
+    } else if (c === '$' && !prevIsWord && /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.test(sql.slice(i, i + 66))) {
+      const tag = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(sql.slice(i))![0]
+      const end = sql.indexOf(tag, i + tag.length)
+      const body = sql.slice(i + tag.length, end === -1 ? n : end)
+      out += ` ${stripSqlComments(body)} `
+      i = end === -1 ? n : end + tag.length
+    } else {
+      out += c
+      i++
+    }
   }
   return out
 }
 
 /** The one drop the repo requires (CLAUDE.md, "Migration hazard"): resetting the loop's views. */
 const LOOP_READ_RESET = /^drop\s+schema\s+(?:if\s+exists\s+)?"?loop_read"?\s+cascade$/i
-const DROPPED_OBJECT = /\bdrop\s+(materialized\s+view|table|column|schema|view|type|sequence|database)\b/i
-/** After ALTER TABLE, `DROP <x>` drops a column (the COLUMN keyword is optional) unless x is one of these. */
-const HARMLESS_TABLE_DROPS = new Set(['not', 'default', 'constraint', 'identity', 'expression'])
-const TYPE_CHANGE = /\balter\s+column\s+\S+\s+(?:set\s+data\s+)?type\b/i
+/** DROP <this> loses no data: it relaxes a rule or removes an index. */
+const ALLOWED_DROPS = new Set(['index', 'constraint', 'not', 'default'])
+/** Objects named after DROP; anything else after ALTER TABLE … DROP is a column. */
+const DROP_OBJECTS = new Set([
+  'table', 'column', 'schema', 'view', 'type', 'sequence', 'database', 'function', 'procedure', 'trigger', 'policy',
+  'extension', 'role', 'user', 'domain', 'aggregate', 'operator', 'rule', 'owned', 'identity', 'expression', 'publication',
+  'subscription', 'server', 'cast', 'collation', 'conversion', 'routine', 'statistics', 'tablespace',
+])
+const TYPE_CHANGE = /\balter\s+(?:column\s+)?(?:"[^"]+"|\S+)\s+(?:set\s+data\s+)?type\b/i
 const MAX_STATEMENT_CHARS = 120
 
+function dropReason(statement: string): string | null {
+  for (const m of statement.matchAll(/\bdrop\s+("[^"]*"|\w+)/gi)) {
+    const word = m[1].replace(/"/g, '').toLowerCase()
+    if (ALLOWED_DROPS.has(word)) continue
+    if (word === 'materialized') return 'drop materialized view'
+    if (DROP_OBJECTS.has(word)) return `drop ${word}`
+    return /^alter\s+table\b/i.test(statement) ? 'drop column' : `drop ${word}`
+  }
+  return null
+}
+
 /**
- * Statements that do more than add: a drop of a table, column, schema, view, type, sequence or
- * database; any RENAME; a column type change. Dropping NOT NULL, a default, a constraint or an
- * index is allowed (it relaxes, it loses no data), and so is exactly `DROP SCHEMA loop_read
- * CASCADE` (the repo requires it before a migration that touches a column its views use).
+ * Statements that do more than add (see the header comment for the full rule): any DROP but the
+ * allowed ones, RENAME, a type change, TRUNCATE, DELETE FROM, and any EXECUTE.
  */
 export function destructiveStatements(sql: string): Array<{ statement: string; reason: string }> {
   const found: Array<{ statement: string; reason: string }> = []
   for (const raw of stripSqlComments(sql).split(';')) {
     const statement = raw.replace(/\s+/g, ' ').trim()
     if (!statement || LOOP_READ_RESET.test(statement)) continue
-    let reason: string | null = null
-    const dropped = DROPPED_OBJECT.exec(statement)
-    if (dropped) reason = `drop ${dropped[1].toLowerCase().replace(/\s+/g, ' ')}`
-    else if (/^alter\s+table\b/i.test(statement)) {
-      for (const m of statement.matchAll(/\bdrop\s+("?[\w]+"?)/gi)) {
-        if (!HARMLESS_TABLE_DROPS.has(m[1].toLowerCase())) { reason = 'drop column'; break }
-      }
-    }
+    let reason: string | null = /\bexecute\b/i.test(statement) ? 'dynamic SQL (EXECUTE)' : dropReason(statement)
+    if (!reason && /\btruncate\b/i.test(statement)) reason = 'truncate'
+    if (!reason && /\bdelete\s+from\b/i.test(statement)) reason = 'delete'
     if (!reason && /\brename\b/i.test(statement)) reason = 'rename'
     if (!reason && TYPE_CHANGE.test(statement)) reason = 'type change'
     if (reason) {
@@ -478,7 +716,7 @@ export function destructiveStatements(sql: string): Array<{ statement: string; r
   return found
 }
 
-/** Migration SQL files added on HEAD, and ones already on the base whose text changed. */
+/** Migration SQL files (nested too) added on HEAD, and ones already on the base whose text changed. */
 export function migrationChanges(
   base: ReadonlyMap<string, string>,
   head: ReadonlyMap<string, string>,
@@ -494,16 +732,29 @@ export function migrationChanges(
   return { added, edited }
 }
 
-/** SQL files drizzle's `meta/_journal.json` does not list: the migrator would never apply them. */
-export function unjournaledMigrations(sqlFiles: readonly string[], journal: string | null): string[] {
-  let tags = new Set<string>()
+/** The SQL files drizzle's journal points at (`<tag>.sql`), and tags that leave the folder. */
+export function journalTargets(journal: string | null): { files: string[]; outside: string[] } {
+  const files: string[] = []
+  const outside: string[] = []
+  let tags: string[] = []
   try {
-    const parsed = JSON.parse(journal ?? '') as { entries?: Array<{ tag?: string }> }
-    tags = new Set((parsed.entries ?? []).map((e) => e.tag ?? ''))
+    const parsed = JSON.parse(journal ?? '') as { entries?: Array<{ tag?: unknown }> }
+    tags = (parsed.entries ?? []).map((e) => String(e.tag ?? ''))
   } catch {
-    // a missing or broken journal lists nothing
+    // a missing or broken journal points at nothing (and the migration run fails)
   }
-  return sqlFiles.filter((f) => isMigrationSql(f) && !tags.has(path.posix.basename(f, '.sql')))
+  for (const tag of tags) {
+    const normal = path.posix.normalize(tag)
+    if (!tag || path.posix.isAbsolute(tag) || normal === '..' || normal.startsWith('../')) outside.push(tag)
+    else files.push(`${MIGRATIONS_DIR}/${normal}.sql`)
+  }
+  return { files, outside }
+}
+
+/** SQL files the journal does not point at: drizzle's migrator would never apply them. */
+export function unjournaledMigrations(sqlFiles: readonly string[], journal: string | null): string[] {
+  const listed = new Set(journalTargets(journal).files)
+  return sqlFiles.filter((f) => isMigrationSql(f) && !listed.has(f))
 }
 
 export type MigrationRun = { ok: true; applied: number; total: number } | { ok: false; error: string }
@@ -513,18 +764,27 @@ export type MigrationRun = { ok: true; applied: number; total: number } | { ok: 
 
 export interface GuardContext {
   addedPackages: AddedPackage[]
+  /** Dependencies added or changed to a source outside the npm registry. */
+  nonRegistry: AddedPackage[]
   newEdges: Edge[]
   plan: PlanDeclaration
   /** Paths the branch changed since the base (committed), renames as both old and new path. */
   changedPaths: string[]
-  /** Areas the plan's Risky areas line names. */
+  /** Risky areas found other than by path name: auth gates in a diff, package.json fields, data scripts. */
+  extraRisky: Array<{ area: RiskyArea; path: string }>
+  /** Areas the plan's Risky areas line names, and its items that are neither an area nor `none`. */
   riskyDeclared: RiskyArea[]
+  riskyUnclear: string[]
+  /** `loop:*` package.json scripts the branch added, removed or changed. */
+  loopScriptChanges: string[]
   migrations: { added: Array<{ file: string; sql: string }>; edited: string[]; unjournaled: string[] }
+  /** Journal tags that resolve outside server/db/migrations/. */
+  journalOutside: string[]
   /** HEAD's migrations applied to a fresh in-memory database; null when not run (unit tests). */
   migrationRun: MigrationRun | null
 }
 
-export type FindingStatus = 'ok' | 'undeclared' | 'violation' | 'exception'
+export type FindingStatus = 'ok' | 'undeclared' | 'unclear' | 'violation' | 'exception'
 
 export interface Finding {
   check: string
@@ -543,16 +803,20 @@ export interface Check {
 }
 
 const showEdge = (e: Edge) => `\`${e.fromFile}\` → \`${e.toFile}\``
+const showPackage = (p: AddedPackage) => `\`${p.name}@${p.version}\` (${p.list})`
 
 export const CHECKS: readonly Check[] = [
   {
     name: 'packages',
     heading: 'packages added',
-    run: (ctx) => ctx.addedPackages.map((p) => ({
-      check: 'packages',
-      subject: `\`${p.name}@${p.version}\` (${p.dev ? 'devDependencies' : 'dependencies'})`,
-      status: packageDeclared(p.name, ctx.plan) ? 'ok' : 'undeclared',
-    })),
+    run: (ctx) => [
+      ...ctx.addedPackages.map((p): Finding => ({
+        check: 'packages', subject: showPackage(p), status: packageDeclared(p.name, ctx.plan) ? 'ok' : 'undeclared',
+      })),
+      ...ctx.nonRegistry.map((p): Finding => ({
+        check: 'packages', subject: `${showPackage(p)} [installed from outside the npm registry]`, status: 'violation',
+      })),
+    ],
   },
   {
     name: 'imports',
@@ -576,28 +840,43 @@ export const CHECKS: readonly Check[] = [
   {
     name: 'risky-areas',
     heading: 'risky areas touched',
-    run: (ctx) => RISKY_AREAS.flatMap(({ area }) => {
-      const paths = ctx.changedPaths.filter((p) => riskyAreasOf(p).includes(area))
-      if (paths.length === 0) return []
-      const shown = paths.slice(0, 3).map((p) => `\`${p}\``).join(', ') + (paths.length > 3 ? `, +${paths.length - 3} more` : '')
-      const status: FindingStatus = ctx.riskyDeclared.includes(area) ? 'ok' : 'undeclared'
-      return [{ check: 'risky-areas', subject: `${area} (${paths.length} path(s): ${shown})`, status }]
-    }),
+    run: (ctx) => [
+      ...RISKY_AREAS.flatMap(({ area }): Finding[] => {
+        const paths = [...new Set([
+          ...ctx.changedPaths.filter((p) => riskyAreasOf(p).includes(area)),
+          ...ctx.extraRisky.filter((r) => r.area === area).map((r) => r.path),
+        ])]
+        if (paths.length === 0) return []
+        const shown = paths.slice(0, 3).map((p) => `\`${p}\``).join(', ') + (paths.length > 3 ? `, +${paths.length - 3} more` : '')
+        const status: FindingStatus = ctx.riskyDeclared.includes(area) ? 'ok' : 'undeclared'
+        return [{ check: 'risky-areas', subject: `${area} (${paths.length} path(s): ${shown})`, status }]
+      }),
+      ...ctx.riskyUnclear.map((item): Finding => ({
+        check: 'risky-areas', subject: `plan item "${item}" is not an area name or none`, status: 'unclear',
+      })),
+    ],
   },
   {
     name: 'guardrails',
     heading: 'guardrail paths changed',
-    run: (ctx) => ctx.changedPaths.filter(isGuardrailPath)
-      .map((p) => ({ check: 'guardrails', subject: `\`${p}\``, status: 'violation' as const })),
+    run: (ctx) => [
+      ...ctx.changedPaths.filter(isGuardrailPath).map((p): Finding => ({ check: 'guardrails', subject: `\`${p}\``, status: 'violation' })),
+      ...ctx.loopScriptChanges.map((s): Finding => ({ check: 'guardrails', subject: `package.json scripts \`${s}\``, status: 'violation' })),
+    ],
   },
   {
     name: 'migrations-apply',
     heading: 'migrations apply',
     countless: true,
     run: (ctx) => {
-      const found: Finding[] = ctx.migrations.unjournaled.map((f) => ({
-        check: 'migrations-apply', subject: `\`${f}\` is not in meta/_journal.json, so it is never applied`, status: 'violation',
-      }))
+      const found: Finding[] = [
+        ...ctx.journalOutside.map((t): Finding => ({
+          check: 'migrations-apply', subject: `journal tag \`${t}\` points outside ${MIGRATIONS_DIR}/`, status: 'violation',
+        })),
+        ...ctx.migrations.unjournaled.map((f): Finding => ({
+          check: 'migrations-apply', subject: `\`${f}\` is not in meta/_journal.json, so it is never applied`, status: 'violation',
+        })),
+      ]
       const run = ctx.migrationRun
       if (run?.ok) {
         found.push({
@@ -615,13 +894,13 @@ export const CHECKS: readonly Check[] = [
     name: 'schema-adds',
     heading: 'destructive migration statements',
     run: (ctx) => [
-      ...ctx.migrations.added.flatMap(({ file, sql }) => destructiveStatements(sql).map((d) => ({
+      ...ctx.migrations.added.flatMap(({ file, sql }) => destructiveStatements(sql).map((d): Finding => ({
         check: 'schema-adds',
         subject: `\`${file}\`: \`${d.statement.replace(/`/g, "'")}\` [${d.reason}]`,
-        status: 'violation' as const,
+        status: 'violation',
       }))),
-      ...ctx.migrations.edited.map((file) => ({
-        check: 'schema-adds', subject: `\`${file}\` [a migration already on the base was edited]`, status: 'violation' as const,
+      ...ctx.migrations.edited.map((file): Finding => ({
+        check: 'schema-adds', subject: `\`${file}\` [a migration already on the base was edited]`, status: 'violation',
       })),
     ],
   },
@@ -632,9 +911,9 @@ export interface GuardResult {
   findings: Finding[]
 }
 
-const FAILING: readonly FindingStatus[] = ['undeclared', 'violation']
+const FAILING: readonly FindingStatus[] = ['undeclared', 'unclear', 'violation']
 
-/** Runs every check; the guard fails when any finding is undeclared or an unexcused violation. */
+/** Runs every check; the guard fails when any finding is undeclared, unclear or a violation. */
 export function evaluate(ctx: GuardContext, checks: readonly Check[] = CHECKS): GuardResult {
   const findings = checks.flatMap((c) => c.run(ctx))
   return { verdict: findings.some((f) => FAILING.includes(f.status)) ? 'fail' : 'pass', findings }
@@ -675,17 +954,19 @@ export function guardLines(result: GuardResult, stats: ScanStats, checks: readon
 const MAX_BUFFER = 512 * 1024 * 1024
 
 function git(args: string[], input?: string): Buffer {
-  return execFileSync('git', args, { input, maxBuffer: MAX_BUFFER, stdio: ['pipe', 'pipe', 'pipe'] })
+  return execFileSync('git', ['-c', 'core.quotePath=false', ...args], { input, maxBuffer: MAX_BUFFER, stdio: ['pipe', 'pipe', 'pipe'] })
 }
 
 function trackedFiles(ref: string): string[] {
-  return git(['ls-tree', '-r', '-z', '--name-only', ref]).toString('utf8').split('\0').filter(Boolean)
+  return parseNulList(git(['ls-tree', '-r', '-z', '--name-only', ref]).toString('utf8'))
 }
 
 /** Reads many files of one commit through a single `git cat-file --batch`. */
 function readFiles(ref: string, files: string[]): Map<string, string> {
   const out = new Map<string, string>()
   if (files.length === 0) return out
+  const odd = files.find((f) => f.includes('\n'))
+  if (odd !== undefined) throw new Error(`a path holds a newline and cannot be read safely: ${JSON.stringify(odd)}`)
   const buf = git(['cat-file', '--batch'], files.map((f) => `${ref}:${f}\n`).join(''))
   let pos = 0
   for (const file of files) {
@@ -707,21 +988,35 @@ function scanTree(ref: string): { all: string[]; scanned: number; edges: Edge[] 
   return { all, scanned: tree.size, edges: buildEdges(tree, new Set(all)) }
 }
 
-function packageJsonAt(ref: string): PackageJson | null {
+/** package.json at a ref. A missing one on the base is empty; on HEAD it stops the run. */
+function packageJsonAt(ref: string, required: boolean): PackageJson | null {
+  let text: string
   try {
-    return JSON.parse(git(['show', `${ref}:package.json`]).toString('utf8')) as PackageJson
+    text = git(['show', `${ref}:package.json`]).toString('utf8')
   } catch {
+    if (required) throw new Error(`${ref}:package.json cannot be read`)
+    return null
+  }
+  try {
+    const parsed = JSON.parse(text) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object')
+    return parsed as PackageJson
+  } catch {
+    if (required) throw new Error(`${ref}:package.json is not valid JSON`)
     return null
   }
 }
 
-/**
- * Paths changed since the base, committed only. Unlike evidence.ts changedPaths, renames are
- * turned off, so a file moved out of a guarded or risky folder shows its old path too.
- */
+/** Paths changed since the base, committed only, with renames off (both old and new path). */
 function changedPathsBothSides(base: string): string[] {
-  const out = git(['diff', '--name-only', '--no-renames', `${base}...HEAD`]).toString('utf8').trim()
-  return out === '' ? [] : out.split('\n')
+  return parseNulList(git(['diff', '--name-only', '-z', '--no-renames', `${base}...HEAD`]).toString('utf8'))
+}
+
+/** The -U0 diff of the changed code files, for authGateFiles. */
+function codeDiff(base: string, changed: string[]): string {
+  const code = changed.filter(isScannedFile)
+  if (code.length === 0) return ''
+  return git(['diff', '-U0', '--no-renames', '--no-color', '--no-ext-diff', `${base}...HEAD`, '--', ...code]).toString('utf8')
 }
 
 /**
@@ -737,8 +1032,7 @@ async function applyMigrations(files: ReadonlyMap<string, string>): Promise<Migr
       mkdirSync(path.dirname(target), { recursive: true })
       writeFileSync(target, text)
     }
-    const journal = files.get(`${MIGRATIONS_DIR}/meta/_journal.json`)
-    const total = (JSON.parse(journal ?? '{"entries":[]}') as { entries?: unknown[] }).entries?.length ?? 0
+    const total = (JSON.parse(files.get(JOURNAL) ?? '{"entries":[]}') as { entries?: unknown[] }).entries?.length ?? 0
     const { PGlite } = await import('@electric-sql/pglite')
     const { drizzle } = await import('drizzle-orm/pglite')
     const { migrate } = await import('drizzle-orm/pglite/migrator')
@@ -784,24 +1078,37 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 2
   }
   const plan = parsePlan(planText)
+  const risky = parseRiskyAreas(planText)
 
   const base = resolveBase(args.base)
+  const headPkg = packageJsonAt('HEAD', true)!
+  const basePkg = packageJsonAt(base, false)
   const baseScan = scanTree(base)
   const headScan = scanTree('HEAD')
-  const headPkg = packageJsonAt('HEAD')
-  const inMigrations = (f: string) => under(f, MIGRATIONS_DIR) && (f.endsWith('.sql') || f.endsWith('_journal.json'))
+  const inMigrations = (f: string) => under(f, MIGRATIONS_DIR) && (f.endsWith('.sql') || f === JOURNAL)
   const baseMigrations = readFiles(base, baseScan.all.filter(inMigrations))
   const headMigrations = readFiles('HEAD', headScan.all.filter(inMigrations))
+  const journal = headMigrations.get(JOURNAL) ?? null
+  const changedPaths = changedPathsBothSides(base)
   const ctx: GuardContext = {
-    addedPackages: addedPackages(packageJsonAt(base), headPkg ?? {}),
+    addedPackages: addedPackages(basePkg, headPkg),
+    nonRegistry: nonRegistrySources(basePkg, headPkg),
     newEdges: newEdges(baseScan.edges, headScan.edges),
     plan,
-    changedPaths: changedPathsBothSides(base),
-    riskyDeclared: parseRiskyAreas(planText),
+    changedPaths,
+    extraRisky: [
+      ...authGateFiles(codeDiff(base, changedPaths)).map((p) => ({ area: 'auth' as const, path: p })),
+      ...packageJsonRiskyChanges(basePkg, headPkg).map((p) => ({ area: 'ci-deploy' as const, path: p })),
+      ...prodDataScripts(changedPaths, headScan.edges).map((p) => ({ area: 'prod-data' as const, path: p })),
+    ],
+    riskyDeclared: risky.areas,
+    riskyUnclear: risky.unclear,
+    loopScriptChanges: loopScriptChanges(basePkg, headPkg),
     migrations: {
       ...migrationChanges(baseMigrations, headMigrations),
-      unjournaled: unjournaledMigrations([...headMigrations.keys()], headMigrations.get(`${MIGRATIONS_DIR}/meta/_journal.json`) ?? null),
+      unjournaled: unjournaledMigrations([...headMigrations.keys()], journal),
     },
+    journalOutside: journalTargets(journal).outside,
     migrationRun: await applyMigrations(headMigrations),
   }
   const result = evaluate(ctx)
@@ -811,7 +1118,7 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     edges: { base: baseScan.edges.length, head: headScan.edges.length },
     planFile: args.plan,
     planItems: plan.items.length,
-    planRisky: ctx.riskyDeclared,
+    planRisky: risky.areas,
   })
   process.stdout.write(`${formatEvidenceBlock({ command: 'guard', verdict: result.verdict, ...treeState(), lines })}\n`)
   return result.verdict === 'pass' ? 0 : 1

@@ -22,6 +22,14 @@ import {
   destructiveStatements,
   migrationChanges,
   unjournaledMigrations,
+  parseNulList,
+  loopScriptChanges,
+  packageJsonRiskyChanges,
+  nonRegistrySources,
+  journalTargets,
+  stripJsComments,
+  authGateFiles,
+  prodDataScripts,
   type Edge,
   type GuardContext,
 } from '../../../scripts/loop/guard'
@@ -188,12 +196,12 @@ describe('addedPackages', () => {
       devDependencies: { vitest: '^1', zod: '^3.0.0', '@types/x': '^2' },
     }
     expect(addedPackages(base, head)).toEqual([
-      { name: '@types/x', version: '^2', dev: true },
-      { name: 'left-pad', version: '^1.3.0', dev: false },
+      { name: '@types/x', version: '^2', list: 'devDependencies' },
+      { name: 'left-pad', version: '^1.3.0', list: 'dependencies' },
     ])
   })
   it('treats a missing base package.json as empty', () => {
-    expect(addedPackages(null, { dependencies: { a: '1' } })).toEqual([{ name: 'a', version: '1', dev: false }])
+    expect(addedPackages(null, { dependencies: { a: '1' } })).toEqual([{ name: 'a', version: '1', list: 'dependencies' }])
   })
 })
 
@@ -211,7 +219,7 @@ describe('parsePlan', () => {
       '  - **Packages:** none beyond zod',
       '  - **Cross-module dependencies:**',
       '    - `src/components → src/hooks`: the card uses the hook',
-      '    - `server/repositories/a.ts -> server/services/b.ts`: layering exception, pure helper with no I/O',
+      '    - `server/repositories/a.ts -> server/services/b.ts`: exception: a pure string helper',
       '- **Approach** something with src/x → src/y in it',
     ].join('\n')
     const parsed = parsePlan(plan)
@@ -227,8 +235,16 @@ describe('parsePlan', () => {
 })
 
 describe('packageDeclared', () => {
-  const plan = parsePlan('- **New dependencies:** `zod@^3.23` (why), @types/node, react')
-  it('matches a whole package name, with or without a version or backticks', () => {
+  const plan = parsePlan([
+    '- **New dependencies:**',
+    '  - `zod@^3.23` for schema checks',
+    '  - @types/node, types for the scripts',
+    '  - react',
+    '  - left-pad is not needed, padStart covers it',
+    '  - we use `lodash` without its types',
+    '  - considered date-fns',
+  ].join('\n'))
+  it('matches a whole package name as the first token of an item, with or without a version or backticks', () => {
     expect(packageDeclared('zod', plan)).toBe(true)
     expect(packageDeclared('@types/node', plan)).toBe(true)
     expect(packageDeclared('react', plan)).toBe(true)
@@ -237,6 +253,19 @@ describe('packageDeclared', () => {
     expect(packageDeclared('react-dom', plan)).toBe(false)
     expect(packageDeclared('node', plan)).toBe(false)
     expect(packageDeclared('zo', plan)).toBe(false)
+  })
+  it('only reads the first token, and never an item with a negation', () => {
+    expect(packageDeclared('left-pad', plan)).toBe(false)
+    expect(packageDeclared('lodash', plan)).toBe(false)
+    expect(packageDeclared('date-fns', plan)).toBe(false)
+    expect(packageDeclared('schema', plan)).toBe(false)
+    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - zod: not instead of yup'))).toBe(false)
+    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - zod, rejected yup'))).toBe(false)
+  })
+  it('does not declare a package named later in an inline list', () => {
+    const inline = parsePlan('- **New dependencies:** `zod@^3.23` (why), @types/node, react')
+    expect(packageDeclared('zod', inline)).toBe(true)
+    expect(packageDeclared('react', inline)).toBe(false)
   })
   it('does not let a none-item declare what its reason mentions', () => {
     const p = parsePlan('- **New dependencies:**\n  - **Packages:** none (considered date-fns, not needed)\n  - src/pages -> src/lib: formatting')
@@ -253,8 +282,12 @@ describe('edgeDeclaration', () => {
     '- **New dependencies:**',
     '  - `src/components → src/hooks`: the card uses the hook',
     '  - @/pages/Home.tsx -> @/lib/format: date formatting',
-    '  - server/repositories/a.ts => server/services/b: layering exception, pure helper with no I/O',
+    '  - server/repositories/a.ts => server/services/b: exception: a pure string helper',
     '  - server/routes/x.ts → server/db: exception',
+    '  - server/services/s.ts -> server/routes/r.ts: exception: two words',
+    '  - server/repositories/c.ts -> server/services/d.ts: exception: it does not touch the database',
+    '  - the hook now uses src/contexts -> src/lib',
+    '  - `src/pages -> src/hooks` is not needed any more',
   ].join('\n'))
 
   it('matches by area on both sides', () => {
@@ -271,12 +304,21 @@ describe('edgeDeclaration', () => {
     expect(edgeDeclaration(edge('server/repositories/a.ts', 'server/services/b.ts'), plan)).toEqual({ declared: true, exception: true })
     expect(edgeDeclaration(edge('server/routes/x.ts', 'server/db/index.ts'), plan)).toEqual({ declared: true, exception: false })
   })
+  it('needs `exception:` and a reason of at least three words without a negation', () => {
+    expect(edgeDeclaration(edge('server/services/s.ts', 'server/routes/r.ts'), plan)).toEqual({ declared: true, exception: false })
+    expect(edgeDeclaration(edge('server/repositories/c.ts', 'server/services/d.ts'), plan).exception).toBe(false)
+  })
+  it('only reads a pair at the start of an item, and never one with a negation', () => {
+    expect(edgeDeclaration(edge('src/contexts/C.tsx', 'src/lib/l.ts'), plan).declared).toBe(false)
+    expect(edgeDeclaration(edge('src/pages/P.tsx', 'src/hooks/h.ts'), plan).declared).toBe(false)
+  })
 })
 
 function ctx(over: Partial<GuardContext> = {}): GuardContext {
   return {
     addedPackages: [], newEdges: [], plan: { none: true, items: [] },
     changedPaths: [], riskyDeclared: [], migrations: { added: [], edited: [], unjournaled: [] }, migrationRun: null,
+    riskyUnclear: [], extraRisky: [], loopScriptChanges: [], nonRegistry: [], journalOutside: [],
     ...over,
   }
 }
@@ -287,7 +329,7 @@ describe('evaluate', () => {
     expect(r.verdict).toBe('pass')
   })
   it('fails on an undeclared package and passes once it is declared', () => {
-    const pkgs = [{ name: 'zod', version: '^3', dev: false }]
+    const pkgs = [{ name: 'zod', version: '^3', list: 'dependencies' }]
     expect(evaluate(ctx({ addedPackages: pkgs })).verdict).toBe('fail')
     expect(evaluate(ctx({ addedPackages: pkgs, plan: parsePlan('**New dependencies:** zod') })).verdict).toBe('pass')
   })
@@ -318,7 +360,7 @@ describe('evaluate', () => {
 describe('guardLines', () => {
   it('prints a header per check, marks each finding, and has no blank lines', () => {
     const r = evaluate(ctx({
-      addedPackages: [{ name: 'zod', version: '^3', dev: false }],
+      addedPackages: [{ name: 'zod', version: '^3', list: 'dependencies' }],
       newEdges: [edge('src/hooks/a.ts', 'server/services/b.ts')],
     }))
     const lines = guardLines(r, { scanned: { base: 10, head: 11 }, edges: { base: 4, head: 5 }, base: 'abc1234' })
@@ -375,28 +417,55 @@ describe('riskyAreasOf', () => {
 })
 
 describe('parseRiskyAreas', () => {
-  it('reads none, and no line as none', () => {
-    expect(parseRiskyAreas('- **Risky areas:** none\n- **New dependencies:** none')).toEqual([])
-    expect(parseRiskyAreas('# plan')).toEqual([])
+  const r = (md: string) => parseRiskyAreas(md)
+  it('reads none, a none with a reason, and no line as nothing', () => {
+    expect(r('- **Risky areas:** none\n- **New dependencies:** none')).toEqual({ areas: [], unclear: [] })
+    expect(r('# plan')).toEqual({ areas: [], unclear: [] })
+    for (const none of ['None — no schema change', 'none - nothing risky', 'none: docs only', 'None (docs only)', '`none`.']) {
+      expect(r(`- **Risky areas:** ${none}`)).toEqual({ areas: [], unclear: [] })
+    }
   })
-  it('accepts the spec names and forgiving synonyms, inline or as sub-bullets', () => {
-    expect(parseRiskyAreas('- **Risky areas:** migrations, auth')).toEqual(['migrations', 'auth'])
-    expect(parseRiskyAreas('- **Risky areas:** CI and deploy configuration; production data script')).toEqual(['ci-deploy', 'prod-data'])
-    expect(parseRiskyAreas([
+  it('accepts exact area names and listed aliases, inline or as sub-bullets', () => {
+    expect(r('- **Risky areas:** migrations, auth')).toEqual({ areas: ['migrations', 'auth'], unclear: [] })
+    expect(r('- **Risky areas:** CI and deploy configuration; production data script.')).toEqual({ areas: ['ci-deploy', 'prod-data'], unclear: [] })
+    expect(r([
       '- **Risky areas:**',
-      '  - DB migration (adds a column)',
-      '  - access control: a new admin check',
-      '  - a backfill script for the new column',
-      '  - the GitHub workflow',
+      '  - Database migrations',
+      '  - `access control`',
+      '  - prod-data',
+      '  - deploy',
       '- **New dependencies:** none',
-    ].join('\n'))).toEqual(['migrations', 'auth', 'ci-deploy', 'prod-data'])
+    ].join('\n'))).toEqual({ areas: ['migrations', 'auth', 'ci-deploy', 'prod-data'], unclear: [] })
   })
-  it('reads a None line with its reason as none', () => {
-    expect(parseRiskyAreas('- **Risky areas:** None — no migrations, auth or CI changes')).toEqual([])
-    expect(parseRiskyAreas('- **Risky areas:**\n  - `none`: no schema or deploy change')).toEqual([])
+  it('reports anything else as unclear, naming the item', () => {
+    expect(r('- **Risky areas:** DB migration (adds a column)')).toEqual({ areas: [], unclear: ['DB migration (adds a column)'] })
+    expect(r('- **Risky areas:** migrations; no auth changes')).toEqual({ areas: ['migrations'], unclear: ['no auth changes'] })
+    expect(r('- **Risky areas:** None — no migrations, auth or CI changes')).toEqual({ areas: [], unclear: [] })
+    expect(r('- **Risky areas:** none\n  - auth').unclear).toEqual(['none, together with areas'])
   })
   it('does not read the next field', () => {
-    expect(parseRiskyAreas('- **Risky areas:** none\n- **Approach** touches the auth flow')).toEqual([])
+    expect(r('- **Risky areas:** none\n- **Approach** touches the auth flow')).toEqual({ areas: [], unclear: [] })
+  })
+})
+
+describe('labelled lines stop at another label', () => {
+  it('a plain Risky areas line stops at a New dependencies line below it', () => {
+    const md = '**Risky areas:**\n- auth\n**New dependencies:** zod\n- react'
+    expect(parseRiskyAreas(md)).toEqual({ areas: ['auth'], unclear: [] })
+    expect(packageDeclared('zod', parsePlan(md))).toBe(true)
+    expect(packageDeclared('react', parsePlan(md))).toBe(true)
+  })
+  it('a New dependencies list stops at a Risky areas line nested inside it, and the reverse', () => {
+    const md = '- **New dependencies:**\n  - zod\n  - **Risky areas:** auth\n  - react'
+    expect(parsePlan(md).items).toEqual(['zod'])
+    expect(parseRiskyAreas(md).areas).toEqual(['auth'])
+    const md2 = '- **Risky areas:**\n  - auth\n  - **New dependencies:** zod'
+    expect(parseRiskyAreas(md2)).toEqual({ areas: ['auth'], unclear: [] })
+    expect(packageDeclared('zod', parsePlan(md2))).toBe(true)
+  })
+  it('keeps the sub-labels of New dependencies', () => {
+    const md = '- **New dependencies:**\n  - **Packages:** zod\n  - **Cross-module dependencies:** src/pages -> src/lib'
+    expect(parsePlan(md).items).toEqual(['zod', 'src/pages -> src/lib'])
   })
 })
 
@@ -560,5 +629,218 @@ describe('risky-area, guardrail and migration checks', () => {
     expect(lines).toContain('- destructive migration statements: none')
     expect(lines).toContain('- guardrail paths changed: none')
     expect(lines.some((l) => l.startsWith('- risky areas touched: 1'))).toBe(true)
+  })
+})
+
+describe('review fixes: paths', () => {
+  it('splits NUL-separated git output, keeping Hebrew names and quotes as they are', () => {
+    const files = parseNulList('.claude/שלום.md\0.claude/a"b.md\0src/App.tsx\0')
+    expect(files).toEqual(['.claude/שלום.md', '.claude/a"b.md', 'src/App.tsx'])
+    expect(files.slice(0, 2).every(isGuardrailPath)).toBe(true)
+    expect(parseNulList('')).toEqual([])
+  })
+})
+
+describe('loopScriptChanges', () => {
+  it('lists loop:* scripts added, removed or changed', () => {
+    const base = { scripts: { 'loop:guard': 'tsx scripts/loop/guard.ts', 'loop:sql': 'tsx a', build: 'vite build' } }
+    const head = { scripts: { 'loop:guard': 'echo ok', 'loop:new': 'x', build: 'vite build --x' } }
+    expect(loopScriptChanges(base, head)).toEqual(['loop:guard', 'loop:new', 'loop:sql'])
+    expect(loopScriptChanges(base, base)).toEqual([])
+  })
+})
+
+describe('packageJsonRiskyChanges', () => {
+  it('counts non-loop script changes, install hooks, overrides and resolutions as CI and deploy', () => {
+    const base = { scripts: { build: 'vite build', 'loop:x': 'a' }, overrides: { a: '1' } }
+    const head = { scripts: { build: 'vite build && x', postinstall: 'curl evil', 'loop:x': 'b' }, overrides: { a: '2' }, resolutions: { b: '1' } }
+    expect(packageJsonRiskyChanges(base, head)).toEqual([
+      'package.json scripts.build',
+      'package.json scripts.postinstall (install hook)',
+      'package.json overrides',
+      'package.json resolutions',
+    ])
+    expect(packageJsonRiskyChanges(head, head)).toEqual([])
+  })
+})
+
+describe('addedPackages and nonRegistrySources across all four lists', () => {
+  it('reads optionalDependencies and peerDependencies too', () => {
+    expect(addedPackages({}, { optionalDependencies: { a: '1' }, peerDependencies: { b: '2' } })).toEqual([
+      { name: 'a', version: '1', list: 'optionalDependencies' },
+      { name: 'b', version: '2', list: 'peerDependencies' },
+    ])
+  })
+  it('flags a dependency added or switched to a source outside the registry', () => {
+    const base = { dependencies: { a: '^1', b: '^1', c: '^1' }, devDependencies: { d: '^1' } }
+    const head = {
+      dependencies: { a: 'git+https://example.com/a.git', b: '^2', c: 'npm:evil@1', e: 'github:x/e' },
+      devDependencies: { d: 'file:../d' },
+      peerDependencies: { f: 'https://example.com/f.tgz', g: 'link:../g', h: 'owner/repo' },
+    }
+    expect(nonRegistrySources(base, head).map((p) => p.name)).toEqual(['a', 'c', 'd', 'e', 'f', 'g', 'h'])
+    expect(nonRegistrySources(base, { dependencies: { a: '^1', b: '~1.2.0', c: 'latest' } })).toEqual([])
+  })
+})
+
+describe('type changes and drops (review fixes)', () => {
+  const reasons = (sql: string) => destructiveStatements(sql).map((f) => f.reason)
+  it('catches a type change without the COLUMN keyword and with a quoted name holding a space', () => {
+    expect(reasons('ALTER TABLE a ALTER n TYPE bigint;')).toEqual(['type change'])
+    expect(reasons('ALTER TABLE "a" ALTER COLUMN "my col" SET DATA TYPE text;')).toEqual(['type change'])
+    expect(reasons('ALTER TABLE "a" ALTER "my col" TYPE text;')).toEqual(['type change'])
+  })
+  it('flags every DROP except index, constraint, not null, default and the loop_read reset', () => {
+    expect(reasons('DROP FUNCTION f();')).toEqual(['drop function'])
+    expect(reasons('DROP TRIGGER t ON x;')).toEqual(['drop trigger'])
+    expect(reasons('DROP POLICY p ON x;')).toEqual(['drop policy'])
+    expect(reasons('ALTER TABLE a ALTER COLUMN b DROP IDENTITY;')).toEqual(['drop identity'])
+    expect(reasons('ALTER TABLE a DROP "c";')).toEqual(['drop column'])
+    expect(reasons('ALTER TABLE a DROP IF EXISTS c;')).toEqual(['drop column'])
+    expect(reasons('DROP INDEX CONCURRENTLY i; ALTER TABLE a DROP CONSTRAINT c; ALTER TABLE a ALTER b DROP NOT NULL; ALTER TABLE a ALTER b DROP DEFAULT;')).toEqual([])
+  })
+  it('flags TRUNCATE and DELETE FROM, not ON DELETE in a foreign key', () => {
+    expect(reasons('TRUNCATE "letters"."letters";')).toEqual(['truncate'])
+    expect(reasons('DELETE FROM users WHERE id = 1;')).toEqual(['delete'])
+    expect(reasons('ALTER TABLE a ADD CONSTRAINT f FOREIGN KEY (b) REFERENCES c(id) ON DELETE CASCADE;')).toEqual([])
+  })
+})
+
+describe('the SQL scanner (review fixes)', () => {
+  const reasons = (sql: string) => destructiveStatements(sql).map((f) => f.reason)
+  it("handles E'…' strings with backslash escapes", () => {
+    expect(reasons("INSERT INTO t VALUES (E'it\\'s; drop table x');")).toEqual([])
+    expect(stripSqlComments("SELECT E'a\\'b' || 'c'")).not.toContain('b')
+  })
+  it('scans the body of a dollar-quoted block instead of skipping it', () => {
+    expect(reasons('DO $$ BEGIN ALTER TABLE a DROP COLUMN b; END $$;')).toEqual(['drop column'])
+    expect(reasons('DO $body$ BEGIN TRUNCATE a; END $body$;')).toEqual(['truncate'])
+    expect(reasons('CREATE FUNCTION f() RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;')).toEqual([])
+  })
+  it('flags any EXECUTE (dynamic SQL cannot be checked)', () => {
+    expect(reasons("DO $$ BEGIN EXECUTE 'DROP TABLE ' || 'x'; END $$;")).toEqual(['dynamic SQL (EXECUTE)'])
+  })
+})
+
+describe('journalTargets', () => {
+  it('maps tags to SQL files, nested folders included, and reports tags that leave the folder', () => {
+    const journal = JSON.stringify({ entries: [{ tag: '0000_a' }, { tag: 'sub/0001_b' }, { tag: '../../../scripts/x' }, { tag: '/etc/x' }] })
+    expect(journalTargets(journal)).toEqual({
+      files: ['server/db/migrations/0000_a.sql', 'server/db/migrations/sub/0001_b.sql'],
+      outside: ['../../../scripts/x', '/etc/x'],
+    })
+  })
+  it('counts a nested SQL file as journaled when its tag names it', () => {
+    const journal = JSON.stringify({ entries: [{ tag: 'sub/0001_b' }] })
+    expect(unjournaledMigrations(['server/db/migrations/sub/0001_b.sql', 'server/db/migrations/sub/0002_c.sql'], journal))
+      .toEqual(['server/db/migrations/sub/0002_c.sql'])
+  })
+  it('treats nested migration files as migrations when added or edited', () => {
+    const head = new Map([['server/db/migrations/sub/0002_c.sql', 'DROP TABLE a;']])
+    expect(migrationChanges(new Map(), head).added.map((a) => a.file)).toEqual(['server/db/migrations/sub/0002_c.sql'])
+  })
+})
+
+describe('stripJsComments and the import scan (review fixes)', () => {
+  it('drops imports that only appear in comments', () => {
+    const src = "// import a from './a'\n/* import b from './b' */\nimport c from './c'"
+    expect(extractSpecifiers(src)).toEqual(['./c'])
+  })
+  it('keeps strings that contain comment markers', () => {
+    const src = "const u = 'http://x.test/*'\nimport d from './d'\nconst v = \"a // b\""
+    expect(stripJsComments(src)).toContain("'http://x.test/*'")
+    expect(extractSpecifiers(src)).toEqual(['./d'])
+  })
+  it('keeps a regex literal holding comment markers', () => {
+    const src = "const r = /\\/\\*+/g\nimport e from './e'\nconst s = /a/ // trailing\n"
+    expect(extractSpecifiers(src)).toEqual(['./e'])
+  })
+  it('accepts backtick strings without ${ and a comment before the string in import()', () => {
+    expect(extractSpecifiers("import f from `./f`\nconst g = import(/* webpackChunkName: 'g' */ './g')\nconst h = import(`./h/${x}`)"))
+      .toEqual(['./f', './g'])
+    expect(extractSpecifiers("vi.mock(`../../server/x`)")).toEqual(['../../server/x'])
+  })
+})
+
+describe('authGateFiles', () => {
+  it('lists files whose diff adds or removes a line using an auth gate', () => {
+    const diff = [
+      'diff --git a/server/routes/bills.ts b/server/routes/bills.ts',
+      '--- a/server/routes/bills.ts',
+      '+++ b/server/routes/bills.ts',
+      '@@ -10 +10 @@',
+      "-router.get('/x', requireAuth, handler)",
+      "+router.get('/x', handler)",
+      'diff --git a/server/routes/mks.ts b/server/routes/mks.ts',
+      '--- a/server/routes/mks.ts',
+      '+++ b/server/routes/mks.ts',
+      '@@ -1 +1 @@',
+      '-const a = 1',
+      '+const a = 2',
+      ' requireAdmin context line',
+      'diff --git a/server/routes/old.ts b/server/routes/old.ts',
+      '--- a/server/routes/old.ts',
+      '+++ /dev/null',
+      '@@ -1 +0,0 @@',
+      "-router.use(requireAdmin)",
+      'diff --git a/server/routes/new.ts b/server/routes/new.ts',
+      '--- /dev/null',
+      '+++ b/server/routes/new.ts',
+      '@@ -0,0 +1 @@',
+      '+router.get("/y", optionalAuth, h)',
+    ].join('\n')
+    expect(authGateFiles(diff)).toEqual(['server/routes/bills.ts', 'server/routes/old.ts', 'server/routes/new.ts'])
+  })
+})
+
+describe('more auth and prod-data paths', () => {
+  it('counts the users repository and role/allowlist/refresh-token/invite services as auth', () => {
+    expect(riskyAreasOf('server/repositories/users-repository.ts')).toEqual(['auth'])
+    expect(riskyAreasOf('server/services/role-check.ts')).toEqual(['auth'])
+    expect(riskyAreasOf('server/repositories/allowlist-repository.ts')).toEqual(['auth'])
+    expect(riskyAreasOf('server/services/refresh-token-store.ts')).toEqual(['auth'])
+    expect(riskyAreasOf('server/services/invite-mailer.ts')).toEqual(['auth'])
+    expect(riskyAreasOf('server/services/committee-list-refresh.ts')).toEqual([])
+  })
+  it('counts a changed script that imports server/db or a repository as a production data script', () => {
+    const edges = [
+      edge('scripts/regen.ts', 'server/repositories/letters-repository.ts'),
+      edge('scripts/one-off.ts', 'server/db/client.ts'),
+      edge('scripts/loop/x.ts', 'server/db/client.ts'),
+      edge('scripts/smoke.ts', 'server/services/a.ts'),
+      edge('scripts/unchanged.ts', 'server/db/client.ts'),
+    ]
+    expect(prodDataScripts(['scripts/regen.ts', 'scripts/one-off.ts', 'scripts/loop/x.ts', 'scripts/smoke.ts'], edges))
+      .toEqual(['scripts/one-off.ts', 'scripts/regen.ts'])
+  })
+})
+
+describe('review-fix checks', () => {
+  const found = (c: GuardContext, check: string) => evaluate(c).findings.filter((f) => f.check === check)
+  it('fails on an unclear Risky areas item, naming it', () => {
+    const f = found(ctx({ riskyUnclear: ['DB migration (adds a column)'] }), 'risky-areas')
+    expect(f.map((x) => x.status)).toEqual(['unclear'])
+    expect(f[0].subject).toContain('DB migration (adds a column)')
+    expect(evaluate(ctx({ riskyUnclear: ['x'] })).verdict).toBe('fail')
+  })
+  it('adds risky paths that come from the diff or package.json, not only from the path name', () => {
+    const c = ctx({ extraRisky: [{ area: 'auth', path: 'server/routes/bills.ts' }, { area: 'ci-deploy', path: 'package.json scripts.build' }] })
+    expect(found(c, 'risky-areas').map((x) => [x.subject.split(' ')[0], x.status])).toEqual([['auth', 'undeclared'], ['ci-deploy', 'undeclared']])
+    expect(evaluate({ ...c, riskyDeclared: ['auth', 'ci-deploy'] }).verdict).toBe('pass')
+  })
+  it('treats a loop:* script change as a guardrail violation', () => {
+    const f = found(ctx({ loopScriptChanges: ['loop:guard'] }), 'guardrails')
+    expect(f.map((x) => x.status)).toEqual(['violation'])
+    expect(f[0].subject).toContain('loop:guard')
+  })
+  it('fails on a package from outside the registry, whatever the plan says', () => {
+    const c = ctx({
+      nonRegistry: [{ name: 'a', version: 'git+https://e/a.git', list: 'dependencies' }],
+      plan: parsePlan('**New dependencies:** a'),
+    })
+    expect(found(c, 'packages').map((x) => x.status)).toEqual(['violation'])
+  })
+  it('fails on a journal tag outside the migrations folder', () => {
+    expect(found(ctx({ journalOutside: ['../../x'] }), 'migrations-apply').map((x) => x.status)).toEqual(['violation'])
   })
 })
