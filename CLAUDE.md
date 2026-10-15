@@ -36,6 +36,7 @@ npm run db:up            # start local Postgres (Docker)
 npm run db:down          # stop local Postgres
 npm run db:reset         # wipe volume and start fresh (ephemeral)
 npm run -s loop:gate     # run the four gate checks, print one evidence block (exit 0 only if all pass; failing checks' last 20 lines on stderr)
+npm run -s loop:guard -- [--base <ref>] [--plan <plan.md>]  # new packages, cross-area imports and layering vs the plan's New dependencies line; exit 0 pass, 1 fail, 2 could not run
 ```
 
 ### Local database
