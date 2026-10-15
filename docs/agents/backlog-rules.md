@@ -92,12 +92,16 @@ built.
   the plan is approved, and follows the plan as its brief.
 - **Approving a plan:** reply with a comment that begins `Approved` (any capitalisation). Text
   after the word amends the plan. The picker checks in code that the reply is newer than the
-  plan, comes from the owner or a collaborator, was typed by a person (no app stamp, no loop
+  plan, comes from the owner, a collaborator or a member, was typed by a person (no app stamp, no loop
   heading), and was never edited. Any other reply is feedback: the next run posts a revised plan
   as a new comment. The newest reply decides. A session on the developer's machine posts with
   no app stamp, so it never posts `Approved` on the developer's behalf.
-- One action per run: a review pass first, then a build, then a plan. An issue whose plan waits
-  for an answer is skipped. Three open loop PRs stop builds, not plans.
+- One action per run: a review pass first; otherwise the highest-priority issue with something
+  to do, a build or a plan. An issue whose plan waits for an answer is skipped, and every run's
+  report lists those plans. Three open loop PRs stop builds, not plans. Until risky work opens
+  (#46), an approved plan is built only if its `Risky areas` line is an explicit `none`.
+- The loop never changes `size:` or priority labels: size decides whether an issue needs a
+  plan.
 - Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
   `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
 - When blocked it posts one `### loop — blocked` comment and swaps `ready-for-agent` for

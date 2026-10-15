@@ -75,8 +75,10 @@ const time = (iso: string) => Date.parse(iso)
  *     app stamp and no loop heading. The loop posts as the owner but always through the app,
  *     so it cannot approve its own plan. Other comments are ignored.
  *   - The newest counting reply decides. It approves only if it begins with "Approved" and was
- *     never edited (an edit could have been made by the loop's account); any other reply is
- *     feedback, and the plan is revised.
+ *     never edited (an edit could have been made by the loop's account; an edited approval
+ *     leaves the plan waiting); any other reply is feedback, and the plan is revised.
+ *   - Known limit: deleting a later reply would make an older "Approved" the newest again.
+ *     Comment lists do not show deletions; the prompt forbids the loop to delete comments.
  */
 export function planState(comments: PlanComment[], owner = REPO.split('/')[0]): PlanState {
   const sorted = [...comments].sort((a, b) => time(a.createdAt) - time(b.createdAt))
@@ -88,7 +90,11 @@ export function planState(comments: PlanComment[], owner = REPO.split('/')[0]): 
   )
   const last = replies.at(-1)
   if (!last) return { state: 'waiting', plan }
-  if (APPROVED.test(last.body) && last.updatedAt === last.createdAt) return { state: 'approved', plan, approval: last }
+  if (APPROVED.test(last.body)) {
+    // An edited "Approved" does not approve (the loop's account could have edited it), and it
+    // is not feedback either: the plan waits for a fresh approval.
+    return last.updatedAt === last.createdAt ? { state: 'approved', plan, approval: last } : { state: 'waiting', plan }
+  }
   return { state: 'revise', plan, feedback: replies }
 }
 

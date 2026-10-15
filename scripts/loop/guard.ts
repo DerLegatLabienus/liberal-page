@@ -562,6 +562,18 @@ export function parseRiskyAreas(markdown: string): { areas: RiskyArea[]; unclear
   return { areas: RISKY_AREAS.map((r) => r.area).filter((a) => named.has(a)), unclear }
 }
 
+/**
+ * True only when the plan has a `**Risky areas:**` line that says `none` (with or without a
+ * reason) and names nothing else. A missing line is not a none: the picker uses this to keep
+ * risky work from being built until the risky tier is open to the loop (#46).
+ */
+export function declaresNoRiskyArea(markdown: string): boolean {
+  const items = labelledItems(markdown, RISKY_LABEL)
+  const { areas, unclear } = parseRiskyAreas(markdown)
+  return items.length > 0 && areas.length === 0 && unclear.length === 0 &&
+    items.every((item) => NONE_DECLARATION.test(item.replace(/`/g, '').trim()))
+}
+
 const AUTH_GATE = /\b(?:requireAuth|requireAdmin|optionalAuth)\b/
 
 /**

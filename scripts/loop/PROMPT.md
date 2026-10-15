@@ -33,6 +33,8 @@ Project rules: `CLAUDE.md`. Issue rules: `docs/agents/backlog-rules.md`.
 - Never edit `scripts/loop-read-views.sql`. It decides what you may read from the database, so
   only the developer changes it.
 - **Never edit or delete any comment**, yours or anyone else's. A revised plan is a new comment.
+- **Never add, remove or change a `size:` or priority label.** Size decides whether an issue
+  needs a plan, so only the developer sets it.
 - **Never post a comment that begins with "Approved"**, and never approve, or say you approve, a
   plan. Only the developer approves. The picker reads approval from GitHub in code; you do not
   judge it.
@@ -112,8 +114,10 @@ without data, and the tests need none. Never print, echo or inspect `LOOP_DATABA
 1. **Find out what this run does.** First make sure you are on an up-to-date `master`
    (`git checkout master && git pull --ff-only`), then run `npm run loop:next`.
    - Exit code 2 (too many loop PRs open, and no plan to write): stop. Report which PRs are
-     open. Do nothing else.
-   - Prints `none`: stop. Report that no eligible `ready-for-agent` issue exists. Do nothing else.
+     open and the plans waiting for an answer (stderr lists both). Do nothing else.
+   - Prints `{"action":"none",...}`: stop. Report that nothing is ready to build or plan, and
+     list `waitingPlans` (the plans waiting for the developer's answer). Do nothing else.
+   - Every backlog action carries `waitingPlans`: list them in your report whatever you did.
    - Prints JSON with `"action":"fix"` —
      `{"action":"fix","pr":N,"branch":"...","id":"#123","reviewers":[...],"agentFindings":A,"developerFindings":D,"comments":[...]}`: one of your
      open PRs has reviewer findings an agent may fix. Follow **Review pass** below and
@@ -203,9 +207,12 @@ branch, no code, no PR in this run.
    When `revise` is present, `revise.plan.body` is your previous plan and `revise.feedback` is
    the developer's answer to it (oldest first; the newest wins). Address every point in the
    feedback.
-2. **Too large?** If the work does not fit one reasonably small PR even as a series of commits,
-   do not plan it: follow **Blocked**, and in the blocked comment propose how the issue could
-   be cut into smaller issues (what each one would do, and its files). The developer files them.
+2. **Too large, or risky?** If the work does not fit one reasonably small PR even as a series of
+   commits, do not plan it: follow **Blocked**, and in the blocked comment propose how the issue
+   could be cut into smaller issues (what each one would do, and its files). The developer files
+   them. If the work needs a risky area, follow **Blocked** too: risky work is not open to the
+   loop yet, so a plan's `Risky areas` line is always `none` (the picker will not build any
+   other).
 3. **Write the plan** to `comment.md`. The first line is exactly `### loop — plan`. Every
    section below is required; one that does not apply says `None` and why in one line. The
    spec's "The plan" section describes each in full; follow it.

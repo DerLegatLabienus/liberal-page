@@ -157,11 +157,19 @@ describe('planState', () => {
     expect(planState([p1, a, p2])).toEqual({ state: 'waiting', plan: p2 })
   })
 
-  it('does not count an approval that was edited after it was posted', () => {
+  it('does not count an approval that was edited after it was posted, and waits rather than re-plans', () => {
     const p = plan()
     const fb = c('Approved', {})
     fb.updatedAt = new Date(Date.parse(fb.createdAt) + 60_000).toISOString()
-    expect(planState([p, fb])).toEqual({ state: 'revise', plan: p, feedback: [fb] })
+    expect(planState([p, fb])).toEqual({ state: 'waiting', plan: p })
+  })
+
+  it('ignores a reply posted in the same second as the plan\'s last edit', () => {
+    const p = plan()
+    const a = c('Approved')
+    a.createdAt = p.updatedAt
+    a.updatedAt = p.updatedAt
+    expect(planState([p, a])).toEqual({ state: 'waiting', plan: p })
   })
 
   it('does not count an approval when the plan was edited after it', () => {

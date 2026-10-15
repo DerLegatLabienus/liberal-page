@@ -5,10 +5,12 @@
 //       (+ "plan":{url,body},"approval":{url,body} when it is built from an approved plan)
 //   {"action":"plan","id":"#123","number":123,"title":"…","openPrs":[…]}      write a plan
 //       (+ "revise":{"plan":{url,body},"feedback":[{url,body}…]} when the developer answered it)
+//   {"action":"none"}                                                         nothing to do
+// Every backlog action also carries "waitingPlans":[{id,url}…], the plans awaiting an answer.
 // The backlog is the repository's GitHub issues; `id` is the issue number as written in branch
 // names and PR titles. A PR opened before the move to issues carries a `LibPage-NNN` id instead.
 // Usage: npm run loop:next
-// Exit codes: 0 = printed an action or "none"; 2 = too many loop PRs open and no plan to write;
+// Exit codes: 0 = printed an action (or "none"); 2 = too many loop PRs open and no plan to write;
 //             1 = gh failed.
 import { execFileSync } from 'node:child_process'
 import { type RestIssueComment, toPlanComment } from './issue'
@@ -21,6 +23,7 @@ import {
   itemIdsOf,
   needsPlan,
   selectNextAction,
+  waitingPlans,
 } from './select-item'
 
 // Named outright rather than left to gh's `{owner}/{repo}` placeholder, so the picker does not
@@ -165,13 +168,17 @@ function main(): void {
   // The open-PR limit stops new builds only; a run at the limit may still write a plan.
   const atLimit = open.length >= MAX_OPEN
   const next = selectNextAction(issues, owner, excluded, { canBuild: !atLimit })
+  // Plans waiting for the developer's answer go in every report, so a quiet run says why.
+  const waiting = waitingPlans(issues, owner)
   if (!next && atLimit) {
     const list = open.map((pr) => `#${pr.number} ${pr.title}`).join('; ')
     console.error(`${open.length} loop PRs are open (limit ${MAX_OPEN}) and no plan is due — nothing to do until one is merged or closed: ${list}`)
+    console.error(`plans waiting for an answer: ${JSON.stringify(waiting)}`)
     process.exit(2)
   }
   // `openPrs` lets the agent check its change against work already in flight.
-  console.log(next ? JSON.stringify(actionPayload(next, open.map((pr) => pr.number))) : 'none')
+  const payload = next ? actionPayload(next, open.map((pr) => pr.number)) : { action: 'none' }
+  console.log(JSON.stringify({ ...payload, waitingPlans: waiting }))
 }
 
 // Every comment on one issue, oldest first, with the fields plan approval needs (app stamp,

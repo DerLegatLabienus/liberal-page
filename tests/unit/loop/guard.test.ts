@@ -17,6 +17,7 @@ import {
   resolveSpecifier,
   riskyAreasOf,
   parseRiskyAreas,
+  declaresNoRiskyArea,
   isGuardrailPath,
   stripSqlComments,
   destructiveStatements,
@@ -860,5 +861,18 @@ describe('review-fix checks', () => {
   })
   it('fails on a journal tag outside the migrations folder', () => {
     expect(found(ctx({ journalOutside: ['../../x'] }), 'migrations-apply').map((x) => x.status)).toEqual(['violation'])
+  })
+})
+
+describe('declaresNoRiskyArea', () => {
+  it('is true only for an explicit none', () => {
+    expect(declaresNoRiskyArea('### loop — plan\n\n**Risky areas:** none\n**New dependencies:** none')).toBe(true)
+    expect(declaresNoRiskyArea('**Risky areas:** None — no schema or auth change')).toBe(true)
+  })
+  it('is false when the line is missing, names an area, or is unclear', () => {
+    expect(declaresNoRiskyArea('### loop — plan\n\n**New dependencies:** none')).toBe(false)
+    expect(declaresNoRiskyArea('**Risky areas:** migrations')).toBe(false)
+    expect(declaresNoRiskyArea('**Risky areas:** a small DB tweak')).toBe(false)
+    expect(declaresNoRiskyArea('**Risky areas:** none, auth')).toBe(false)
   })
 })

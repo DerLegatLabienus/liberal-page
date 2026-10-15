@@ -2,6 +2,7 @@
 // docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md) and of what to do with
 // it (docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md, "How an issue flows").
 // No I/O here — next-item.ts supplies the issues, their comments and the IDs to skip.
+import { declaresNoRiskyArea } from './guard.js'
 import { type PlanComment, planState } from './issue'
 
 export interface LoopItem {
@@ -95,11 +96,13 @@ export type NextAction =
   | { action: 'plan'; item: LoopItem; revise?: { plan: PlanComment; feedback: PlanComment[] } }
 
 /**
- * What this run does with the backlog, after any review pass (spec, "How an issue flows"): the
- * first eligible issue that is ready to build (`size:S`, or with an approved plan), else the
- * first one that needs a plan or a revised plan. An issue whose plan waits for an answer is
- * skipped. At the open-PR limit (`canBuild` false) builds stop but plans do not. An issue whose
- * comments were not fetched counts as having none, so it can only be planned, never built.
+ * What this run does with the backlog, after any review pass (spec, "How an issue flows"): walk
+ * the eligible issues in priority order and take the first one with something to do — a build
+ * (`size:S`, or an approved plan) or a plan (none yet, or the developer answered it). An issue
+ * whose plan waits for an answer is skipped. At the open-PR limit (`canBuild` false) builds stop
+ * but plans do not. An issue whose comments were not fetched counts as having none, so it can
+ * only be planned, never built. An approved plan is built only when its `Risky areas` line is an
+ * explicit `none`: risky work stays closed to the loop until #46.
  */
 export function selectNextAction(
   issues: IssueData[],
@@ -107,7 +110,6 @@ export function selectNextAction(
   excludedIds: Set<string>,
   { canBuild }: { canBuild: boolean },
 ): NextAction | null {
-  let plan: NextAction | null = null
   for (const issue of eligibleIssues(issues, owner, excludedIds)) {
     const item = toItem(issue)
     if (!needsPlan(issue.labels)) {
@@ -116,14 +118,25 @@ export function selectNextAction(
     }
     const state = planState(issue.comments ?? [], owner)
     if (state.state === 'approved') {
-      if (canBuild) return { action: 'new', item, plan: state.plan, approval: state.approval }
+      if (canBuild && declaresNoRiskyArea(state.plan.body)) {
+        return { action: 'new', item, plan: state.plan, approval: state.approval }
+      }
     } else if (state.state === 'needs-plan') {
-      plan ??= { action: 'plan', item }
+      return { action: 'plan', item }
     } else if (state.state === 'revise') {
-      plan ??= { action: 'plan', item, revise: { plan: state.plan, feedback: state.feedback } }
+      return { action: 'plan', item, revise: { plan: state.plan, feedback: state.feedback } }
     }
   }
-  return plan
+  return null
+}
+
+/** Eligible issues whose plan waits for the developer's answer, for the run's report. */
+export function waitingPlans(issues: IssueData[], owner: string): { id: string; url: string }[] {
+  return issues.flatMap((issue) => {
+    if (!needsPlan(issue.labels)) return []
+    const state = planState(issue.comments ?? [], owner)
+    return state.state === 'waiting' ? [{ id: `#${issue.number}`, url: state.plan.url }] : []
+  })
 }
 
 // Loop branches are ordinary short-lived trunk-based branches: a conventional-commit type,

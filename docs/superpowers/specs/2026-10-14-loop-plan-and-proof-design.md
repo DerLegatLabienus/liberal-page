@@ -53,6 +53,12 @@ lowest number) and takes the first one that has something to do:
 An issue whose plan is waiting for an answer is skipped. The limit of three open loop PRs stops
 new builds only; a run at the limit may still write a plan.
 
+As built (2026-10-15): the issues are walked in priority order and the first with either a
+build or a plan is taken, so a high-priority issue's plan is not held back by lower-priority
+builds. An edited "Approved" leaves the plan waiting rather than revising it. Known limit:
+deleting a later reply would make an older "Approved" the newest again; comment lists do not
+show deletions, so only the prompt's rule against deleting comments covers it.
+
 **Changed from today:** the picker no longer skips an issue because it is labelled `risky`.
 
 ## Triage and one vocabulary

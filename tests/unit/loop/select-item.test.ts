@@ -8,6 +8,7 @@ import {
   actionPayload,
   selectNextAction,
   selectNextIssue,
+  waitingPlans,
 } from '../../../scripts/loop/select-item'
 import type { PlanComment } from '../../../scripts/loop/issue'
 
@@ -228,7 +229,7 @@ describe('selectNextAction', () => {
     const t = new Date(Date.UTC(2026, 9, 15, 1, clock++)).toISOString()
     return { authorLogin: OWNER, body, appSlug: null, authorAssociation: 'OWNER', createdAt: t, updatedAt: t, url: `c${clock}`, ...o }
   }
-  const planComment = () => comment('### loop — plan\n\nthe plan', { appSlug: 'claude' })
+  const planComment = () => comment('### loop — plan\n\n**Risky areas:** none\n\nthe plan', { appSlug: 'claude' })
   const ready = (n: number, labels: string[], comments?: PlanComment[]) =>
     issue(n, ['ready-for-agent', 'P2', ...labels], comments ? { comments } : {})
   const build = { canBuild: true }
@@ -271,9 +272,25 @@ describe('selectNextAction', () => {
     })
   })
 
-  it('prefers any build over any plan, whatever the priority', () => {
+  it('walks issues in priority order and takes the first with something to do', () => {
     const issues = [issue(3, ['ready-for-agent', 'P0', 'size:M'], { comments: [] }), issue(40, ['ready-for-agent', 'P3', 'size:S'])]
-    expect(selectNextAction(issues, OWNER, none, build)?.item.number).toBe(40)
+    expect(selectNextAction(issues, OWNER, none, build)).toMatchObject({ action: 'plan', item: { number: 3 } })
+    const waiting = [issue(3, ['ready-for-agent', 'P0', 'size:M'], { comments: [planComment()] }), issue(40, ['ready-for-agent', 'P3', 'size:S'])]
+    expect(selectNextAction(waiting, OWNER, none, build)).toMatchObject({ action: 'new', item: { number: 40 } })
+  })
+
+  it('never builds an approved plan whose Risky areas line is not an explicit none (risky work is #46)', () => {
+    const risky = comment('### loop — plan\n\n**Risky areas:** migrations', { appSlug: 'claude' })
+    const missing = comment('### loop — plan\n\nno risky line', { appSlug: 'claude' })
+    for (const p of [risky, missing]) {
+      expect(selectNextAction([ready(7, ['size:M'], [p, comment('Approved')])], OWNER, none, build)).toBeNull()
+    }
+  })
+
+  it('lists the plans waiting for an answer', () => {
+    const p = planComment()
+    const issues = [ready(8, ['size:M'], [p]), ready(9, ['size:S'])]
+    expect(waitingPlans(issues, OWNER)).toEqual([{ id: '#8', url: p.url }])
   })
 
   it('at the open-PR limit still plans, but never builds', () => {
