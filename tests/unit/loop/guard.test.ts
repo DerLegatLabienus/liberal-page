@@ -254,13 +254,23 @@ describe('packageDeclared', () => {
     expect(packageDeclared('node', plan)).toBe(false)
     expect(packageDeclared('zo', plan)).toBe(false)
   })
-  it('only reads the first token, and never an item with a negation', () => {
+  it('only reads the first token, and never an item whose head holds a negation', () => {
     expect(packageDeclared('left-pad', plan)).toBe(false)
     expect(packageDeclared('lodash', plan)).toBe(false)
     expect(packageDeclared('date-fns', plan)).toBe(false)
     expect(packageDeclared('schema', plan)).toBe(false)
-    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - zod: not instead of yup'))).toBe(false)
-    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - zod, rejected yup'))).toBe(false)
+    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - not adding zod'))).toBe(false)
+    expect(packageDeclared('zod', parsePlan('- **New dependencies:**\n  - zod is not needed'))).toBe(false)
+  })
+  it('reads a package written the way the spec asks, with why and why nothing existing covers it', () => {
+    const spec = parsePlan([
+      '- **New dependencies:**',
+      '  - **Packages:**',
+      "    - `zod@3.23.8` — validates the plan's input; no existing package does this and hand-rolled checks don't cover nesting",
+      '    - date-fns@4.1.0: formats Hebrew dates (Intl alone does not give the Knesset format)',
+    ].join('\n'))
+    expect(packageDeclared('zod', spec)).toBe(true)
+    expect(packageDeclared('date-fns', spec)).toBe(true)
   })
   it('does not declare a package named later in an inline list', () => {
     const inline = parsePlan('- **New dependencies:** `zod@^3.23` (why), @types/node, react')
@@ -286,6 +296,8 @@ describe('edgeDeclaration', () => {
     '  - server/routes/x.ts → server/db: exception',
     '  - server/services/s.ts -> server/routes/r.ts: exception: two words',
     '  - server/repositories/c.ts -> server/services/d.ts: exception: it does not touch the database',
+    "  - `server/routes/q.ts → server/db` — exception: needs a raw transaction the repository doesn't expose; avoiding it means a new repository method",
+    '  - not server/routes/n.ts -> server/db',
     '  - the hook now uses src/contexts -> src/lib',
     '  - `src/pages -> src/hooks` is not needed any more',
   ].join('\n'))
@@ -304,9 +316,15 @@ describe('edgeDeclaration', () => {
     expect(edgeDeclaration(edge('server/repositories/a.ts', 'server/services/b.ts'), plan)).toEqual({ declared: true, exception: true })
     expect(edgeDeclaration(edge('server/routes/x.ts', 'server/db/index.ts'), plan)).toEqual({ declared: true, exception: false })
   })
-  it('needs `exception:` and a reason of at least three words without a negation', () => {
+  it('needs `exception:` and a reason of at least three words', () => {
     expect(edgeDeclaration(edge('server/services/s.ts', 'server/routes/r.ts'), plan)).toEqual({ declared: true, exception: false })
-    expect(edgeDeclaration(edge('server/repositories/c.ts', 'server/services/d.ts'), plan).exception).toBe(false)
+  })
+  it('accepts a reason written with negations, as the spec asks (why it is needed, what avoiding it takes)', () => {
+    expect(edgeDeclaration(edge('server/repositories/c.ts', 'server/services/d.ts'), plan)).toEqual({ declared: true, exception: true })
+    expect(edgeDeclaration(edge('server/routes/q.ts', 'server/db/index.ts'), plan)).toEqual({ declared: true, exception: true })
+  })
+  it('declares nothing when the negation is in the head', () => {
+    expect(edgeDeclaration(edge('server/routes/n.ts', 'server/db/index.ts'), plan).declared).toBe(false)
   })
   it('only reads a pair at the start of an item, and never one with a negation', () => {
     expect(edgeDeclaration(edge('src/contexts/C.tsx', 'src/lib/l.ts'), plan).declared).toBe(false)

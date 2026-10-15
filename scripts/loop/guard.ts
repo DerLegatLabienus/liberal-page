@@ -34,8 +34,9 @@
 //   - A package is declared only by an item whose first token is `name` or `name@version`
 //     (backticks fine). An import only by an item that starts with an `A → B` pair (`->`, `=>`
 //     too); each side is an area, a file path (extension and `@/` optional) or a folder prefix.
-//     An item holding a negation (no, not, n't, without, instead of, considered, rejected)
-//     declares nothing.
+//     An item whose head (the text before ` — `, ` - `, `:`, `(`, `,` or `;`) holds a negation
+//     (no, not, n't, without, instead of, considered, rejected) declares nothing; the
+//     explanation after the head may hold negations, as the spec asks for one.
 //   - A layering break is excused only by an item that declares the import and contains
 //     `exception:` followed by a reason of at least three words.
 //   - Packages from outside the registry (npm:, git, github:, file:, link:, URLs, owner/repo)
@@ -416,10 +417,17 @@ export function parsePlan(markdown: string): PlanDeclaration {
   return { none: items.length === 0, items }
 }
 
-/** An item as matched: backticks removed. Null when it holds a negation, so it declares nothing. */
+/** Where an item's head ends and its explanation begins: ` — `, ` - `, `:`, `(`, `,` or `;`. */
+const HEAD_END = /\s+[—–]\s+|\s+-\s+|[:(,;]/
+
+/**
+ * An item as matched: backticks removed. Null when its head (the text before the explanation)
+ * holds a negation, so it declares nothing. The explanation itself may say "no existing
+ * package covers this" or "the repository doesn't expose it", as the spec asks plans to.
+ */
 function declaringText(item: string): string | null {
   const text = item.replace(/`/g, '').trim()
-  return NEGATION.test(text) ? null : text
+  return NEGATION.test(text.split(HEAD_END)[0]) ? null : text
 }
 
 /** Whether an item's first token is `name` or `name@version`. */

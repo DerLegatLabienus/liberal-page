@@ -131,6 +131,19 @@ see it was considered rather than forgotten.
     a service starting to call another service, or server code importing from `src/`), with the
     direction and why. A dependency that goes against the layering below is called out as such,
     with the reason it is needed and what it would take to avoid it.
+- **How `loop:guard` reads these two lines.** The guard checks the diff against them, so they
+  follow a fixed form (fail-closed; `scripts/loop/guard.ts` header has the full rules):
+  - `Risky areas`: `none` (optionally with a reason after ` — `, `: ` or in brackets), or a
+    comma-separated list of exact area names: `migrations`, `auth`, `CI and deploy
+    configuration`, `production data script` (short aliases such as `ci`, `deploy`, `prod data`
+    are accepted). Any other wording is reported as unclear and fails.
+  - `New dependencies`: one item per package or import. The item starts with the package
+    (`name` or `name@version`) or the `A → B` pair (an area, a file or a folder on each side);
+    the explanation follows after ` — `, ` - `, `:`, `(`, `,` or `;`. An item whose start holds a
+    negation (`no`, `not`, `without`, `considered`, `rejected`) declares nothing; the explanation
+    may hold negations.
+  - A layering exception is the import's item with `exception: <reason>`, the reason at least
+    three words.
 - **Approach**, in a few sentences.
 - **Wider scope.** Whether the same change applies beyond the issue: the same pattern in other
   modules, or other open issues that ask for the same kind of change. See Wider scope below.
@@ -290,6 +303,12 @@ line, with the commit it ran at.
 - **Refactor** (a `refactor/` branch): no existing test logic may change, only import and mock
   paths, and the suite must be green on `master`'s source and on the branch.
 - Docs-only branches are exempt.
+- As built (fail-closed; `scripts/loop/proof.ts` header): a file passes only when vitest marks
+  the file passed and the run exits 0; a file that cannot load on `master`'s source counts as
+  failing there only when it is new on the branch; a refactor also fails when it changes test
+  support files under `tests/`, `vitest.config.ts`, `src/test-setup.ts`, `src/__mocks__/` or a
+  snapshot, or the names a test imports; an explicit `--base` resolves to its merge base with
+  the branch.
 
 The run on `master`'s source uses a temporary git worktree outside the repo, with
 `node_modules` linked in, removed afterwards. The working tree is never modified.
@@ -317,7 +336,8 @@ production data scripts) is open to the loop when the approved plan names the ar
 | Layering is respected | A new import that goes against the layering below fails the check unless the plan names it as an exception with a reason |
 | Guardrails stay closed | Any change under `scripts/loop/**`, `.claude/**`, the reviewer workflows (`pr-review.yml`, `claude-code-review.yml`, `claude.yml`) or `scripts/loop-read-views.sql` or `docs/agents/**` (the rules the loop follows) fails the check |
 | Migrations apply | Every migration is applied to a fresh in-memory database, as the repo's tests already do, and the result is printed |
-| Schema changes only add | A new migration containing a drop, a rename or a type change fails the check |
+| Schema changes only add | A new migration containing a drop, a rename or a type change fails the check. As built: any `DROP` fails except `DROP INDEX`, `DROP CONSTRAINT`, `DROP NOT NULL`, `DROP DEFAULT` and exactly `DROP SCHEMA [IF EXISTS] loop_read CASCADE`; `TRUNCATE`, `DELETE FROM` and dynamic SQL (`EXECUTE`) also fail; editing a migration already on `master`, or a `.sql` file the journal does not list, fails |
+| Packages come from the registry | A package added or changed to an `npm:`, git, `file:`, `link:` or URL source fails whatever the plan says. Changes to `package.json` `scripts`, install hooks or `overrides` count as CI and deploy configuration; a change to a `loop:*` script is a guardrail change |
 
 **Areas and layering**, as the code is organised today. Areas: `src/components`, `src/hooks`,
 `src/contexts`, `src/lib`, `src/pages` and other `src/` folders, `server/routes`,
