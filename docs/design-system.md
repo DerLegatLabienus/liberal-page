@@ -176,7 +176,8 @@ Build from `src/components/ui/*`. Reach for these; don't reimplement them.
   `/admin/letters`) — operator workspaces, not modals.
 - **Header control clustering**: utility/account controls live in a right-hand cluster of real
   buttons (see `layout/Header.tsx`), not loose text links.
-- **Responsive**: everything works down to mobile width; wide content (tables, code, diagrams) scrolls
+- **Responsive**: everything works down to mobile width (check at 375 px: no page-level horizontal
+  scroll); wide content (tables, code, diagrams) scrolls
   inside its own container rather than the page body.
 
 ---

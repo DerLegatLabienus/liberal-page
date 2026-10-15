@@ -301,3 +301,56 @@ The migration design spec is in `docs/superpowers/specs/`.
 ## Directionality
 
 The site is Hebrew-first. Direction-sensitive components use `useDirection()`, which reads `document.documentElement.dir` and returns `rtl` or `ltr`. The drawer side and selected icon mirroring follow that value.
+
+Server-side, letter content keeps its Hebrew right-to-left direction outside the app too:
+
+- Public share pages are standalone `lang="he" dir="rtl"` documents (`share-renderer.ts`).
+- Rich HTML a member copies (letter detail page, share page) is wrapped in
+  `<div dir="rtl" style="text-align:right">` so it stays right-aligned when pasted into Gmail.
+- Hebrew in generated images (the share card PNG) is reordered to visual order with
+  `server/services/bidi.ts`, because `satori` has no bidi support.
+
+## Limits and safeguards
+
+The values behind `docs/nfr.md`. Change a value here when the code changes.
+
+**Rate limits** — the in-memory `SlidingWindowLimiter` (`server/services/rate-limit.ts`). It
+resets on restart and is per instance, which is accepted for the single Render instance.
+
+| Endpoint | Limit |
+|---|---|
+| `POST /api/meetings/booking-link` | 10/min per IP and 5/min per verified email |
+| `POST /api/summarize` | 10/min per IP (and `requireAuth`) |
+| `POST /api/auth/magic-link/request` | 5 per 15 min per (IP, email) |
+| `POST /api/admin/letters/beautify` | 1 per 2 min per caller; an empty body or an unconfigured AI service does not use the slot |
+| `POST /api/public/letters/:id/send` | 10 s throttle per (IP, letter, action) |
+
+Other public endpoints (for example `POST /api/analytics/join`, `GET /api/feature-flags`,
+`GET /api/parliament/:type`) have no rate limit.
+
+**Outbound fetches** — `server/services/url-guard.ts`: host allowlist (`*.knesset.gov.il`,
+`ALLOWED_DOC_HOST_SUFFIXES`), every resolved address must be public, at most 3 redirects, each
+re-checked, a 15 s timeout and a 15 MB cap.
+
+**Tokens** — access JWT 15 min (`ACCESS_TOKEN_TTL`, default 900 s); refresh tokens rotate and
+only their sha256 hash is stored; reuse of a rotated token revokes all of that user's sessions;
+magic-link tokens are 32 random bytes, stored hashed, single-use, 15-minute expiry.
+
+**Uploads** — letter images: PNG, JPEG, GIF or WebP, at most 5 MB, checked by magic bytes (see
+R2 Media).
+
+**Caches** — MK list 6 h (`knesset_members_cache`); committee list (`knesset_committees_cache`);
+document summaries keyed by the MD5 of the document's bytes (`summaries_cache`), so a document
+is summarised once. The summariser is relevance-gated: an irrelevant document stores nothing.
+
+**Email** — sends spaced at about 2 per second (`sendEmailsThrottled`); delivery polling capped
+at 100 rows per cycle (`EMAIL_STATUS_POLL_CAP`), oldest first.
+
+**Failure modes** — Calendly errors fail closed (no booking link); the public send counter's
+Turnstile check fails open without `TURNSTILE_SECRET_KEY` (sends still counted, so a
+misconfiguration cannot zero the metric); each integration without its env vars degrades as
+listed in `CLAUDE.md` (Local full-stack dev — what's real vs. faked).
+
+**Signals recorded today** — `/api/health`; the server's console logs on Render; join
+click-throughs (`GET /api/admin/analytics/join`); letter sends per channel and source (admin
+letters dashboard); email delivery status (`sent_emails.status`).
