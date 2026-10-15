@@ -88,10 +88,23 @@ describe('git facts (against a temporary repo)', () => {
     expect(resolveBase(undefined, dir)).toBe(first)
   })
 
-  it('resolveBase takes an explicit base and resolves it to a full SHA', () => {
+  it('resolveBase takes an explicit base that is an ancestor and resolves it to its full SHA', () => {
     const first = commitFile('a.txt')
     commitFile('b.txt')
     expect(resolveBase('HEAD~1', dir)).toBe(first)
+  })
+
+  it('resolveBase uses the branch point when an explicit base ref has moved ahead of it', () => {
+    commitFile('a.txt')
+    const branchPoint = commitFile('b.txt')
+    git('checkout', '-q', '-b', 'feature')
+    commitFile('c.txt')
+    git('checkout', '-q', 'master')
+    commitFile('d.txt')
+    git('checkout', '-q', 'feature')
+    expect(resolveBase('master', dir)).toBe(branchPoint)
+    // and the diff from it holds only the branch's own change
+    expect(changedPaths(resolveBase('master', dir), dir)).toEqual(['c.txt'])
   })
 
   it('resolveBase throws when neither origin/master nor master exists', () => {
@@ -109,5 +122,11 @@ describe('git facts (against a temporary repo)', () => {
     commitFile('c.txt')
     fs.writeFileSync(path.join(dir, 'uncommitted.txt'), 'x')
     expect(changedPaths(base, dir).sort()).toEqual(['b.txt', 'c.txt'])
+  })
+
+  it('changedPaths prints non-ASCII file names as they are, not quoted', () => {
+    const base = commitFile('a.txt')
+    commitFile('מכתב.md')
+    expect(changedPaths(base, dir)).toEqual(['מכתב.md'])
   })
 })

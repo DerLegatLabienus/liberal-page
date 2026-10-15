@@ -61,10 +61,12 @@ export function treeState(cwd?: string): { commit: string; dirty: boolean } {
 
 /**
  * The commit the branch is compared against: its merge base with `origin/master`, or with
- * `master` when there is no remote ref. `base` overrides it (a ref or SHA).
+ * `master` when there is no remote ref. `base` (a ref or SHA) replaces that ref, and is still
+ * reduced to its merge base with HEAD: when the ref has moved past the branch point, a checkout
+ * of the base, a `git show` at it and a `base...HEAD` diff all mean the same commit.
  */
 export function resolveBase(base?: string, cwd?: string): string {
-  if (base) return git(['rev-parse', base], cwd)
+  if (base) return git(['merge-base', base, 'HEAD'], cwd)
   for (const ref of ['origin/master', 'master']) {
     try {
       return git(['merge-base', 'HEAD', ref], cwd)
@@ -77,6 +79,7 @@ export function resolveBase(base?: string, cwd?: string): string {
 
 /** Paths the branch changed since `base` (added, modified, renamed, deleted), committed only. */
 export function changedPaths(base: string, cwd?: string): string[] {
-  const out = git(['diff', '--name-only', `${base}...HEAD`], cwd)
+  // quotePath=false: non-ASCII names (Hebrew) come out as they are, not as quoted octal escapes.
+  const out = git(['-c', 'core.quotePath=false', 'diff', '--name-only', `${base}...HEAD`], cwd)
   return out === '' ? [] : out.split('\n')
 }

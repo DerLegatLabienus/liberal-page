@@ -1,10 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import {
+  Scratch,
   classifyBranch,
   compareRefactorTests,
   fixVerdict,
   formatFileResult,
   isTestFile,
+  makeSignalHandler,
+  refactorGuardedChanges,
   overlayPaths,
   normaliseTestText,
   parseArgs,
@@ -112,8 +119,17 @@ describe('summariseRun', () => {
       { name: '/repo/tests/unit/b.test.ts', status: 'passed', message: '', assertionResults: [ok, skip] },
     ])
     expect(summariseRun(json, ROOT, ['tests/unit/a.test.ts', 'tests/unit/b.test.ts'])).toEqual({
-      'tests/unit/a.test.ts': { state: 'ran', passed: 2, failed: 1, skipped: 0 },
-      'tests/unit/b.test.ts': { state: 'ran', passed: 1, failed: 0, skipped: 1 },
+      'tests/unit/a.test.ts': { state: 'ran', status: 'failed', passed: 2, failed: 1, skipped: 0 },
+      'tests/unit/b.test.ts': { state: 'ran', status: 'passed', passed: 1, failed: 0, skipped: 1 },
+    })
+  })
+
+  it('keeps the file status: a file whose afterAll throws failed though every test passed', () => {
+    const json = run([{
+      name: '/repo/tests/unit/a.test.ts', status: 'failed', message: 'Error: afterAll boom\n  at x', assertionResults: [ok, ok],
+    }])
+    expect(summariseRun(json, ROOT, ['tests/unit/a.test.ts'])['tests/unit/a.test.ts']).toEqual({
+      state: 'ran', status: 'failed', passed: 2, failed: 0, skipped: 0, message: 'Error: afterAll boom',
     })
   })
 
@@ -136,34 +152,69 @@ describe('summariseRun', () => {
 
 describe('formatFileResult', () => {
   it('prints counts, skipping zero counts', () => {
-    expect(formatFileResult({ state: 'ran', passed: 2, failed: 1, skipped: 0 })).toBe('1 failed, 2 passed')
-    expect(formatFileResult({ state: 'ran', passed: 3, failed: 0, skipped: 1 })).toBe('3 passed, 1 skipped')
-    expect(formatFileResult({ state: 'ran', passed: 0, failed: 0, skipped: 0 })).toBe('no tests ran')
+    expect(formatFileResult({ state: 'ran', status: 'failed', passed: 2, failed: 1, skipped: 0 })).toBe('1 failed, 2 passed')
+    expect(formatFileResult({ state: 'ran', status: 'passed', passed: 3, failed: 0, skipped: 1 })).toBe('3 passed, 1 skipped')
+    expect(formatFileResult({ state: 'ran', status: 'passed', passed: 0, failed: 0, skipped: 0 })).toBe('no tests ran')
+    expect(formatFileResult({ state: 'ran', status: 'failed', passed: 2, failed: 0, skipped: 0, message: 'boom' }))
+      .toBe('2 passed, file failed (boom)')
     expect(formatFileResult({ state: 'load-error', message: 'boom' })).toBe('failed to load (boom)')
     expect(formatFileResult({ state: 'missing' })).toBe('not run')
   })
 })
 
-const ran = (passed: number, failed = 0): FileResult => ({ state: 'ran', passed, failed, skipped: 0 })
+const ran = (passed: number, failed = 0, status = failed > 0 ? 'failed' : 'passed'): FileResult =>
+  ({ state: 'ran', status, passed, failed, skipped: 0 })
+/** A file whose own hooks failed (e.g. afterAll threw) though every test in it passed. */
+const hookFailed = (passed: number): FileResult => ({ state: 'ran', status: 'failed', passed, failed: 0, skipped: 0, message: 'afterAll' })
 
 describe('fixVerdict', () => {
   const files = ['tests/a.test.ts', 'tests/b.test.ts']
+  const opts = { newFiles: files, branchExitCode: 0 }
 
   it('is proved when at least one file fails on master and all pass on the branch', () => {
     const v = fixVerdict(files, { 'tests/a.test.ts': ran(2, 1), 'tests/b.test.ts': ran(1) },
-      { 'tests/a.test.ts': ran(3), 'tests/b.test.ts': ran(1) })
+      { 'tests/a.test.ts': ran(3), 'tests/b.test.ts': ran(1) }, opts)
     expect(v).toEqual({ pass: true, reason: "proved: 1 of 2 test files fail on master's source; all pass on the branch" })
   })
 
   it('counts a file that cannot load on master (new module) as failing there', () => {
     const v = fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': { state: 'load-error', message: 'x' } },
-      { 'tests/a.test.ts': ran(2) })
+      { 'tests/a.test.ts': ran(2) }, opts)
     expect(v.pass).toBe(true)
+  })
+
+  it('does not count a load error on master for a test file that already exists there', () => {
+    const v = fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': { state: 'load-error', message: 'x' } },
+      { 'tests/a.test.ts': ran(2) }, { newFiles: [], branchExitCode: 0 })
+    expect(v).toEqual({
+      pass: false,
+      reason: "not proved: every test passes on master's source too, so the tests do not show the change",
+    })
+  })
+
+  it('counts a file whose hooks fail on master as failing there', () => {
+    const v = fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': hookFailed(2) }, { 'tests/a.test.ts': ran(2) }, opts)
+    expect(v.pass).toBe(true)
+  })
+
+  it('is not proved when a file’s hooks fail on the branch though its tests pass', () => {
+    const v = fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': ran(0, 1) }, { 'tests/a.test.ts': hookFailed(2) }, opts)
+    expect(v).toEqual({
+      pass: false, reason: 'not proved: `tests/a.test.ts` does not pass on the branch (2 passed, file failed (afterAll))',
+    })
+  })
+
+  it('is not proved when vitest exits non-zero on the branch (an unhandled error)', () => {
+    const v = fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': ran(0, 1) }, { 'tests/a.test.ts': ran(2) },
+      { newFiles: ['tests/a.test.ts'], branchExitCode: 1 })
+    expect(v).toEqual({ pass: false, reason: 'not proved: vitest exited with code 1 on the branch (unhandled errors?)' })
+    expect(fixVerdict(['tests/a.test.ts'], { 'tests/a.test.ts': ran(0, 1) }, { 'tests/a.test.ts': ran(2) },
+      { newFiles: ['tests/a.test.ts'], branchExitCode: null }).pass).toBe(false)
   })
 
   it('is not proved when every test passes on master too', () => {
     const v = fixVerdict(files, { 'tests/a.test.ts': ran(3), 'tests/b.test.ts': ran(1) },
-      { 'tests/a.test.ts': ran(3), 'tests/b.test.ts': ran(1) })
+      { 'tests/a.test.ts': ran(3), 'tests/b.test.ts': ran(1) }, opts)
     expect(v).toEqual({
       pass: false,
       reason: "not proved: every test passes on master's source too, so the tests do not show the change",
@@ -172,26 +223,32 @@ describe('fixVerdict', () => {
 
   it('is not proved when a file fails, does not load or runs nothing on the branch', () => {
     const master = { 'tests/a.test.ts': ran(0, 1), 'tests/b.test.ts': ran(1) }
-    expect(fixVerdict(files, master, { 'tests/a.test.ts': ran(2, 1), 'tests/b.test.ts': ran(1) }))
+    expect(fixVerdict(files, master, { 'tests/a.test.ts': ran(2, 1), 'tests/b.test.ts': ran(1) }, opts))
       .toEqual({ pass: false, reason: 'not proved: `tests/a.test.ts` does not pass on the branch (1 failed, 2 passed)' })
-    expect(fixVerdict(files, master, { 'tests/a.test.ts': ran(0), 'tests/b.test.ts': ran(1) }).reason)
+    expect(fixVerdict(files, master, { 'tests/a.test.ts': ran(0), 'tests/b.test.ts': ran(1) }, opts).reason)
       .toContain('(no tests ran)')
-    expect(fixVerdict(files, master, { 'tests/a.test.ts': { state: 'missing' }, 'tests/b.test.ts': ran(1) }).reason)
+    expect(fixVerdict(files, master, { 'tests/a.test.ts': { state: 'missing' }, 'tests/b.test.ts': ran(1) }, opts).reason)
       .toContain('(not run)')
   })
 
   it('is not proved when a file did not run on master at all', () => {
     const v = fixVerdict(files, { 'tests/a.test.ts': ran(0, 1), 'tests/b.test.ts': { state: 'missing' } },
-      { 'tests/a.test.ts': ran(1), 'tests/b.test.ts': ran(1) })
+      { 'tests/a.test.ts': ran(1), 'tests/b.test.ts': ran(1) }, opts)
     expect(v).toEqual({ pass: false, reason: "not proved: `tests/b.test.ts` did not run on master's source" })
   })
 })
 
 describe('normaliseTestText', () => {
-  it('ignores changes to import statements, including multi-line ones', () => {
-    const before = "import { a } from '../src/a'\nimport {\n  b,\n  c,\n} from '../src/bc'\n\nit('x', () => a(b, c))\n"
-    const after = "import { a } from '../src/lib/a'\nimport { b, c } from '../src/lib/bc'\nit('x', () => a(b, c))\n"
+  it('ignores changed module paths and the layout of multi-line imports', () => {
+    const before = "import { a } from '../src/a'\nimport {\n  b,\n  c,\n} from '../src/bc'\nimport '../src/side'\nexport { d } from '../src/d'\n\nit('x', () => a(b, c))\n"
+    const after = "import { a } from '../src/lib/a'\nimport { b, c } from \"../src/lib/bc\";\nimport '../src/lib/side'\nexport { d } from '../src/lib/d'\nit('x', () => a(b, c))\n"
     expect(normaliseTestText(before)).toBe(normaliseTestText(after))
+  })
+
+  it('keeps imported names: importing something else is a change', () => {
+    expect(normaliseTestText("import { a } from '../src/a'\nit('x', () => a())"))
+      .not.toBe(normaliseTestText("import { b as a } from '../src/a'\nit('x', () => a())"))
+    expect(normaliseTestText("import { a } from '../src/a'")).not.toBe(normaliseTestText("import { a, extra } from '../src/a'"))
   })
 
   it('ignores changed mock paths but not changed mock factories', () => {
@@ -227,6 +284,19 @@ describe('compareRefactorTests', () => {
   })
 })
 
+describe('refactorGuardedChanges', () => {
+  it('lists changed test infrastructure a refactor may not touch', () => {
+    expect(refactorGuardedChanges([
+      'src/a.ts', 'tests/unit/a.test.ts', 'tests/support/fixtures.ts', 'vitest.config.ts', 'src/test-setup.ts',
+      'src/__mocks__/react-i18next.ts', 'tests/unit/__snapshots__/a.test.ts.snap', 'src/x.snap', 'docs/a.md',
+    ])).toEqual([
+      'tests/support/fixtures.ts', 'vitest.config.ts', 'src/test-setup.ts',
+      'src/__mocks__/react-i18next.ts', 'tests/unit/__snapshots__/a.test.ts.snap', 'src/x.snap',
+    ])
+    expect(refactorGuardedChanges(['src/a.ts', 'tests/unit/a.test.tsx'])).toEqual([])
+  })
+})
+
 describe('summariseSuite and refactorVerdict', () => {
   const green = run([
     { name: '/r/tests/a.test.ts', status: 'passed', message: '', assertionResults: [ok, ok] },
@@ -238,21 +308,24 @@ describe('summariseSuite and refactorVerdict', () => {
   ])
 
   it('summarises a whole-suite run', () => {
-    expect(summariseSuite(green)).toEqual({ state: 'ran', passed: 3, failed: 0, skipped: 1, failedFiles: 0 })
-    expect(summariseSuite(red)).toEqual({ state: 'ran', passed: 1, failed: 1, skipped: 0, failedFiles: 2 })
-    expect(summariseSuite(null)).toEqual({ state: 'missing' })
+    expect(summariseSuite(green, 0)).toEqual({ state: 'ran', passed: 3, failed: 0, skipped: 1, failedFiles: 0, exitCode: 0 })
+    expect(summariseSuite(red, 1)).toEqual({ state: 'ran', passed: 1, failed: 1, skipped: 0, failedFiles: 2, exitCode: 1 })
+    expect(summariseSuite(null, 1)).toEqual({ state: 'missing' })
   })
 
   it('passes only with no logic changes and a green suite on both sides', () => {
-    const g = summariseSuite(green)
+    const g = summariseSuite(green, 0)
     expect(refactorVerdict([], g, g)).toEqual({
       pass: true, reason: "proved: test logic unchanged; the suite is green on master's source and on the branch",
     })
     expect(refactorVerdict(['`tests/a.test.ts`: test file deleted'], null, null)).toEqual({
-      pass: false, reason: 'not proved: test logic changed in 1 file',
+      pass: false, reason: 'not proved: 1 test change a refactor may not make',
     })
-    expect(refactorVerdict([], summariseSuite(red), g).reason).toBe("not proved: the suite is not green on master's source")
-    expect(refactorVerdict([], g, summariseSuite(red)).reason).toBe('not proved: the suite is not green on the branch')
+    expect(refactorVerdict([], summariseSuite(red, 1), g).reason).toBe("not proved: the suite is not green on master's source")
+    expect(refactorVerdict([], g, summariseSuite(red, 1)).reason).toBe('not proved: the suite is not green on the branch')
+    // Every test passed but vitest still exited non-zero (an unhandled error): not green.
+    expect(refactorVerdict([], g, summariseSuite(green, 1)).reason).toBe('not proved: the suite is not green on the branch')
+    expect(refactorVerdict([], summariseSuite(green, 1), g).reason).toBe("not proved: the suite is not green on master's source")
     expect(refactorVerdict([], g, { state: 'missing' }).reason).toBe('not proved: the suite is not green on the branch')
   })
 })
@@ -275,7 +348,7 @@ describe('proofLines', () => {
     expect(proofLines({
       kind: 'refactor', base: 'abc1234', files: [],
       problems: ['`tests/a.test.ts`: test file deleted'],
-      suites: { master: { state: 'ran', passed: 5, failed: 0, skipped: 0, failedFiles: 0 }, branch: { state: 'missing' } },
+      suites: { master: { state: 'ran', passed: 5, failed: 0, skipped: 0, failedFiles: 0, exitCode: 0 }, branch: { state: 'missing' } },
       reason: 'not proved: y',
     })).toEqual([
       '- kind: refactor',
@@ -284,6 +357,13 @@ describe('proofLines', () => {
       '- suite: master: 5 passed; branch: not run',
       '- verdict: not proved: y',
     ])
+    expect(proofLines({
+      kind: 'refactor', base: 'abc', files: [], reason: 'r',
+      suites: {
+        master: { state: 'ran', passed: 5, failed: 0, skipped: 0, failedFiles: 0, exitCode: 1 },
+        branch: { state: 'ran', passed: 4, failed: 1, skipped: 0, failedFiles: 1, exitCode: 1 },
+      },
+    })).toContain('- suite: master: 5 passed (vitest exit 1); branch: 1 failed, 4 passed (1 file(s) failed) (vitest exit 1)')
   })
 
   it('prints a note for a file with no runs', () => {
@@ -294,5 +374,63 @@ describe('proofLines', () => {
   it('prints no file lines when there are none', () => {
     expect(proofLines({ kind: 'no-tests', base: 'abc', files: [], reason: 'no tests: z' }))
       .toEqual(['- kind: no-tests', '- base: `abc`', '- verdict: no tests: z'])
+  })
+})
+
+describe('Scratch (against a temporary repo)', () => {
+  let repo: string
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], {
+      cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim()
+
+  beforeEach(() => {
+    repo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'loop-proof-test-repo-')))
+    git('init', '-q')
+    fs.writeFileSync(path.join(repo, '.gitignore'), 'node_modules\n')
+    fs.mkdirSync(path.join(repo, 'tests'))
+    fs.writeFileSync(path.join(repo, 'tests', 'a.test.ts'), 'base')
+    git('add', '.')
+    git('commit', '-q', '-m', 'base')
+    fs.writeFileSync(path.join(repo, 'tests', 'a.test.ts'), 'head')
+    git('commit', '-q', '-am', 'head')
+    fs.mkdirSync(path.join(repo, 'node_modules'))
+    fs.writeFileSync(path.join(repo, 'node_modules', 'keep.txt'), 'x')
+    fs.writeFileSync(path.join(repo, 'untracked.txt'), 'live tree file')
+  })
+  afterEach(() => {
+    fs.rmSync(repo, { recursive: true, force: true })
+  })
+
+  it('makes two checkouts with node_modules linked and an overlay, then removes everything', () => {
+    const statusBefore = git('status', '--porcelain')
+    const scratch = new Scratch(repo)
+    const a = scratch.checkout('HEAD~1', 'master', { ref: 'HEAD', paths: ['tests/a.test.ts'] })
+    const b = scratch.checkout('HEAD', 'branch')
+    expect(fs.readFileSync(path.join(a, 'tests', 'a.test.ts'), 'utf8')).toBe('head')
+    expect(fs.readFileSync(path.join(b, 'node_modules', 'keep.txt'), 'utf8')).toBe('x')
+    expect(git('worktree', 'list').split('\n')).toHaveLength(3)
+
+    scratch.cleanup()
+    scratch.cleanup() // idempotent
+    expect(git('worktree', 'list').split('\n')).toHaveLength(1)
+    expect(git('status', '--porcelain')).toBe(statusBefore)
+    expect(fs.existsSync(scratch.dir)).toBe(false)
+    expect(fs.readFileSync(path.join(repo, 'node_modules', 'keep.txt'), 'utf8')).toBe('x')
+    expect(fs.readFileSync(path.join(repo, 'tests', 'a.test.ts'), 'utf8')).toBe('head')
+  })
+
+  it('the signal handler runs the same cleanup, then exits 130 or 143', () => {
+    for (const [signal, code] of [['SIGTERM', 143], ['SIGINT', 130]] as const) {
+      const scratch = new Scratch(repo)
+      scratch.checkout('HEAD', 'branch')
+      const exit = vi.fn()
+      const log = vi.fn()
+      makeSignalHandler(scratch, exit, log)(signal)
+      expect(exit).toHaveBeenCalledWith(code)
+      expect(log).toHaveBeenCalledWith(expect.stringContaining(signal))
+      expect(git('worktree', 'list').split('\n')).toHaveLength(1)
+      expect(fs.existsSync(scratch.dir)).toBe(false)
+    }
   })
 })

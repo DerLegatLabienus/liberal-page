@@ -10,9 +10,23 @@
 //   source and on the branch.
 // - Any other branch that adds or changes no test file: "no tests", fails.
 //
-// The refactor rule is strict on purpose: new tests added to an existing test file count as
-// changed logic (only a brand-new test file is allowed), so a refactor cannot slip in tests that
-// were never run against master's source.
+// Strict rules (each fails closed):
+// - A test file passes only when vitest marks the file itself passed (a throwing beforeAll or
+//   afterAll fails the file though every test in it passed) with no failed and at least one
+//   passed test. A file counts as failing on master's source when vitest marks it failed.
+// - A test file that cannot load on master's source counts as failing there only when the file is
+//   new on the branch (its module does not exist yet). An existing test file that cannot load on
+//   master proves nothing.
+// - vitest must exit 0 on the branch, and on both sides of a refactor, so an unhandled error
+//   outside any test fails the proof.
+// - Refactor: new tests added to an existing test file count as changed logic (only a brand-new
+//   test file is allowed), so a refactor cannot slip in tests never run against master's source.
+//   Imported names are compared too; only quoted module paths (import, export-from, import(),
+//   vi.mock, vi.doMock, vi.importActual and friends) and the layout of multi-line imports are
+//   ignored. Any change to test infrastructure fails: non-test files under tests/,
+//   vitest.config.ts, src/test-setup.ts, src/__mocks__/** and any *.snap.
+// - An explicit `--base` is reduced to its merge base with HEAD (see resolveBase), so the checkout,
+//   the file reads and the diff all use the branch point.
 //
 // Both sides run in temporary `git worktree` checkouts outside the repo: master's source (the
 // base commit, with the branch's committed tests/ files copied over) and the branch (HEAD as
@@ -20,7 +34,8 @@
 // affect the verdict, and the live working tree is never written to. Each checkout has
 // node_modules linked in and is removed afterwards, also on SIGINT and SIGTERM. Each vitest run
 // gets its own TMPDIR, so the suite's pglite snapshot (written to os.tmpdir()) cannot clash with
-// another test run, and CI=1, so missing snapshots fail instead of being written.
+// another test run, CI=1, so missing snapshots fail instead of being written, and --no-cache, so
+// vitest's results cache is not written into the live node_modules through the symlink.
 //
 // Prints one `<!-- loop:proof -->` evidence block.
 // Exit codes: 0 = proved or exempt; 1 = not proved, no tests, or the proof could not run.
@@ -49,6 +64,16 @@ export function isTestFile(p: string): boolean {
 export function overlayPaths(paths: string[], deleted: string[]): string[] {
   const gone = new Set(deleted)
   return paths.filter((p) => p.startsWith('tests/') && !gone.has(p))
+}
+
+/** Test infrastructure a refactor may not change, among the branch's changed paths. */
+export function refactorGuardedChanges(paths: string[]): string[] {
+  return paths.filter((p) =>
+    (p.startsWith('tests/') && !isTestFile(p)) ||
+    p === 'vitest.config.ts' ||
+    p === 'src/test-setup.ts' ||
+    p.startsWith('src/__mocks__/') ||
+    p.endsWith('.snap'))
 }
 
 export interface ClassifyInput {
@@ -109,7 +134,8 @@ export interface VitestJson {
 }
 
 export type FileResult =
-  | { state: 'ran'; passed: number; failed: number; skipped: number }
+  /** `status` is vitest's verdict on the file itself; `message` is its error's first line. */
+  | { state: 'ran'; status: string; passed: number; failed: number; skipped: number; message?: string }
   | { state: 'load-error'; message: string }
   | { state: 'missing' }
 
@@ -133,7 +159,10 @@ export function summariseRun(json: VitestJson | null, root: string, files: strin
     if (!r) out[f] = { state: 'missing' }
     else if (r.status === 'failed' && r.assertionResults.length === 0) {
       out[f] = { state: 'load-error', message: (r.message || 'no message').split('\n')[0].trim() }
-    } else out[f] = { state: 'ran', ...countAssertions(r.assertionResults) }
+    } else {
+      const message = r.status === 'failed' && r.message ? r.message.split('\n')[0].trim() : undefined
+      out[f] = { state: 'ran', status: r.status, ...countAssertions(r.assertionResults), ...(message ? { message } : {}) }
+    }
   }
   return out
 }
@@ -150,6 +179,7 @@ function formatCounts(c: { passed: number; failed: number; skipped: number }): s
 export function formatFileResult(r: FileResult): string {
   if (r.state === 'missing') return 'not run'
   if (r.state === 'load-error') return `failed to load (${r.message})`
+  if (r.status === 'failed' && r.failed === 0) return `${formatCounts(r)}, file failed (${r.message ?? 'no message'})`
   return formatCounts(r)
 }
 
@@ -158,11 +188,17 @@ export interface ProofVerdict {
   reason: string
 }
 
-const passesCleanly = (r: FileResult) => r.state === 'ran' && r.failed === 0 && r.passed > 0
-const failsOn = (r: FileResult) => (r.state === 'ran' && r.failed > 0) || r.state === 'load-error'
+const passesCleanly = (r: FileResult) => r.state === 'ran' && r.status === 'passed' && r.failed === 0 && r.passed > 0
+
+export interface FixRunFacts {
+  /** Test files that do not exist at the base commit. */
+  newFiles: string[]
+  /** vitest's exit code on the branch; null when it was killed or never started. */
+  branchExitCode: number | null
+}
 
 export function fixVerdict(
-  files: string[], master: Record<string, FileResult>, branch: Record<string, FileResult>,
+  files: string[], master: Record<string, FileResult>, branch: Record<string, FileResult>, facts: FixRunFacts,
 ): ProofVerdict {
   const missing: FileResult = { state: 'missing' }
   for (const f of files) {
@@ -171,12 +207,21 @@ export function fixVerdict(
       return { pass: false, reason: `not proved: \`${f}\` does not pass on the branch (${formatFileResult(b)})` }
     }
   }
+  if (facts.branchExitCode !== 0) {
+    return {
+      pass: false,
+      reason: `not proved: vitest exited with code ${facts.branchExitCode ?? 'none'} on the branch (unhandled errors?)`,
+    }
+  }
+  const isNew = new Set(facts.newFiles)
+  const failsOn = (f: string, r: FileResult) =>
+    (r.state === 'ran' && (r.status === 'failed' || r.failed > 0)) || (r.state === 'load-error' && isNew.has(f))
   for (const f of files) {
     if ((master[f] ?? missing).state === 'missing') {
       return { pass: false, reason: `not proved: \`${f}\` did not run on master's source` }
     }
   }
-  const failing = files.filter((f) => failsOn(master[f]))
+  const failing = files.filter((f) => failsOn(f, master[f]))
   if (failing.length === 0) {
     return {
       pass: false,
@@ -189,16 +234,25 @@ export function fixVerdict(
   }
 }
 
+/** An import/export clause on one line with fixed spacing: `{\n  a,\n  b,\n}` becomes `{ a, b }`. */
+function tidyClause(clause: string): string {
+  return clause.replace(/\s+/g, ' ').replace(/,\s*\}/g, ' }').replace(/\{\s*/g, '{ ').replace(/\s*\}/g, ' }').trim()
+}
+
 /**
- * A test file's logic with import and mock paths taken out: import statements (single or
- * multi-line) are dropped, the path in `import('...')` and in `vi.mock` / `vi.doMock` /
- * `vi.importActual` and friends is replaced by a placeholder, and blank lines are dropped.
- * Mock factory bodies are kept: they are test logic.
+ * A test file's logic with module paths taken out. Every quoted module path (import and
+ * export-from statements, side-effect imports, `import('...')`, `vi.mock` / `vi.doMock` /
+ * `vi.importActual` and friends) becomes a placeholder; import and export clauses are joined
+ * onto one line with fixed spacing; blank lines are dropped. Imported names and mock factory
+ * bodies are kept: they are test logic.
  */
 export function normaliseTestText(text: string): string {
   return text
-    .replace(/^[ \t]*import\s+[^;'"]*?\bfrom\s*(['"])[^'"\n]*\1[ \t]*;?[ \t]*$/gm, '')
-    .replace(/^[ \t]*import\s*(['"])[^'"\n]*\1[ \t]*;?[ \t]*$/gm, '')
+    .replace(
+      /^[ \t]*(import|export)(\s[^;'"]*?\bfrom)\s*(['"])[^'"\n]*\3[ \t]*;?/gm,
+      (_m, kw: string, clause: string) => `${kw} ${tidyClause(clause)} <path>`,
+    )
+    .replace(/^[ \t]*import\s*(['"])[^'"\n]*\1[ \t]*;?/gm, 'import <path>')
     // vi.* first: its optional type argument may itself hold an `import('...')`.
     .replace(
       /\b(vi\.(?:mock|doMock|unmock|doUnmock|importActual|importMock))\s*(<[^>]*>)?\s*\(\s*(['"`])[^'"`\n]*\3/g,
@@ -252,29 +306,32 @@ export function compareRefactorTests(entries: RefactorTestEntry[]): string[] {
 }
 
 export type SuiteResult =
-  | { state: 'ran'; passed: number; failed: number; skipped: number; failedFiles: number }
+  | { state: 'ran'; passed: number; failed: number; skipped: number; failedFiles: number; exitCode: number | null }
   | { state: 'missing' }
 
-export function summariseSuite(json: VitestJson | null): SuiteResult {
+export function summariseSuite(json: VitestJson | null, exitCode: number | null): SuiteResult {
   if (!json) return { state: 'missing' }
   const all = countAssertions(json.testResults.flatMap((r) => r.assertionResults))
-  return { state: 'ran', ...all, failedFiles: json.testResults.filter((r) => r.status === 'failed').length }
+  return { state: 'ran', ...all, failedFiles: json.testResults.filter((r) => r.status === 'failed').length, exitCode }
 }
 
 function formatSuite(s: SuiteResult): string {
   if (s.state === 'missing') return 'not run'
-  const counts = formatCounts(s)
-  return s.failedFiles > 0 ? `${counts} (${s.failedFiles} file(s) failed)` : counts
+  let out = formatCounts(s)
+  if (s.failedFiles > 0) out += ` (${s.failedFiles} file(s) failed)`
+  if (s.exitCode !== 0) out += ` (vitest exit ${s.exitCode ?? 'none'})`
+  return out
 }
 
 const isGreen = (s: SuiteResult | null) =>
-  !!s && s.state === 'ran' && s.failed === 0 && s.failedFiles === 0 && s.passed > 0
+  !!s && s.state === 'ran' && s.failed === 0 && s.failedFiles === 0 && s.passed > 0 && s.exitCode === 0
 
 export function refactorVerdict(
   problems: string[], master: SuiteResult | null, branch: SuiteResult | null,
 ): ProofVerdict {
   if (problems.length > 0) {
-    return { pass: false, reason: `not proved: test logic changed in ${problems.length} file${problems.length === 1 ? '' : 's'}` }
+    const n = problems.length
+    return { pass: false, reason: `not proved: ${n} test change${n === 1 ? '' : 's'} a refactor may not make` }
   }
   if (!isGreen(master)) return { pass: false, reason: "not proved: the suite is not green on master's source" }
   if (!isGreen(branch)) return { pass: false, reason: 'not proved: the suite is not green on the branch' }
@@ -324,8 +381,15 @@ function showAt(ref: string, file: string, cwd: string): Buffer | null {
   }
 }
 
+export interface VitestRun {
+  json: VitestJson | null
+  /** null when vitest was killed by a signal or never started. */
+  exitCode: number | null
+  stderr: string
+}
+
 /** Everything the run creates lives under one temp directory, removed by `cleanup`. */
-class Scratch {
+export class Scratch {
   readonly dir: string
   private readonly worktrees: string[] = []
   private child: ChildProcess | null = null
@@ -355,18 +419,21 @@ class Scratch {
   }
 
   /** Runs vitest with the JSON reporter in `cwd`; resolves to the parsed report or null. */
-  vitest(cwd: string, label: string, files: string[]): Promise<{ json: VitestJson | null; stderr: string }> {
+  vitest(cwd: string, label: string, files: string[]): Promise<VitestRun> {
     const tmp = fs.mkdtempSync(path.join(this.dir, `tmp-${label}-`))
     const out = path.join(this.dir, `${label}.json`)
     const bin = path.join(cwd, 'node_modules', '.bin', 'vitest')
     return new Promise((resolve) => {
       let stderr = ''
-      const child = spawn(bin, ['run', '--reporter=json', `--outputFile=${out}`, ...files], {
+      const child = spawn(bin, ['run', '--no-cache', '--reporter=json', `--outputFile=${out}`, ...files], {
         cwd, env: { ...process.env, TMPDIR: tmp, CI: process.env.CI ?? '1' }, stdio: ['ignore', 'ignore', 'pipe'],
       })
       this.child = child
       child.stderr?.on('data', (d: Buffer) => { stderr = (stderr + d.toString()).slice(-4000) })
-      const done = () => {
+      let settled = false
+      const done = (exitCode: number | null) => {
+        if (settled) return
+        settled = true
         this.child = null
         let json: VitestJson | null = null
         try {
@@ -374,10 +441,10 @@ class Scratch {
         } catch {
           json = null
         }
-        resolve({ json, stderr })
+        resolve({ json, exitCode, stderr })
       }
-      child.on('error', (e) => { stderr += String(e); done() })
-      child.on('close', done)
+      child.on('error', (e) => { stderr += String(e); done(null) })
+      child.on('close', (code) => done(code))
     })
   }
 
@@ -395,6 +462,17 @@ class Scratch {
       try { git(['worktree', 'prune'], this.repo) } catch { /* best effort */ }
     }
     fs.rmSync(this.dir, { recursive: true, force: true })
+  }
+}
+
+/** The SIGINT/SIGTERM handler: the same cleanup as the `finally`, then exit 130 or 143. */
+export function makeSignalHandler(
+  scratch: { cleanup(): void }, exit: (code: number) => void, log: (message: string) => void,
+): (signal: NodeJS.Signals) => void {
+  return (signal) => {
+    scratch.cleanup()
+    log(`loop:proof interrupted by ${signal}; temporary worktrees removed`)
+    exit(signal === 'SIGINT' ? 130 : 143)
   }
 }
 
@@ -422,7 +500,7 @@ async function prove(repo: string, args: Args, scratch: Scratch): Promise<{ verd
   if (kind === 'no-tests') return finish({ files: [], reason: 'no tests: the branch adds or changes no test file' }, false)
 
   if (kind === 'refactor') {
-    const renames = parseRenames(git(['diff', '--name-status', '-M', `${base}...HEAD`], repo))
+    const renames = parseRenames(git(['-c', 'core.quotePath=false', 'diff', '--name-status', '-M', `${base}...HEAD`], repo))
     const entries: RefactorTestEntry[] = paths.filter(isTestFile).map((p) => {
       const oldPath = renames.get(p)
       return {
@@ -431,8 +509,13 @@ async function prove(repo: string, args: Args, scratch: Scratch): Promise<{ verd
         headText: showAt(head, p, repo)?.toString('utf8') ?? null,
       }
     })
-    const problems = compareRefactorTests(entries)
-    const flagged = new Set(problems.map((p) => p.slice(1, p.indexOf('`', 1))))
+    const guarded = refactorGuardedChanges(paths)
+    const logic = compareRefactorTests(entries)
+    const problems = [
+      ...(guarded.length ? [`test setup changed: ${guarded.map((p) => `\`${p}\``).join(', ')}`] : []),
+      ...logic,
+    ]
+    const flagged = new Set(logic.map((p) => p.slice(1, p.indexOf('`', 1))))
     const files = entries
       .filter((e) => e.headText !== null && e.baseText !== null && !flagged.has(e.path))
       .map((e) => ({ path: e.path, note: 'test logic unchanged' }))
@@ -443,7 +526,10 @@ async function prove(repo: string, args: Args, scratch: Scratch): Promise<{ verd
     // and the text check above already showed their logic is master's.
     const masterRun = await scratch.vitest(scratch.checkout(base, 'master'), 'master', [])
     const branchRun = await scratch.vitest(scratch.checkout(head, 'branch'), 'branch', [])
-    const suites = { master: summariseSuite(masterRun.json), branch: summariseSuite(branchRun.json) }
+    const suites = {
+      master: summariseSuite(masterRun.json, masterRun.exitCode),
+      branch: summariseSuite(branchRun.json, branchRun.exitCode),
+    }
     const v = refactorVerdict(problems, suites.master, suites.branch)
     const extra = [
       ...(masterRun.json ? [] : ['- master run produced no report:', ...lastLines(masterRun.stderr)]),
@@ -460,7 +546,8 @@ async function prove(repo: string, args: Args, scratch: Scratch): Promise<{ verd
   const branchRun = await scratch.vitest(branchDir, 'branch', testFiles)
   const master = summariseRun(masterRun.json, masterDir, testFiles)
   const branchRes = summariseRun(branchRun.json, branchDir, testFiles)
-  const v = fixVerdict(testFiles, master, branchRes)
+  const newFiles = testFiles.filter((p) => showAt(base, p, repo) === null)
+  const v = fixVerdict(testFiles, master, branchRes, { newFiles, branchExitCode: branchRun.exitCode })
   const extra = [
     ...(masterRun.json ? [] : ['- master run produced no report:', ...lastLines(masterRun.stderr)]),
     ...(branchRun.json ? [] : ['- branch run produced no report:', ...lastLines(branchRun.stderr)]),
@@ -481,11 +568,7 @@ async function main(): Promise<number> {
   const repo = fs.realpathSync(git(['rev-parse', '--show-toplevel'], process.cwd()))
   const state = treeState(repo)
   const scratch = new Scratch(repo)
-  const onSignal = (signal: NodeJS.Signals) => {
-    scratch.cleanup()
-    console.error(`loop:proof interrupted by ${signal}; temporary worktrees removed`)
-    process.exit(signal === 'SIGINT' ? 130 : 143)
-  }
+  const onSignal = makeSignalHandler(scratch, (code) => process.exit(code), (m) => console.error(m))
   process.once('SIGINT', onSignal)
   process.once('SIGTERM', onSignal)
 
