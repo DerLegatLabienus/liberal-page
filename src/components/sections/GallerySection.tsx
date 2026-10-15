@@ -71,10 +71,10 @@ export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
             {shown.map((item, i) => (
               <div
                 key={item.id}
-                className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-white shadow-sm"
+                className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-card shadow-sm"
                 onClick={() => setSelectedIndex(i)}
               >
-                <div className="relative h-44 w-full bg-slate-100">
+                <div className="relative h-44 w-full bg-muted">
                   <img
                     src={resolveImageSrc(item.src)}
                     alt={i18n.language === 'he' ? item.caption : (item.captionEn ?? item.caption)}
