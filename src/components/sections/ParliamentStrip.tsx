@@ -3,17 +3,17 @@ import { useDirection } from '@/hooks/useDirection'
 import type { Bill, Committee } from '@/types'
 
 const STATUS_COLORS: Record<string, string> = {
-  'בוועדה': 'border-green-500 bg-green-50',
-  'הצבעה קרובה': 'border-orange-500 bg-orange-50',
-  'עבר': 'border-slate-400 bg-slate-50',
-  'נדחה': 'border-red-400 bg-red-50',
+  'בוועדה': 'border-success bg-success/10',
+  'הצבעה קרובה': 'border-warning bg-warning/10',
+  'עבר': 'border-muted-foreground/60 bg-muted',
+  'נדחה': 'border-destructive/80 bg-destructive/10',
 }
 
 const STATUS_DOT: Record<string, string> = {
-  'בוועדה': 'text-green-600',
-  'הצבעה קרובה': 'text-orange-500',
-  'עבר': 'text-slate-500',
-  'נדחה': 'text-red-500',
+  'בוועדה': 'text-success',
+  'הצבעה קרובה': 'text-warning',
+  'עבר': 'text-muted-foreground',
+  'נדחה': 'text-destructive',
 }
 
 interface ParliamentStripProps {
@@ -30,7 +30,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
   return (
     <div dir={direction}>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-blue-700">
+        <h2 className="text-right text-sm font-semibold uppercase tracking-wide text-primary">
           {t('ui.strip_heading')}
         </h2>
         <button onClick={onOpenDrawer} className="text-xs font-medium text-primary hover:underline">
@@ -42,7 +42,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={bill.id}
               dir={direction}
-              className={`min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 bg-white px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-slate-300 bg-slate-50'}`}
+              className={`min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 px-4 py-3 text-right shadow-sm ${STATUS_COLORS[bill.status] ?? 'border-border bg-muted'}`}
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_active_bill')}</p>
               <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{bill.title}</p>
@@ -53,12 +53,12 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
             <div
               key={c.id}
               dir={direction}
-              className="min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 border-blue-500 bg-white px-4 py-3 text-right shadow-sm"
+              className="min-w-[150px] sm:min-w-[180px] rounded-lg border border-s-4 border-primary bg-card px-4 py-3 text-right shadow-sm"
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('ui.strip_tracked_committee')}</p>
               <p className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground">{c.name}</p>
               {c.lastSessionDate && (
-                <p className="text-xs text-green-600">
+                <p className="text-xs text-success">
                   ● ישיבה: {new Date(c.lastSessionDate).toLocaleDateString('he-IL')}
                 </p>
               )}
@@ -66,7 +66,7 @@ export default function ParliamentStrip({ bills, committees, onOpenDrawer }: Par
           ))}
           <button
             onClick={onOpenDrawer}
-            className="flex w-full sm:w-auto items-center justify-center rounded-lg border border-dashed border-primary/40 bg-white px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
+            className="flex w-full sm:w-auto items-center justify-center rounded-lg border border-dashed border-primary/40 bg-card px-4 py-3 text-sm font-medium text-primary shadow-sm hover:bg-primary/5"
           >
             {t('ui.strip_more')}
           </button>
