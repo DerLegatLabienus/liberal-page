@@ -38,12 +38,13 @@ export function formatEvidenceBlock(block: EvidenceBlock): string {
   ].join('\n')
 }
 
-/** Finds a command's block in a larger text (a PR body). The block runs to the next blank line. */
+/** Finds a command's block in a larger text (a PR body). The block runs to the next blank line (LF or CRLF). */
 export function findEvidenceBlock(text: string, command: EvidenceCommand): string | null {
   const start = text.indexOf(evidenceMarker(command))
   if (start === -1) return null
-  const end = text.indexOf('\n\n', start)
-  return text.slice(start, end === -1 ? undefined : end)
+  // A blank line ends the block; PR bodies edited on the web can arrive with CRLF line ends.
+  const end = text.slice(start).search(/\r?\n\r?\n/)
+  return text.slice(start, end === -1 ? undefined : start + end)
 }
 
 function git(args: string[], cwd?: string): string {

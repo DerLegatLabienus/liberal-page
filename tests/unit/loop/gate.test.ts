@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import {
   GATE_CHECKS,
+  TSC_NO_FILES_NOTE,
   buildGateBlock,
   checkLine,
   failureTail,
   flattenLine,
   gateVerdict,
+  main,
   tellingLine,
+  tscNote,
   type CheckResult,
 } from '../../../scripts/loop/gate'
 import { findEvidenceBlock } from '../../../scripts/loop/evidence'
@@ -60,6 +63,17 @@ describe('tellingLine: test (vitest)', () => {
       NPM_TRAILER,
     ].join('\n')
     expect(tellingLine('test', out, 1)).toBe('Tests 3 failed | 1200 passed (1203)')
+  })
+
+  it('adds the Errors summary when vitest failed on unhandled errors with all tests passed', () => {
+    const out = [
+      ' Test Files  120 passed (120)',
+      '      Tests  1200 passed (1200)',
+      '     Errors  1 error',
+      '   Duration  30.1s',
+      NPM_TRAILER,
+    ].join('\n')
+    expect(tellingLine('test', out, 1)).toBe('Tests 1200 passed (1200); Errors 1 error')
   })
 
   it('falls back to the last non-npm line when there is no summary', () => {
@@ -136,9 +150,32 @@ describe('tellingLine: build', () => {
     expect(tellingLine('build', out, 2)).toBe("2 errors; first: src/a.ts(3,5): error TS2322: Type 'string' is not assignable.")
   })
 
-  it('shows the first non-npm error line otherwise, never the npm trailer', () => {
-    const out = ['vite v5', '[vite]: Rollup failed to resolve import "x"', 'error during build:', NPM_TRAILER].join('\n')
-    expect(tellingLine('build', out, 1)).toBe('error during build:')
+  it('shows the cause after vite\'s "error during build:", not the stack or the npm trailer', () => {
+    const out = [
+      'vite v5.4.0 building for production...',
+      'src/x.tsx (1:0): Module level directives cause errors when bundled, "use client" was ignored.',
+      'error during build:',
+      '[vite]: Rollup failed to resolve import "x" from "src/a.ts".',
+      '    at viteWarn (file:///repo/node_modules/vite/dist/node/chunks/dep.js:1:1)',
+      NPM_TRAILER,
+    ].join('\n')
+    expect(tellingLine('build', out, 1)).toBe('[vite]: Rollup failed to resolve import "x" from "src/a.ts".')
+  })
+
+  it('otherwise shows a line that starts with error/Error/[vite], not one that merely contains "error"', () => {
+    const out = [
+      'dist/assets/ErrorBoundary-abc.js  1.2 kB',
+      'src/x.tsx (1:0): Module level directives cause errors when bundled',
+      'Error: ENOSPC: no space left on device',
+      'later line',
+      NPM_TRAILER,
+    ].join('\n')
+    expect(tellingLine('build', out, 1)).toBe('Error: ENOSPC: no space left on device')
+  })
+
+  it('falls back to the last non-npm line when no line starts with an error', () => {
+    const out = ['dist/assets/ErrorBoundary-abc.js  1.2 kB', 'Killed', NPM_TRAILER].join('\n')
+    expect(tellingLine('build', out, 1)).toBe('Killed')
   })
 })
 
@@ -152,6 +189,18 @@ describe('checkLine and gateVerdict', () => {
 
   it('formats a failing check with its exit code', () => {
     expect(checkLine(fail)).toBe('- lint (`npm run lint`): FAIL (exit 1) — ✖ 1 problem (1 error, 0 warnings)')
+  })
+
+  it('says a check timed out rather than "could not run"', () => {
+    expect(checkLine({
+      name: 'test', display: 'npm test', exitCode: null, output: '', error: 'spawnSync /bin/sh ETIMEDOUT',
+      signal: 'SIGTERM', timedOut: true,
+    })).toBe('- test (`npm test`): FAIL — timed out after 20 min')
+  })
+
+  it('appends a check\'s note to its telling line', () => {
+    expect(checkLine({ name: 'tsc', display: 'npx tsc --noEmit', exitCode: 0, output: '', note: TSC_NO_FILES_NOTE }))
+      .toBe('- tsc (`npx tsc --noEmit`): pass — no errors (root tsconfig checks no files — #20)')
   })
 
   it('reports a check that could not start or was killed', () => {
@@ -205,7 +254,79 @@ describe('failureTail', () => {
     expect(tail[19]).toBe('line 30')
   })
 
+  it('leaves out npm\'s own lines', () => {
+    expect(failureTail(['> pkg@1 lint', '> eslint .', 'real problem', NPM_TRAILER].join('\n'), 20)).toBe('real problem')
+  })
+
   it('returns everything when shorter than N', () => {
     expect(failureTail('a\nb', 20)).toBe('a\nb')
+  })
+})
+
+describe('tscNote', () => {
+  it('flags a root tsconfig with empty files and no include (today\'s state, #20)', () => {
+    expect(tscNote(JSON.stringify({ files: [], references: [{ path: './tsconfig.app.json' }] }))).toBe(TSC_NO_FILES_NOTE)
+    expect(TSC_NO_FILES_NOTE).toBe('root tsconfig checks no files — #20')
+  })
+
+  it('says nothing when the root tsconfig includes files, or cannot be read', () => {
+    expect(tscNote(JSON.stringify({ files: [], include: ['src'] }))).toBeUndefined()
+    expect(tscNote(JSON.stringify({ compilerOptions: {} }))).toBeUndefined()
+    expect(tscNote(JSON.stringify({ files: ['a.ts'] }))).toBeUndefined()
+    expect(tscNote('{ not json')).toBeUndefined()
+    expect(tscNote(null)).toBeUndefined()
+  })
+})
+
+describe('main', () => {
+  it('runs all four checks when the second fails, prints the block, sends the tail to stderr, returns 1', () => {
+    const called: string[] = []
+    const run = (check: { name: CheckResult['name']; display: string }): CheckResult => {
+      called.push(check.name)
+      return check.name === 'tsc'
+        ? { name: check.name, display: check.display, exitCode: 2, output: "src/a.ts(1,1): error TS2322: bad\n" }
+        : { name: check.name, display: check.display, exitCode: 0, output: '' }
+    }
+    const err: string[] = []
+    const out: string[] = []
+    const code = main({
+      run,
+      tree: () => ({ commit: 'abc1234', dirty: false }),
+      readTsconfig: () => null,
+      stderr: (s) => err.push(s),
+      stdout: (s) => out.push(s),
+    })
+    expect(code).toBe(1)
+    expect(called).toEqual(['test', 'tsc', 'lint', 'build'])
+    expect(err.join('\n')).toContain('src/a.ts(1,1): error TS2322: bad')
+    const block = out.join('')
+    expect(block.startsWith('<!-- loop:gate -->\n**loop:gate: FAIL**')).toBe(true)
+    expect(block).toContain('- tsc (`npx tsc --noEmit`): FAIL (exit 2) — 1 error')
+  })
+
+  it('returns 0 when all pass, and adds the tsconfig note to the tsc line', () => {
+    const out: string[] = []
+    const code = main({
+      run: (check) => ({ name: check.name, display: check.display, exitCode: 0, output: '' }),
+      tree: () => ({ commit: 'abc1234', dirty: false }),
+      readTsconfig: () => JSON.stringify({ files: [] }),
+      stderr: () => {},
+      stdout: (s) => out.push(s),
+    })
+    expect(code).toBe(0)
+    expect(out.join('')).toContain('no errors (root tsconfig checks no files — #20)')
+  })
+
+  it('returns 2 when git cannot give the tree state', () => {
+    const err: string[] = []
+    const code = main({
+      run: () => { throw new Error('should not run') },
+      tree: () => { throw new Error('not a git repo') },
+      readTsconfig: () => null,
+      stderr: (s) => err.push(s),
+      stdout: () => {},
+    })
+    expect(code).toBe(2)
+    expect(err.join('\n')).toContain('could not read the commit')
   })
 })

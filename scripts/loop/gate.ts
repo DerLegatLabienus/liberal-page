@@ -4,11 +4,13 @@
 //
 // All four checks run even when one fails: `npm test`, `npx tsc --noEmit`, `npm run lint`,
 // `npm run build`. stdout carries only the block (see evidence.ts); progress and the last lines
-// of each failing check go to stderr.
+// of each failing check go to stderr. Each check runs through `sh -c '<command> 2>&1'`, so its
+// stdout and stderr arrive as one stream in the order they were written.
 //
 // Exit codes: 0 = all four checks passed; 1 = at least one check failed;
 //             2 = the gate could not run (e.g. git could not report the commit).
 import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { formatEvidenceBlock, treeState, type Verdict } from './evidence.js'
@@ -17,35 +19,44 @@ export type CheckName = 'test' | 'tsc' | 'lint' | 'build'
 
 export interface GateCheck {
   name: CheckName
-  command: string
-  args: string[]
-  /** The command as a person would type it, shown in the block. */
+  /** The command, run as given by `sh` and shown in the block. Fixed text, never user input. */
   display: string
 }
 
 export const GATE_CHECKS: readonly GateCheck[] = [
-  { name: 'test', command: 'npm', args: ['test'], display: 'npm test' },
-  { name: 'tsc', command: 'npx', args: ['tsc', '--noEmit'], display: 'npx tsc --noEmit' },
-  { name: 'lint', command: 'npm', args: ['run', 'lint'], display: 'npm run lint' },
-  { name: 'build', command: 'npm', args: ['run', 'build'], display: 'npm run build' },
+  { name: 'test', display: 'npm test' },
+  { name: 'tsc', display: 'npx tsc --noEmit' },
+  { name: 'lint', display: 'npm run lint' },
+  { name: 'build', display: 'npm run build' },
 ]
 
 /** How many lines of a failing check's output go to stderr. */
 export const TAIL_LINES = 20
 /** Upper bound on a telling line, so one check cannot flood the block. */
 export const MAX_LINE_CHARS = 200
+/** A check that runs longer than this is killed and reported as timed out. */
+export const CHECK_TIMEOUT_MS = 20 * 60 * 1000
+/**
+ * Added to tsc's line while the root tsconfig.json has `"files": []` and no `include` (#20):
+ * `npx tsc --noEmit` then checks nothing, and a bare "no errors" would mislead.
+ */
+export const TSC_NO_FILES_NOTE = 'root tsconfig checks no files — #20'
 
 export interface CheckResult {
   name: CheckName
   display: string
   /** The process exit status; null when it could not start or was killed. */
   exitCode: number | null
-  /** stdout and stderr together. */
+  /** stdout and stderr together, in the order written. */
   output: string
   /** Set when the process could not be started (e.g. ENOENT). */
   error?: string
   /** Set when the process was killed by a signal. */
   signal?: string
+  /** Set when the process was killed for running past CHECK_TIMEOUT_MS. */
+  timedOut?: boolean
+  /** Context appended to the telling line in brackets (e.g. TSC_NO_FILES_NOTE). */
+  note?: string
 }
 
 // eslint-disable-next-line no-control-regex
@@ -102,7 +113,11 @@ function pickTellingLine(name: CheckName, output: string, exitCode: number | nul
     case 'test': {
       // Matches `Tests  12 passed (12)`, not `Test Files ...` or `Failed Tests ...`.
       const summary = lines.filter((l) => /^Tests\s+/.test(l))
-      return summary.length > 0 ? summary[summary.length - 1] : lastOf(lines, 'no output')
+      if (summary.length === 0) return lastOf(lines, 'no output')
+      // vitest exits 1 on unhandled errors even when every test passed; its `Errors` line says so.
+      const errors = lines.filter((l) => /^Errors\s+\d+ errors?\b/.test(l))
+      const tests = summary[summary.length - 1]
+      return errors.length > 0 ? `${tests}; ${errors[errors.length - 1]}` : tests
     }
     case 'tsc': {
       // Counted from the lines, since piped tsc output may have no `Found N errors` summary.
@@ -119,7 +134,12 @@ function pickTellingLine(name: CheckName, output: string, exitCode: number | nul
       if (passed) return lines.find((l) => /\bbuilt in\b/.test(l)) ?? lastOf(lines, 'no output')
       const tsErrors = lines.filter((l) => TS_ERROR.test(l))
       if (tsErrors.length > 0) return `${plural(tsErrors.length, 'error')}; first: ${tsErrors[0]}`
-      return lines.find((l) => /error/i.test(l)) ?? lastOf(lines, 'no output')
+      // vite prints `error during build:`, then the cause, then a stack trace.
+      const marker = lines.findIndex((l) => /^error during build:?$/.test(l))
+      if (marker !== -1 && marker + 1 < lines.length) return lines[marker + 1]
+      // Only a line that starts like an error: rollup warnings ("... cause errors when bundled")
+      // and chunk names (`ErrorBoundary-abc.js`) merely contain the word.
+      return lines.find((l) => /^(error|Error|\[vite\])/.test(l)) ?? lastOf(lines, 'no output')
     }
   }
 }
@@ -127,12 +147,14 @@ function pickTellingLine(name: CheckName, output: string, exitCode: number | nul
 /** The check's line in the block, e.g. ``- lint (`npm run lint`): FAIL (exit 1) — ✖ 1 problem``. */
 export function checkLine(result: CheckResult): string {
   const label = `- ${result.name} (\`${result.display}\`)`
+  if (result.timedOut) return `${label}: FAIL — timed out after ${CHECK_TIMEOUT_MS / 60_000} min`
   if (result.error) return `${label}: FAIL — ${flattenLine(`could not run: ${result.error}`)}`
   if (result.signal) return `${label}: FAIL — killed by ${result.signal}`
   const status = result.exitCode === 0
     ? 'pass'
     : result.exitCode === null ? 'FAIL' : `FAIL (exit ${result.exitCode})`
-  return `${label}: ${status} — ${tellingLine(result.name, result.output, result.exitCode)}`
+  const telling = tellingLine(result.name, result.output, result.exitCode)
+  return `${label}: ${status} — ${result.note ? `${telling} (${flattenLine(result.note)})` : telling}`
 }
 
 /** Pass only when there were checks and every one exited 0. */
@@ -150,26 +172,44 @@ export function buildGateBlock(results: CheckResult[], tree: { commit: string; d
   })
 }
 
-/** The last `n` lines of a check's output, for stderr. */
+/** The last `n` lines of a check's output, for stderr, without npm's own lines. */
 export function failureTail(output: string, n: number = TAIL_LINES): string {
-  const lines = stripAnsi(output).replace(/\r/g, '').split('\n')
+  const lines = stripAnsi(output).replace(/\r/g, '').split('\n').filter((l) => !isNpmNoise(l.trim()))
   while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop()
   return lines.slice(-n).join('\n')
 }
 
+/**
+ * TSC_NO_FILES_NOTE when the root tsconfig.json (its text, or null if unreadable) has
+ * `"files": []` and no `include`, so `npx tsc --noEmit` checks nothing; otherwise undefined.
+ */
+export function tscNote(tsconfigText: string | null): string | undefined {
+  if (tsconfigText === null) return undefined
+  let config: unknown
+  try {
+    config = JSON.parse(tsconfigText)
+  } catch {
+    return undefined
+  }
+  if (typeof config !== 'object' || config === null) return undefined
+  const { files, include } = config as { files?: unknown; include?: unknown }
+  return Array.isArray(files) && files.length === 0 && include === undefined ? TSC_NO_FILES_NOTE : undefined
+}
+
 /** Large enough that a noisy test run is never cut off (the default ~1 MiB kills the child). */
 const MAX_BUFFER = 64 * 1024 * 1024
-/** A check that runs longer than this is killed and reported as failed. */
-const CHECK_TIMEOUT_MS = 20 * 60 * 1000
 
 function runCheck(check: GateCheck): CheckResult {
-  const res = spawnSync(check.command, check.args, {
+  // One merged pipe keeps stdout and stderr in order. `exec` makes the command the shell's own
+  // process, so the timeout's SIGTERM reaches it rather than only the shell.
+  const res = spawnSync('/bin/sh', ['-c', `exec ${check.display} 2>&1`], {
     encoding: 'utf8',
     maxBuffer: MAX_BUFFER,
     timeout: CHECK_TIMEOUT_MS,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
   })
+  const timedOut = (res.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT'
   return {
     name: check.name,
     display: check.display,
@@ -177,34 +217,67 @@ function runCheck(check: GateCheck): CheckResult {
     output: `${res.stdout ?? ''}${res.stderr ?? ''}`,
     ...(res.error ? { error: res.error.message } : {}),
     ...(res.signal ? { signal: res.signal } : {}),
+    ...(timedOut ? { timedOut: true } : {}),
   }
 }
 
-function main(): number {
-  // Taken before the checks run, so the block describes the tree the gate ran on.
-  let tree: { commit: string; dirty: boolean }
+function readRootTsconfig(): string | null {
   try {
-    tree = treeState()
+    return fs.readFileSync('tsconfig.json', 'utf8')
   } catch {
-    console.error('error: loop:gate could not read the commit and tree state from git')
+    return null
+  }
+}
+
+export interface GateDeps {
+  run: (check: GateCheck) => CheckResult
+  tree: () => { commit: string; dirty: boolean }
+  /** The root tsconfig.json's text, or null; read at run time for the tsc note. */
+  readTsconfig: () => string | null
+  stderr: (text: string) => void
+  stdout: (text: string) => void
+}
+
+const defaultDeps: GateDeps = {
+  run: runCheck,
+  tree: () => treeState(),
+  readTsconfig: readRootTsconfig,
+  stderr: (text) => console.error(text),
+  stdout: (text) => { process.stdout.write(text) },
+}
+
+export function main(deps: GateDeps = defaultDeps): number {
+  const { run, tree, readTsconfig, stderr, stdout } = deps
+  // Taken before the checks run, so the block describes the tree the gate ran on.
+  let state: { commit: string; dirty: boolean }
+  try {
+    state = tree()
+  } catch {
+    stderr('error: loop:gate could not read the commit and tree state from git')
     return 2
   }
 
   const results: CheckResult[] = []
   for (const check of GATE_CHECKS) {
-    console.error(`loop:gate: running ${check.display} ...`)
-    const result = runCheck(check)
+    stderr(`loop:gate: running ${check.display} ...`)
+    const result = run(check)
+    if (check.name === 'tsc') {
+      const note = tscNote(readTsconfig())
+      if (note) result.note = note
+    }
     results.push(result)
     if (result.exitCode !== 0) {
-      const why = result.error ?? (result.signal ? `killed by ${result.signal}` : `exit ${result.exitCode}`)
-      console.error(`--- ${check.name} failed (${why}): last ${TAIL_LINES} lines ---`)
+      const why = result.timedOut
+        ? `timed out after ${CHECK_TIMEOUT_MS / 60_000} min`
+        : result.error ?? (result.signal ? `killed by ${result.signal}` : `exit ${result.exitCode}`)
+      stderr(`--- ${check.name} failed (${why}): last ${TAIL_LINES} lines ---`)
       const tail = failureTail(result.output)
-      if (tail !== '') console.error(tail)
-      console.error(`--- end of ${check.name} ---`)
+      if (tail !== '') stderr(tail)
+      stderr(`--- end of ${check.name} ---`)
     }
   }
 
-  process.stdout.write(`${buildGateBlock(results, tree)}\n`)
+  stdout(`${buildGateBlock(results, state)}\n`)
   return gateVerdict(results) === 'pass' ? 0 : 1
 }
 
