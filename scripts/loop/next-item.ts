@@ -1,14 +1,27 @@
 // CLI for the weekly loop: prints what this run should do, as JSON, or "none".
 //   {"action":"fix","pr":N,"branch":"…","id":"#123","reviewers":[…],"agentFindings":A,"developerFindings":D,"comments":[url…]}
 //       an open loop PR has reviewer findings an agent may fix — fix those, start nothing new
-//   {"action":"new","id":"#123","number":123,"title":"…","openPrs":[…]}       take this issue
+//   {"action":"new","id":"#123","number":123,"title":"…","openPrs":[…]}       build this issue
+//       (+ "plan":{url,body},"approval":{url,body} when it is built from an approved plan)
+//   {"action":"plan","id":"#123","number":123,"title":"…","openPrs":[…]}      write a plan
+//       (+ "revise":{"plan":{url,body},"feedback":[{url,body}…]} when the developer answered it)
 // The backlog is the repository's GitHub issues; `id` is the issue number as written in branch
 // names and PR titles. A PR opened before the move to issues carries a `LibPage-NNN` id instead.
 // Usage: npm run loop:next
-// Exit codes: 0 = printed an action or "none"; 2 = too many loop PRs already open; 1 = gh failed.
+// Exit codes: 0 = printed an action or "none"; 2 = too many loop PRs open and no plan to write;
+//             1 = gh failed.
 import { execFileSync } from 'node:child_process'
+import { type RestIssueComment, toPlanComment } from './issue'
 import { type LoopPrData, selectFixTarget } from './review-pass'
-import { type IssueData, isLoopPullRequest, itemIdsOf, selectNextIssue } from './select-item'
+import {
+  actionPayload,
+  eligibleIssues,
+  type IssueData,
+  isLoopPullRequest,
+  itemIdsOf,
+  needsPlan,
+  selectNextAction,
+} from './select-item'
 
 // Named outright rather than left to gh's `{owner}/{repo}` placeholder, so the picker does not
 // depend on how gh resolves the current repository in the cloud environment.
@@ -132,12 +145,6 @@ function main(): void {
     return
   }
 
-  if (open.length >= MAX_OPEN) {
-    const list = open.map((pr) => `#${pr.number} ${pr.title}`).join('; ')
-    console.error(`${open.length} loop PRs are open (limit ${MAX_OPEN}) — nothing to do until one is merged or closed: ${list}`)
-    process.exit(2)
-  }
-
   // Skip every issue that ever had a loop PR: in flight (open), rejected (closed unmerged),
   // or done (merged). A merged PR normally closed its issue already; excluding it anyway
   // covers a PR that only referred to the issue, so a part-done issue is not taken again
@@ -147,10 +154,30 @@ function main(): void {
     for (const id of itemIdsOf({ branch: pr.headRefName, title: pr.title, body: pr.body })) excluded.add(id)
   }
 
-  // Only the repository owner's issues are instructions; see selectNextIssue.
-  const item = selectNextIssue(listCandidateIssues(), REPO.split('/')[0], excluded)
+  // Only the repository owner's issues are instructions; see selectNextIssue. Comments are
+  // fetched only for the eligible issues that need a plan: plan approval is read from them.
+  const owner = REPO.split('/')[0]
+  const issues = eligibleIssues(listCandidateIssues(), owner, excluded)
+  for (const issue of issues) {
+    if (needsPlan(issue.labels)) issue.comments = listIssueComments(issue.number)
+  }
+
+  // The open-PR limit stops new builds only; a run at the limit may still write a plan.
+  const atLimit = open.length >= MAX_OPEN
+  const next = selectNextAction(issues, owner, excluded, { canBuild: !atLimit })
+  if (!next && atLimit) {
+    const list = open.map((pr) => `#${pr.number} ${pr.title}`).join('; ')
+    console.error(`${open.length} loop PRs are open (limit ${MAX_OPEN}) and no plan is due — nothing to do until one is merged or closed: ${list}`)
+    process.exit(2)
+  }
   // `openPrs` lets the agent check its change against work already in flight.
-  console.log(item ? JSON.stringify({ action: 'new', ...item, openPrs: open.map((pr) => pr.number) }) : 'none')
+  console.log(next ? JSON.stringify(actionPayload(next, open.map((pr) => pr.number))) : 'none')
+}
+
+// Every comment on one issue, oldest first, with the fields plan approval needs (app stamp,
+// author association, created and edited times).
+function listIssueComments(issue: number): NonNullable<IssueData['comments']> {
+  return restList<RestIssueComment>(`repos/${REPO}/issues/${issue}/comments?per_page=100`).map(toPlanComment)
 }
 
 try {

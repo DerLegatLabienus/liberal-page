@@ -5,8 +5,11 @@ import {
   isLoopBranch,
   isLoopPullRequest,
   itemIdsOf,
+  actionPayload,
+  selectNextAction,
   selectNextIssue,
 } from '../../../scripts/loop/select-item'
+import type { PlanComment } from '../../../scripts/loop/issue'
 
 const OWNER = 'DerLegatLabienus'
 const none = new Set<string>()
@@ -216,5 +219,102 @@ describe('extractItemId', () => {
   it('does not read a number that is not in the ID position', () => {
     expect(extractItemId('fix/auth-2-factor')).toBeNull()
     expect(extractItemId('chore: bump to 1.2.3 #456')).toBeNull()
+  })
+})
+
+describe('selectNextAction', () => {
+  let clock = 0
+  function comment(body: string, o: Partial<PlanComment> = {}): PlanComment {
+    const t = new Date(Date.UTC(2026, 9, 15, 1, clock++)).toISOString()
+    return { authorLogin: OWNER, body, appSlug: null, authorAssociation: 'OWNER', createdAt: t, updatedAt: t, url: `c${clock}`, ...o }
+  }
+  const planComment = () => comment('### loop — plan\n\nthe plan', { appSlug: 'claude' })
+  const ready = (n: number, labels: string[], comments?: PlanComment[]) =>
+    issue(n, ['ready-for-agent', 'P2', ...labels], comments ? { comments } : {})
+  const build = { canBuild: true }
+
+  it('builds a size:S issue directly', () => {
+    expect(selectNextAction([ready(5, ['size:S'])], OWNER, none, build)).toEqual({
+      action: 'new', item: { id: '#5', number: 5, title: 'Issue 5' },
+    })
+  })
+
+  it('plans a size:M, size:L or unsized issue that has no plan', () => {
+    for (const labels of [['size:M'], ['size:L'], []]) {
+      expect(selectNextAction([ready(6, labels, [])], OWNER, none, build)).toEqual({
+        action: 'plan', item: { id: '#6', number: 6, title: 'Issue 6' },
+      })
+    }
+  })
+
+  it('treats an issue whose comments were not fetched as needing a plan, never as approved', () => {
+    expect(selectNextAction([ready(6, ['size:M'])], OWNER, none, build)?.action).toBe('plan')
+  })
+
+  it('builds an issue with an approved plan and hands over the plan and approval', () => {
+    const p = planComment()
+    const a = comment('Approved, and keep the old label.')
+    expect(selectNextAction([ready(7, ['size:M'], [p, a])], OWNER, none, build)).toEqual({
+      action: 'new', item: { id: '#7', number: 7, title: 'Issue 7' }, plan: p, approval: a,
+    })
+  })
+
+  it('skips an issue whose plan waits for an answer', () => {
+    expect(selectNextAction([ready(8, ['size:M'], [planComment()])], OWNER, none, build)).toBeNull()
+  })
+
+  it('revises a plan the developer answered without approving, with the feedback', () => {
+    const p = planComment()
+    const f = comment('Use the existing hook.')
+    expect(selectNextAction([ready(9, ['size:L'], [p, f])], OWNER, none, build)).toEqual({
+      action: 'plan', item: { id: '#9', number: 9, title: 'Issue 9' }, revise: { plan: p, feedback: [f] },
+    })
+  })
+
+  it('prefers any build over any plan, whatever the priority', () => {
+    const issues = [issue(3, ['ready-for-agent', 'P0', 'size:M'], { comments: [] }), issue(40, ['ready-for-agent', 'P3', 'size:S'])]
+    expect(selectNextAction(issues, OWNER, none, build)?.item.number).toBe(40)
+  })
+
+  it('at the open-PR limit still plans, but never builds', () => {
+    const issues = [ready(4, ['size:S']), ready(10, ['size:M'], [])]
+    expect(selectNextAction(issues, OWNER, none, { canBuild: false })).toEqual({
+      action: 'plan', item: { id: '#10', number: 10, title: 'Issue 10' },
+    })
+    expect(selectNextAction([ready(4, ['size:S'])], OWNER, none, { canBuild: false })).toBeNull()
+  })
+
+  it('keeps every existing refusal: risky, needs-info, not the owner\'s, excluded', () => {
+    const issues = [
+      ready(11, ['size:S', 'risky']),
+      ready(12, ['size:S', 'needs-info']),
+      issue(13, ['ready-for-agent', 'size:S'], { authorLogin: 'a-stranger' }),
+      ready(14, ['size:S']),
+    ]
+    expect(selectNextAction(issues, OWNER, new Set(['#14']), build)).toBeNull()
+  })
+})
+
+describe('actionPayload', () => {
+  const pc = (body: string, url: string): PlanComment =>
+    ({ authorLogin: OWNER, body, appSlug: null, authorAssociation: 'OWNER', createdAt: 't', updatedAt: 't', url })
+  const item = { id: '#7', number: 7, title: 'Issue 7' }
+
+  it('prints a plain build as before', () => {
+    expect(actionPayload({ action: 'new', item }, [3])).toEqual({ action: 'new', id: '#7', number: 7, title: 'Issue 7', openPrs: [3] })
+  })
+
+  it('hands a planned build the plan and the approval, as url and text', () => {
+    expect(actionPayload({ action: 'new', item, plan: pc('### loop — plan\n\nP', 'u1'), approval: pc('Approved, and X', 'u2') }, [])).toEqual({
+      action: 'new', id: '#7', number: 7, title: 'Issue 7', openPrs: [],
+      plan: { url: 'u1', body: '### loop — plan\n\nP' }, approval: { url: 'u2', body: 'Approved, and X' },
+    })
+  })
+
+  it('hands a revision the previous plan and every piece of feedback', () => {
+    expect(actionPayload({ action: 'plan', item, revise: { plan: pc('P', 'u1'), feedback: [pc('F1', 'u2'), pc('F2', 'u3')] } }, [4])).toEqual({
+      action: 'plan', id: '#7', number: 7, title: 'Issue 7', openPrs: [4],
+      revise: { plan: { url: 'u1', body: 'P' }, feedback: [{ url: 'u2', body: 'F1' }, { url: 'u3', body: 'F2' }] },
+    })
   })
 })

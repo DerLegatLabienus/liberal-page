@@ -11,6 +11,18 @@ const REPO = process.env.LOOP_REPO ?? 'DerLegatLabienus/liberal-page'
 export interface IssueComment {
   authorLogin: string
   body: string
+  /** GitHub's `performed_via_github_app.slug`: set when the comment was posted through an app. */
+  appSlug?: string | null
+}
+
+/** A comment with everything plan approval needs. All fields come from GitHub's REST API. */
+export interface PlanComment extends IssueComment {
+  appSlug: string | null
+  /** GitHub's `author_association`: OWNER, COLLABORATOR, MEMBER, CONTRIBUTOR, NONE, … */
+  authorAssociation: string
+  createdAt: string
+  updatedAt: string
+  url: string
 }
 
 // Every comment the loop posts carries a heading of this shape: `### loop — blocked`, with a
@@ -20,13 +32,64 @@ export interface IssueComment {
 const LOOP_HEADING = /^\s*###\s+loop\s+[—–-]/im
 
 /**
+ * True for a comment the loop posted: it carries GitHub's app stamp (the cloud routine posts
+ * through the Claude app, and an app cannot post without leaving it), or a `### loop — `
+ * heading. A comment with neither is the developer's.
+ */
+export function isLoopComment(comment: IssueComment): boolean {
+  return Boolean(comment.appSlug) || LOOP_HEADING.test(comment.body)
+}
+
+/**
  * The comments the loop may treat as the developer's words: written by the repository owner and
  * not one of the loop's own. The loop posts as the owner's account, so its comments have to be
- * recognised by their heading; without this it would read its own past output as instructions.
- * Anyone else's comment is dropped because the repository is public.
+ * recognised by their stamp or heading; without this it would read its own past output as
+ * instructions. Anyone else's comment is dropped because the repository is public.
  */
 export function developerComments(comments: IssueComment[], owner: string): IssueComment[] {
-  return comments.filter((comment) => isOwner(comment.authorLogin, owner) && !LOOP_HEADING.test(comment.body))
+  return comments.filter((comment) => isOwner(comment.authorLogin, owner) && !isLoopComment(comment))
+}
+
+// A plan comment's heading: `### loop — plan` (also on a revised plan).
+const PLAN_HEADING = /^\s*###\s+loop\s+[—–-]\s*plan\b/im
+// Who may approve (spec, "Approving a plan"). CONTRIBUTOR only means a commit was once merged.
+const APPROVERS = new Set(['OWNER', 'COLLABORATOR', 'MEMBER'])
+const APPROVED = /^\s*approved\b/i
+
+export type PlanState =
+  | { state: 'needs-plan' }
+  | { state: 'waiting'; plan: PlanComment }
+  | { state: 'approved'; plan: PlanComment; approval: PlanComment }
+  | { state: 'revise'; plan: PlanComment; feedback: PlanComment[] }
+
+const time = (iso: string) => Date.parse(iso)
+
+/**
+ * Where an issue's plan stands, decided in code from its comments (oldest or newest first, it
+ * does not matter). Spec: "Approving a plan". Fail-closed rules:
+ *   - The plan is the newest comment with a `### loop — plan` heading posted from the owner's
+ *     account (the loop posts as the owner).
+ *   - Only replies created after the plan was last edited count, so a plan edited after its
+ *     approval needs a new one. A revised plan is always a new comment.
+ *   - A reply counts only from an approver (OWNER, COLLABORATOR, MEMBER), typed by a person: no
+ *     app stamp and no loop heading. The loop posts as the owner but always through the app,
+ *     so it cannot approve its own plan. Other comments are ignored.
+ *   - The newest counting reply decides. It approves only if it begins with "Approved" and was
+ *     never edited (an edit could have been made by the loop's account); any other reply is
+ *     feedback, and the plan is revised.
+ */
+export function planState(comments: PlanComment[], owner = REPO.split('/')[0]): PlanState {
+  const sorted = [...comments].sort((a, b) => time(a.createdAt) - time(b.createdAt))
+  const plans = sorted.filter((c) => isOwner(c.authorLogin, owner) && PLAN_HEADING.test(c.body))
+  const plan = plans.at(-1)
+  if (!plan) return { state: 'needs-plan' }
+  const replies = sorted.filter(
+    (c) => time(c.createdAt) > time(plan.updatedAt) && APPROVERS.has(c.authorAssociation) && !isLoopComment(c),
+  )
+  const last = replies.at(-1)
+  if (!last) return { state: 'waiting', plan }
+  if (APPROVED.test(last.body) && last.updatedAt === last.createdAt) return { state: 'approved', plan, approval: last }
+  return { state: 'revise', plan, feedback: replies }
 }
 
 export function isOwner(login: string, owner: string): boolean {
@@ -40,6 +103,29 @@ export function formatIssue(number: number, title: string, body: string, comment
     parts.push('', `## Developer comment ${index + 1}`, '', comment.body.trim())
   })
   return parts.join('\n')
+}
+
+/** One issue comment as GitHub's REST API returns it (the fields the loop reads). */
+export interface RestIssueComment {
+  body: string | null
+  html_url: string
+  user: { login: string } | null
+  author_association: string
+  performed_via_github_app: { slug: string } | null
+  created_at: string
+  updated_at: string
+}
+
+export function toPlanComment(c: RestIssueComment): PlanComment {
+  return {
+    authorLogin: c.user?.login ?? '',
+    body: c.body ?? '',
+    appSlug: c.performed_via_github_app?.slug ?? null,
+    authorAssociation: c.author_association ?? '',
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    url: c.html_url,
+  }
 }
 
 function gh(args: string[]): string {
@@ -65,8 +151,8 @@ function main(): void {
   const comments = gh(['api', '--paginate', `repos/${REPO}/issues/${number}/comments?per_page=100`, '--jq', '.[]'])
     .split('\n')
     .filter((line) => line.trim() !== '')
-    .map((line) => JSON.parse(line) as { body: string | null; user: { login: string } | null })
-    .map((c) => ({ authorLogin: c.user?.login ?? '', body: c.body ?? '' }))
+    .map((line) => JSON.parse(line) as RestIssueComment)
+    .map(toPlanComment)
   console.log(formatIssue(number, issue.title, issue.body ?? '', developerComments(comments, owner)))
 }
 

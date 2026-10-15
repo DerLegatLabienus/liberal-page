@@ -1,6 +1,8 @@
 // Pure selection of the loop's next issue (spec:
-// docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md). No I/O here —
-// next-item.ts supplies the issues and the IDs to skip.
+// docs/superpowers/specs/2026-10-13-backlog-to-github-issues-design.md) and of what to do with
+// it (docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md, "How an issue flows").
+// No I/O here — next-item.ts supplies the issues, their comments and the IDs to skip.
+import { type PlanComment, planState } from './issue'
 
 export interface LoopItem {
   /** The issue as it is written in branch names, titles and `Closes` lines: `#123`. */
@@ -17,6 +19,8 @@ export interface IssueData {
   authorLogin: string
   /** GitHub's issues endpoint also returns pull requests; those are never items. */
   isPullRequest: boolean
+  /** The issue's comments, fetched only for an issue that needs a plan. */
+  comments?: PlanComment[]
 }
 
 const READY_FOR_AGENT = 'ready-for-agent'
@@ -57,6 +61,12 @@ function isExcluded(issue: IssueData, excludedIds: Set<string>): boolean {
  * must not make its text instructions.
  */
 export function selectNextIssue(issues: IssueData[], owner: string, excludedIds: Set<string>): LoopItem | null {
+  const next = eligibleIssues(issues, owner, excludedIds)[0]
+  return next ? toItem(next) : null
+}
+
+/** The issues selectNextIssue may take, in the order it takes them. */
+export function eligibleIssues(issues: IssueData[], owner: string, excludedIds: Set<string>): IssueData[] {
   const eligible = issues.filter(
     (issue) =>
       !issue.isPullRequest &&
@@ -67,8 +77,53 @@ export function selectNextIssue(issues: IssueData[], owner: string, excludedIds:
       !isExcluded(issue, excludedIds),
   )
   eligible.sort((a, b) => priorityRank(a.labels) - priorityRank(b.labels) || a.number - b.number)
-  const next = eligible[0]
-  return next ? { id: `#${next.number}`, number: next.number, title: next.title.trim() } : null
+  return eligible
+}
+
+function toItem(issue: IssueData): LoopItem {
+  return { id: `#${issue.number}`, number: issue.number, title: issue.title.trim() }
+}
+
+/** Only a `size:S` issue is built straight from its acceptance criteria; anything else, an
+ *  unsized issue included, gets a plan first. */
+export function needsPlan(labels: string[]): boolean {
+  return !hasLabel(labels, 'size:s')
+}
+
+export type NextAction =
+  | { action: 'new'; item: LoopItem; plan?: PlanComment; approval?: PlanComment }
+  | { action: 'plan'; item: LoopItem; revise?: { plan: PlanComment; feedback: PlanComment[] } }
+
+/**
+ * What this run does with the backlog, after any review pass (spec, "How an issue flows"): the
+ * first eligible issue that is ready to build (`size:S`, or with an approved plan), else the
+ * first one that needs a plan or a revised plan. An issue whose plan waits for an answer is
+ * skipped. At the open-PR limit (`canBuild` false) builds stop but plans do not. An issue whose
+ * comments were not fetched counts as having none, so it can only be planned, never built.
+ */
+export function selectNextAction(
+  issues: IssueData[],
+  owner: string,
+  excludedIds: Set<string>,
+  { canBuild }: { canBuild: boolean },
+): NextAction | null {
+  let plan: NextAction | null = null
+  for (const issue of eligibleIssues(issues, owner, excludedIds)) {
+    const item = toItem(issue)
+    if (!needsPlan(issue.labels)) {
+      if (canBuild) return { action: 'new', item }
+      continue
+    }
+    const state = planState(issue.comments ?? [], owner)
+    if (state.state === 'approved') {
+      if (canBuild) return { action: 'new', item, plan: state.plan, approval: state.approval }
+    } else if (state.state === 'needs-plan') {
+      plan ??= { action: 'plan', item }
+    } else if (state.state === 'revise') {
+      plan ??= { action: 'plan', item, revise: { plan: state.plan, feedback: state.feedback } }
+    }
+  }
+  return plan
 }
 
 // Loop branches are ordinary short-lived trunk-based branches: a conventional-commit type,
@@ -138,4 +193,16 @@ export function itemIdsOf(pr: { branch: string; title: string; body: string }): 
   }
   for (const match of pr.body.matchAll(BODY_REFS)) ids.add(`#${match[1]}`)
   return [...ids]
+}
+
+const quote = (c: PlanComment) => ({ url: c.url, body: c.body })
+
+/** The JSON `loop:next` prints for a backlog action. Comment text goes in as written; the agent
+ *  reads it as the developer's words (only approvers' replies reach it). */
+export function actionPayload(next: NextAction, openPrs: number[]): Record<string, unknown> {
+  const base = { action: next.action, ...next.item, openPrs }
+  if (next.action === 'new') {
+    return next.plan && next.approval ? { ...base, plan: quote(next.plan), approval: quote(next.approval) } : base
+  }
+  return next.revise ? { ...base, revise: { plan: quote(next.revise.plan), feedback: next.revise.feedback.map(quote) } } : base
 }

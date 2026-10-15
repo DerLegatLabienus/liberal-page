@@ -134,7 +134,9 @@ branches, no PRs, no worktrees. Never run `superpowers:using-git-worktrees` or
 
 **PR lane — unattended work only** (the loop: `npm run loop:next` picks the next issue from the
 backlog, `scripts/loop/PROMPT.md` is its instructions). It only ever opens a pull request or pushes to its
-own PR branch, and never pushes to `master` or merges. The developer merges by hand. Four named
+own PR branch, and never pushes to `master` or merges. Anything larger than `size:S` gets a plan
+comment on the issue first, built only after the developer replies `Approved` (rules:
+`docs/agents/backlog-rules.md`). The developer merges by hand. Four named
 reviewers (`.claude/agents/*-reviewer.md`) comment on every PR and mark each finding
 `Needs: agent` or `Needs: developer`.
 

@@ -42,7 +42,7 @@ Every issue is written as an agile item, with these sections:
 | Size | `size:S`, `size:M`, `size:L` | A rough estimate |
 | Priority | `P0`, `P1`, `P2`, `P3` | `P0` is reserved for something broken in production |
 | Workflow | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` | Not assessed yet; questions for the author, or the loop is blocked; assessed, clear and wanted, the loop may take it; wanted, the developer builds it; not wanted or already done (the developer closes it) |
-| Other | `risky`, `loop` | Risky tier; a PR opened by the loop |
+| Other | `risky`, `loop`, `plan-ready` | Risky tier; a PR opened by the loop; the loop posted a plan that waits for the developer's answer (a signal only; the picker does not read it) |
 
 The workflow labels are the five triage roles of the agent skills, under the same names, so
 the loop, the skills and the developer's sessions use one vocabulary (since 2026-10-15,
@@ -84,8 +84,20 @@ built.
   number. A loop PR is one the owner opened from this repository on a `<type>/<number>-slug`
   branch or with the `loop` label.
 - It reads the issue body and the owner's comments (`npm run -s loop:issue -- <number>`), never
-  anyone else's. Its own comments begin `### loop — ` and are filtered out, because it posts
-  under the owner's account.
+  anyone else's. Its own comments are filtered out, because it posts under the owner's account:
+  a comment is the loop's when it carries GitHub's app stamp (`performed_via_github_app`) or
+  begins `### loop — `.
+- **`size:S` is built directly. `size:M`, `size:L` and unsized issues get a plan first.** The
+  loop posts one `### loop — plan` comment, adds `plan-ready`, and stops. It builds only after
+  the plan is approved, and follows the plan as its brief.
+- **Approving a plan:** reply with a comment that begins `Approved` (any capitalisation). Text
+  after the word amends the plan. The picker checks in code that the reply is newer than the
+  plan, comes from the owner or a collaborator, was typed by a person (no app stamp, no loop
+  heading), and was never edited. Any other reply is feedback: the next run posts a revised plan
+  as a new comment. The newest reply decides. A session on the developer's machine posts with
+  no app stamp, so it never posts `Approved` on the developer's behalf.
+- One action per run: a review pass first, then a build, then a plan. An issue whose plan waits
+  for an answer is skipped. Three open loop PRs stop builds, not plans.
 - Its branch is `<type>/<number>-slug`; its PR title ends `(#<number>)` and its body says
   `Closes #<number>`, or `Refs #<number>` when only part of the issue is done.
 - When blocked it posts one `### loop — blocked` comment and swaps `ready-for-agent` for
@@ -94,5 +106,6 @@ built.
 - It never creates an issue, never adds `ready-for-agent`, and never edits an issue's body. These
   are instructions in its prompt; nothing in GitHub enforces them.
 
-The plan-first changes to this (plans, approval, risky work, proof scripts) are designed in
-`docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md` and are not built yet.
+Design: `docs/superpowers/specs/2026-10-14-loop-plan-and-proof-design.md`. Built so far: plans
+and approval. Not built yet: proof blocks and review inside the run, risky work, wider scope and
+loop triage.
