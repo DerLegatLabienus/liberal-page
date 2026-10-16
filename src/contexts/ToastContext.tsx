@@ -1,22 +1,8 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { ToastContext, type ToastType } from '@/contexts/toast-context'
 
-type ToastType = 'error' | 'success' | 'info'
 interface Toast { id: number; message: string; type: ToastType }
-interface ToastContextValue { toast: (message: string, type?: ToastType) => void }
-
-const ToastContext = createContext<ToastContextValue | null>(null)
-
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast must be used within ToastProvider')
-  return ctx
-}
-
-/** Returns null outside a provider (so standalone components/tests don't crash). */
-export function useToastOptional(): ToastContextValue | null {
-  return useContext(ToastContext)
-}
 
 const DISMISS_MS = 5000
 

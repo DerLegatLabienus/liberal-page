@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useToast } from '@/contexts/ToastContext'
+import { useToast } from '@/hooks/useToast'
 import { api, type JoinAnalyticsData } from '@/lib/api-client'
 
 /** Read-only join click-through analytics: all-time total, per-combo breakdown, last 14 days. */
