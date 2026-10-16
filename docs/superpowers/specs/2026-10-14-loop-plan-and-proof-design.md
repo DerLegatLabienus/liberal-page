@@ -315,7 +315,8 @@ line, with the commit it ran at.
   the file passed and the run exits 0; a file that cannot load on `master`'s source counts as
   failing there only when it is new on the branch; a refactor also fails when it changes test
   support files under `tests/`, `vitest.config.ts`, `src/test-setup.ts`, `src/__mocks__/` or a
-  snapshot, or the names a test imports; an explicit `--base` resolves to its merge base with
+  snapshot, or the set of names a test imports (moving a name to another import statement is
+  allowed; renaming, aliasing, adding or removing one, or changing its kind is not); an explicit `--base` resolves to its merge base with
   the branch.
 
 The run on `master`'s source uses a temporary git worktree outside the repo, with
