@@ -43,6 +43,10 @@ export default {
           DEFAULT: 'oklch(var(--card) / <alpha-value>)',
           foreground: 'oklch(var(--card-foreground) / <alpha-value>)',
         },
+        scrim: {
+          DEFAULT: 'oklch(var(--scrim) / <alpha-value>)',
+          foreground: 'oklch(var(--scrim-foreground) / <alpha-value>)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

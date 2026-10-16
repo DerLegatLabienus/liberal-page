@@ -39,14 +39,6 @@ describe('GallerySection — design tokens only', () => {
   // Raw Tailwind palette classes (bg-white, bg-slate-100, hover:bg-black/70, text-white/80 …).
   const PALETTE_CLASS = /^(?:[a-z-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|divide)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})(?:\/\d+)?$/
 
-  // Waiting on a design decision (#17): the lightbox is a dark scrim with white controls and
-  // text over photographs, which docs/design-system.md lists as not covered by a token yet.
-  // Shrink this list as tokens are decided; anything not listed here fails the test.
-  const PENDING_DESIGN_DECISION = new Set([
-    'bg-black/95', 'bg-black/50', 'hover:bg-black/70', 'hover:bg-black/80',
-    'text-white', 'text-white/80', 'text-white/60', 'ring-white',
-  ])
-
   function paletteClasses(root: Element): string[] {
     return [root, ...Array.from(root.querySelectorAll('*'))]
       .flatMap((el) => Array.from(el.classList))
@@ -57,7 +49,7 @@ describe('GallerySection — design tokens only', () => {
     for (const c of ['bg-white', 'bg-slate-100', 'hover:bg-black/70', 'text-white/80', 'ring-white']) {
       expect(c).toMatch(PALETTE_CLASS)
     }
-    for (const c of ['bg-card', 'bg-muted', 'text-primary', 'border-border', 'ring-transparent']) {
+    for (const c of ['bg-card', 'bg-muted', 'text-primary', 'border-border', 'ring-transparent', 'bg-scrim/95', 'text-scrim-foreground/80']) {
       expect(c).not.toMatch(PALETTE_CLASS)
     }
   })
@@ -67,13 +59,13 @@ describe('GallerySection — design tokens only', () => {
     expect(paletteClasses(container)).toEqual([])
   })
 
-  it('renders no palette class in the lightbox outside the pending design decisions', async () => {
+  it('renders no palette class in the lightbox', async () => {
     render(<GallerySection maxItems={4} />)
     await userEvent.click(screen.getByTestId('gallery-view-all'))
     // The lightbox is portalled outside the section's container. Scan this section's own panel
     // (the parent of its arrows); the shared Dialog backdrop belongs to ui/dialog, not this issue.
     const panel = screen.getByRole('button', { name: 'Next' }).parentElement!
-    expect(paletteClasses(panel)).toContain('bg-black/95')
-    expect(paletteClasses(panel).filter((c) => !PENDING_DESIGN_DECISION.has(c))).toEqual([])
+    expect(panel).toHaveClass('bg-scrim/95')
+    expect(paletteClasses(panel)).toEqual([])
   })
 })

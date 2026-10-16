@@ -107,8 +107,8 @@ export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
 
       <Dialog open={selectedIndex !== null} onOpenChange={(open) => { if (!open) setSelectedIndex(null) }}>
         <DialogContent>
-          <div dir={direction} className="relative rounded-xl bg-black/95 p-2 shadow-2xl">
-            <DialogClose className="absolute end-3 top-3 z-10 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70">
+          <div dir={direction} className="relative rounded-xl bg-scrim/95 p-2 shadow-2xl">
+            <DialogClose className="absolute end-3 top-3 z-10 rounded-full bg-scrim/50 p-1.5 text-scrim-foreground hover:bg-scrim/70">
               <XIcon className="h-5 w-5" />
               <span className="sr-only">Close</span>
             </DialogClose>
@@ -125,7 +125,7 @@ export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
             <button
               onClick={() => step(-1)}
               disabled={selectedIndex === 0}
-              className="absolute start-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/80 disabled:opacity-30"
+              className="absolute start-3 top-1/2 -translate-y-1/2 rounded-full bg-scrim/50 p-3 text-scrim-foreground transition hover:bg-scrim/80 disabled:opacity-30"
               aria-label="Previous"
             >
               <PrevIcon className="h-6 w-6" />
@@ -133,15 +133,15 @@ export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
             <button
               onClick={() => step(1)}
               disabled={selectedIndex === gallery.length - 1}
-              className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/80 disabled:opacity-30"
+              className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-scrim/50 p-3 text-scrim-foreground transition hover:bg-scrim/80 disabled:opacity-30"
               aria-label="Next"
             >
               <NextIcon className="h-6 w-6" />
             </button>
 
             <div className="flex items-center justify-center gap-3 px-2 pt-3 pb-1">
-              {caption && <p className="text-center text-sm text-white/80">{caption}</p>}
-              <span dir="ltr" className="shrink-0 text-xs font-medium text-white/60">
+              {caption && <p className="text-center text-sm text-scrim-foreground/80">{caption}</p>}
+              <span dir="ltr" className="shrink-0 text-xs font-medium text-scrim-foreground/60">
                 {(selectedIndex ?? 0) + 1} / {gallery.length}
               </span>
             </div>
@@ -161,7 +161,7 @@ export default function GallerySection({ maxItems }: GallerySectionProps = {}) {
                     aria-label={`תמונה ${i + 1}`}
                     onClick={() => setSelectedIndex(i)}
                     className={`h-12 w-16 shrink-0 overflow-hidden rounded ring-2 transition ${
-                      i === selectedIndex ? 'ring-white' : 'opacity-50 ring-transparent hover:opacity-100'
+                      i === selectedIndex ? 'ring-scrim-foreground' : 'opacity-50 ring-transparent hover:opacity-100'
                     }`}
                   >
                     <img

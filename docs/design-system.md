@@ -44,6 +44,13 @@ Colors are **oklch design tokens**, defined in `src/index.css` and exposed as Ta
 | `bg-warning` / `text-warning` | Needs attention: something due soon, a draft, an abstention, a caution note |
 | `border-border`, `border-input` | Hairline borders, field borders |
 | `ring-ring` | Focus ring (brand blue) |
+| `bg-scrim` / `text-scrim-foreground` | Dark overlay over photographs (e.g. the gallery lightbox) and the text, icons and rings on it |
+
+**Scrim.** `scrim` (black) and `scrim-foreground` (white), added 2026-10-16, are the one pair that
+does **not** change in dark mode: a photo viewer stays dark in either theme. Set the strength with an
+opacity modifier: `bg-scrim/95` for a panel, `bg-scrim/50` → `hover:bg-scrim/70` for a control on a
+photo, `text-scrim-foreground/80` for secondary text. Use it only over photographs or media, never as
+a general dark surface.
 
 **Status colours.** `success` and `warning` (added 2026-10-14) follow the same three shapes as
 `destructive`, so a status reads the same everywhere:
@@ -59,7 +66,7 @@ Swap `success` for `warning` or `destructive` as the meaning requires. Do not re
 
 **Not covered by a token yet** (leave as they are and flag for a design decision; do not invent
 one): per-kind accent colours (the MK card's purple, the constitution chapters' own colours), the
-brand gradient on the hero and join sections, and white text or dark scrims over photographs.
+brand gradient on the hero and join sections.
 
 `--radius` is `0.625rem`; use `rounded-md`/`rounded-lg`/`rounded-xl` off it, not arbitrary pixel radii.
 `--popover`, `--chart-*`, `--sidebar-*` are full `oklch(...)` values (not alpha-injectable).

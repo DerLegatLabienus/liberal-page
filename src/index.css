@@ -28,6 +28,9 @@
     --border: 0.922 0 0;
     --input: 0.922 0 0;
     --ring: 0.546 0.245 262.881;
+    /* Dark overlay over photographs, and what sits on it. Same in both themes: not in .dark. */
+    --scrim: 0 0 0;
+    --scrim-foreground: 1 0 0;
     --radius: 0.625rem;
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
