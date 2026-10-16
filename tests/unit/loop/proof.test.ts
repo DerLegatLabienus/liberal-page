@@ -282,6 +282,39 @@ describe('compareRefactorTests', () => {
       '`tests/gone.test.ts`: test file deleted',
     ])
   })
+
+  const compareOne = (baseText: string, headText: string) =>
+    compareRefactorTests([{ path: 'tests/a.test.ts', baseText, headText }])
+  const body = "\nit('a', () => {\n  expect(a()).toBe(1)\n})"
+
+  it('passes a name moved to its own import from another module', () => {
+    expect(compareOne(
+      "import { Provider, useThing } from '@/contexts/Thing'" + body,
+      "import { Provider } from '@/contexts/Thing'\nimport { useThing } from '@/hooks/useThing'" + body,
+    )).toEqual([])
+    expect(compareOne(
+      "import { b } from './b'\nimport { a } from './a'" + body,
+      "import { a, b } from './ab'" + body,
+    )).toEqual([])
+  })
+
+  it('reports a changed set of imported names, whatever the grouping', () => {
+    const changed = (head: string) => compareOne("import { a } from './a'" + body, head + body)
+    expect(changed("import { b as a } from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: removed `a`, added `b as a`'])
+    expect(changed("import { a } from './a'\nimport { extra } from './x'")).toEqual(['`tests/a.test.ts`: imported names changed: added `extra`'])
+    expect(changed("import a from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: removed `a`, added `default as a`'])
+    expect(changed("import * as a from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: removed `a`, added `* as a`'])
+    expect(changed("import { type a } from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: removed `a`, added `type a`'])
+    expect(changed("import type { a } from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: removed `a`, added `type a`'])
+    expect(changed("import '../setup'\nimport { a } from './a'")).toEqual(['`tests/a.test.ts`: imported names changed: added side-effect import'])
+  })
+
+  it('still reports changed logic after a regrouped import', () => {
+    expect(compareOne(
+      "import { a, b } from './ab'" + body,
+      "import { a } from './a'\nimport { b } from './b'\nit('a', () => {\n  expect(a()).toBe(2)\n})",
+    )).toEqual(['`tests/a.test.ts`: test logic changed: `expect(a()).toBe(1)` became `expect(a()).toBe(2)`'])
+  })
 })
 
 describe('refactorGuardedChanges', () => {

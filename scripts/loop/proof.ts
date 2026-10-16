@@ -21,9 +21,11 @@
 //   outside any test fails the proof.
 // - Refactor: new tests added to an existing test file count as changed logic (only a brand-new
 //   test file is allowed), so a refactor cannot slip in tests never run against master's source.
-//   Imported names are compared too; only quoted module paths (import, export-from, import(),
-//   vi.mock, vi.doMock, vi.importActual and friends) and the layout of multi-line imports are
-//   ignored. Any change to test infrastructure fails: non-test files under tests/,
+//   Imported names are compared too, as a set: each name with its kind (named, default,
+//   namespace, type-only) and local alias, plus side-effect imports, so moving a name to another
+//   import statement is no change but renaming, aliasing or adding one is. Only quoted module
+//   paths (import, export-from, import(), vi.mock, vi.doMock, vi.importActual and friends) and
+//   how names are grouped into import statements are ignored. Any change to test infrastructure fails: non-test files under tests/,
 //   vitest.config.ts, src/test-setup.ts, src/__mocks__/** and any *.snap.
 // - An explicit `--base` is reduced to its merge base with HEAD (see resolveBase), so the checkout,
 //   the file reads and the diff all use the branch point.
@@ -281,6 +283,51 @@ function clip(s: string, max = 80): string {
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+const SIDE_EFFECT = 'side-effect import'
+
+/**
+ * Splits normalised test text into its import bindings and the rest. Each binding is one name
+ * as the test sees it (`a`, `b as a`, `default as a`, `* as a`, `type a`, `export d`), so a name
+ * that moves to another import statement is the same binding; the bindings come back sorted.
+ */
+function splitImports(norm: string): { bindings: string[]; body: string[] } {
+  const bindings: string[] = []
+  const body: string[] = []
+  for (const line of norm.split('\n')) {
+    if (line === 'import <path>') { bindings.push(SIDE_EFFECT); continue }
+    const m = /^(import|export) (.*) from <path>$/.exec(line)
+    if (!m) { body.push(line); continue }
+    const prefix = m[1] === 'export' ? 'export ' : ''
+    let clause = m[2]
+    let allType = false
+    if (clause.startsWith('type ')) { allType = true; clause = clause.slice(5) }
+    const braced = /\{([^}]*)\}/.exec(clause)?.[1] ?? ''
+    const named = braced.split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+      const type = allType || s.startsWith('type ')
+      const [imported, local] = s.replace(/^type /, '').split(/\s+as\s+/)
+      return `${type ? 'type ' : ''}${imported}${local && local !== imported ? ` as ${local}` : ''}`
+    })
+    const other = clause.replace(/\{[^}]*\}/, '').split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+      const t = allType ? 'type ' : ''
+      if (s.startsWith('* as ')) return `${t}* as ${s.slice(5).trim()}`
+      return s === '*' ? '*' : `${t}default as ${s}`
+    })
+    for (const b of [...other, ...named]) bindings.push(prefix + b)
+  }
+  return { bindings: bindings.sort(), body }
+}
+
+/** `a` minus `b`, counting repeats: a binding imported twice must be dropped twice. */
+function minus(a: string[], b: string[]): string[] {
+  const left = [...b]
+  return a.filter((x) => {
+    const i = left.indexOf(x)
+    if (i === -1) return true
+    left.splice(i, 1)
+    return false
+  })
+}
+
 /** One problem line per test file whose logic changed or that was deleted; empty = fine. */
 export function compareRefactorTests(entries: RefactorTestEntry[]): string[] {
   const problems: string[] = []
@@ -290,8 +337,21 @@ export function compareRefactorTests(entries: RefactorTestEntry[]): string[] {
       problems.push(`\`${e.path}\`: test file deleted`)
       continue
     }
-    const a = normaliseTestText(e.baseText).split('\n')
-    const b = normaliseTestText(e.headText).split('\n')
+    const base = splitImports(normaliseTestText(e.baseText))
+    const head = splitImports(normaliseTestText(e.headText))
+    const removed = minus(base.bindings, head.bindings)
+    const added = minus(head.bindings, base.bindings)
+    if (removed.length || added.length) {
+      const show = (b: string) => (b === SIDE_EFFECT ? b : `\`${b}\``)
+      const parts = [
+        ...(removed.length ? [`removed ${removed.map(show).join(', ')}`] : []),
+        ...(added.length ? [`added ${added.map(show).join(', ')}`] : []),
+      ]
+      problems.push(`\`${e.path}\`: imported names changed: ${parts.join(', ')}`)
+      continue
+    }
+    const a = base.body
+    const b = head.body
     const n = Math.max(a.length, b.length)
     for (let i = 0; i < n; i++) {
       if (a[i] !== b[i]) {
