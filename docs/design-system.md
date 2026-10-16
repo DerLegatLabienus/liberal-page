@@ -144,7 +144,7 @@ Build from `src/components/ui/*`. Reach for these; don't reimplement them.
 ## 7. Interaction & feedback
 
 - **Action results go through toasts**, not inline error text. `useToast()` → `toast(message, type)`
-  with `type ∈ {success, error, info}` (`contexts/ToastContext.tsx`). Save succeeded → success toast;
+  with `type ∈ {success, error, info}` (`hooks/useToast.ts`; provider in `contexts/ToastContext.tsx`). Save succeeded → success toast;
   failed → error toast. Reserve inline messages for modal-blocked contexts where a toast would render
   behind an inert backdrop (see the login dialog).
 - **Loading**: use the translucent pulsing **`Skeleton`** (`ui/skeleton.tsx`). Match the skeleton to

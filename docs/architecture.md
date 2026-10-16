@@ -49,8 +49,10 @@ liberal-page/
 │   │   └── ui/                  # shadcn-style primitives (button, card, sheet, tabs, accordion…)
 │   ├── contexts/
 │   │   ├── AuthContext.tsx      # Google sign-in state, token refresh, useAuth / useAuthOptional
-│   │   └── ToastContext.tsx     # transient toast notifications
+│   │   ├── ToastContext.tsx     # ToastProvider: transient toast notifications
+│   │   └── toast-context.ts     # toast context object + ToastType / ToastContextValue
 │   ├── hooks/
+│   │   ├── useToast.ts          # useToast / useToastOptional (toast access)
 │   │   ├── useDirection.ts      # reads document.documentElement.dir → 'rtl' | 'ltr'
 │   │   ├── useParliament.ts     # fetches /api/parliament/:type (tracked entities)
 │   │   ├── useFeatureFlags.ts   # fetches /api/feature-flags
