@@ -57,7 +57,9 @@ As built (2026-10-15): the issues are walked in priority order and the first wit
 build or a plan is taken, so a high-priority issue's plan is not held back by lower-priority
 builds. An edited "Approved" leaves the plan waiting rather than revising it. Known limit:
 deleting a later reply would make an older "Approved" the newest again; comment lists do not
-show deletions, so only the prompt's rule against deleting comments covers it.
+show deletions, so only the prompt's rule against deleting comments covers it. A plan counts
+only when it carries the app stamp (seen on the routine's first plan, #18, 2026-10-16): a typed
+comment with the `### loop — plan` heading would otherwise replace the real plan.
 
 **Changed from today:** the picker no longer skips an issue because it is labelled `risky`.
 

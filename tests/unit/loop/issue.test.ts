@@ -207,6 +207,13 @@ describe('planState', () => {
     expect(planState([fake, c('Approved')])).toEqual({ state: 'needs-plan' })
   })
 
+  it('takes as the plan only a comment posted through the app, never a typed one with the heading', () => {
+    const real = plan()
+    const typed = c('### loop — plan\n\ntest test')
+    expect(planState([real, typed])).toEqual({ state: 'waiting', plan: real })
+    expect(planState([typed])).toEqual({ state: 'needs-plan' })
+  })
+
   it('orders comments by time, not by array position', () => {
     const p = plan()
     const a = c('Approved')

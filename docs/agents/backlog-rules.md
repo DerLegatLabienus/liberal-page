@@ -88,7 +88,8 @@ built.
   a comment is the loop's when it carries GitHub's app stamp (`performed_via_github_app`) or
   begins `### loop — `.
 - **`size:S` is built directly. `size:M`, `size:L` and unsized issues get a plan first.** The
-  loop posts one `### loop — plan` comment, adds `plan-ready`, and stops. It builds only after
+  loop posts one `### loop — plan` comment, adds `plan-ready`, and stops. Only a plan comment
+  that carries the app stamp counts; one typed with the same heading counts for nothing. It builds only after
   the plan is approved, and follows the plan as its brief.
 - **Approving a plan:** reply with a comment that begins `Approved` (any capitalisation). Text
   after the word amends the plan. The picker checks in code that the reply is newer than the

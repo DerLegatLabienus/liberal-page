@@ -68,7 +68,9 @@ const time = (iso: string) => Date.parse(iso)
  * Where an issue's plan stands, decided in code from its comments (oldest or newest first, it
  * does not matter). Spec: "Approving a plan". Fail-closed rules:
  *   - The plan is the newest comment with a `### loop — plan` heading posted from the owner's
- *     account (the loop posts as the owner).
+ *     account through the app (the loop posts as the owner, always through the Claude app;
+ *     verified on #18 on 2026-10-16). A typed comment with the heading is not a plan, and as a
+ *     loop-looking comment it is not a reply either: it counts for nothing.
  *   - Only replies created after the plan was last edited count, so a plan edited after its
  *     approval needs a new one. A revised plan is always a new comment.
  *   - A reply counts only from an approver (OWNER, COLLABORATOR, MEMBER), typed by a person: no
@@ -82,7 +84,7 @@ const time = (iso: string) => Date.parse(iso)
  */
 export function planState(comments: PlanComment[], owner = REPO.split('/')[0]): PlanState {
   const sorted = [...comments].sort((a, b) => time(a.createdAt) - time(b.createdAt))
-  const plans = sorted.filter((c) => isOwner(c.authorLogin, owner) && PLAN_HEADING.test(c.body))
+  const plans = sorted.filter((c) => isOwner(c.authorLogin, owner) && Boolean(c.appSlug) && PLAN_HEADING.test(c.body))
   const plan = plans.at(-1)
   if (!plan) return { state: 'needs-plan' }
   const replies = sorted.filter(
