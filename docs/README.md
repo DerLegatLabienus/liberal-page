@@ -10,6 +10,7 @@
 
 | Doc | Purpose |
 |-----|---------|
+| [dev-setup.md](./dev-setup.md) | Setting up a new machine, from clone to a passing gate |
 | [architecture.md](./architecture.md) | Runtime architecture, routes, data flow, and project structure |
 | [design-system.md](./design-system.md) | Frontend/UX source of truth — tokens, components, RTL, feedback, a11y |
 | [components.md](./components.md) | Current frontend component reference |

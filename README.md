@@ -27,6 +27,8 @@ The site combines public movement content with a practical Knesset tracking tool
 
 ## Local Development
 
+Setting up a new machine? Follow [`docs/dev-setup.md`](docs/dev-setup.md) first.
+
 Install dependencies:
 
 ```bash
