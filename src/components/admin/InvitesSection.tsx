@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { useToast } from '@/contexts/ToastContext'
+import { useToast } from '@/hooks/useToast'
 import { api, type Invite } from '@/lib/api-client'
 
 /** Allowlist management: add an invited email + role (sends an invitation), list, and remove. */

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAuthOptional } from '@/contexts/AuthContext'
-import { useToastOptional } from '@/contexts/ToastContext'
+import { useToastOptional } from '@/hooks/useToast'
 import UserMenu from '@/components/layout/UserMenu'
 import { api, errorStatus } from '@/lib/api-client'
 

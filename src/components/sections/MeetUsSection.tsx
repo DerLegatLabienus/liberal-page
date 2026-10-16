@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuthOptional } from '@/contexts/AuthContext'
-import { useToastOptional } from '@/contexts/ToastContext'
+import { useToastOptional } from '@/hooks/useToast'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { api, type ActiveMeeting } from '@/lib/api-client'
 
