@@ -11,7 +11,7 @@ inside WSL.
 
 | Tool | Why | Check |
 |---|---|---|
-| **Node 22** (`package.json` `engines`, and what CI uses) | Everything | `node --version` → `v22.x` |
+| **Node 22.23.4+** (`package.json` `engines`, `.nvmrc`, and what CI and Render pin) | Everything | `node --version` → `v22.23.4` or later 22.x |
 | **git** | — | `git --version` |
 | **GitHub CLI**, signed in (`gh auth login`) | The backlog is GitHub issues; the loop scripts, `gh run watch` for CI | `gh auth status` |
 | **Docker** (Docker Desktop with WSL integration, or Docker in WSL) | Only for the offline local database and the optional MinIO | `docker compose version` |
